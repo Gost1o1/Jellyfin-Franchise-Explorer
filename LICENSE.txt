@@ -1,0 +1,22 @@
+PERSONAL AND NONCOMMERCIAL USE LICENSE (DRAFT)
+Version 0.1 - Copyright (c) 2026 the project contributors. All rights reserved.
+
+IMPORTANT: This is a custom, non-OSI-approved source-available license draft. It is not legal advice. Obtain appropriate legal review before publication or reliance.
+
+1. Grant. Subject to these terms, the copyright holder grants individual natural persons a nonexclusive, worldwide, royalty-free permission to use, study, copy, and modify this software for personal, noncommercial purposes.
+
+2. Sharing. Individuals may redistribute unmodified copies or noncommercial modifications without charge if they include this complete license, preserve copyright and attribution notices, identify substantive changes, and do not suggest that the original authors endorse the modification.
+
+3. Commercial restriction. No permission is granted for commercial use by individuals or organizations, including business/internal organizational use, sale, paid support, hosted commercial services, inclusion in commercial software or products, or redistribution for commercial advantage. A separate written license from the copyright holder is required.
+
+4. Attribution and representations. You must not falsely claim authorship of original contributions, remove original notices, or misrepresent the origin of this software.
+
+5. No trademark permission. No trademark or endorsement rights are granted.
+
+6. Third-party materials. This license only covers original portions controlled by the copyright holder and cannot override separate licenses governing dependencies or others' contributions.
+
+7. Disclaimer. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTIES OF ANY KIND, TO THE EXTENT PERMITTED BY LAW. THE COPYRIGHT HOLDER IS NOT LIABLE FOR DAMAGES ARISING FROM USE TO THE EXTENT PERMITTED BY LAW.
+
+8. Termination. Permissions end automatically if you violate these terms, subject to applicable law.
+
+For a commercial license, contact the repository owner through the GitHub repository.
