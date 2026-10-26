@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "guid": "6bc7820b-7c6d-4e64-a139-dfb90b8d6f42",
+    "name": "Franchise Explorer",
+    "overview": "Experimental virtual franchise groups for Jellyfin 12.x (use caution).",
+    "description": "Unfinished experimental plugin. Virtual franchise hierarchies and item-ID references; no native category or media manipulation.",
+    "owner": "Gost1o1",
+    "category": "General",
+    "versions": [
+      {
+        "version": "0.2.0.0",
+        "changelog": "https://github.com/Gost1o1/Jellyfin-Franchise-Explorer/releases/tag/v0.2.0.0",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/Gost1o1/Jellyfin-Franchise-Explorer/releases/download/v0.2.0.0/franchise-explorer_0.2.0.0.zip",
+        "checksum": "275b05596a0db5124439b76ce2f3dd53",
+        "timestamp": "2026-10-26T22:29:20Z"
+      }
+    ]
+  }
+]
