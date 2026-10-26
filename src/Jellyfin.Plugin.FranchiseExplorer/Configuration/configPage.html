@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Franchise Explorer — Experimental</title>
+    <style>
+      #FranchiseExplorerConfigPage .fx-wrap{max-width:1050px;margin:0 auto;padding:16px 20px 60px}
+      #FranchiseExplorerConfigPage .fx-warning{border:2px solid #cb8f2c;border-radius:10px;padding:15px;margin:14px 0;background:rgba(203,143,44,.12)}
+      #FranchiseExplorerConfigPage .fx-columns{display:grid;grid-template-columns:minmax(230px,1fr) minmax(280px,1.5fr);gap:18px}
+      #FranchiseExplorerConfigPage .fx-panel{border:1px solid rgba(128,128,128,.35);border-radius:12px;padding:16px;margin:10px 0}
+      #FranchiseExplorerConfigPage .fx-field{display:block;margin:12px 0}
+      #FranchiseExplorerConfigPage .fx-field>span{display:block;font-size:.88rem;margin-bottom:5px}
+      #FranchiseExplorerConfigPage .fx-field input,#FranchiseExplorerConfigPage .fx-field textarea,#FranchiseExplorerConfigPage .fx-field select{box-sizing:border-box;width:100%;padding:9px;border:1px solid #777;border-radius:5px;background:var(--background,#262626);color:inherit}
+      #FranchiseExplorerConfigPage .fx-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
+      #FranchiseExplorerConfigPage .fx-row button{padding:9px 12px;border:1px solid #888;border-radius:6px;cursor:pointer;background:rgba(128,128,128,.16);color:inherit}
+      #FranchiseExplorerConfigPage .fx-row button:disabled{cursor:not-allowed;opacity:.4}
+      #FranchiseExplorerConfigPage .fx-tree-item{display:block;text-align:left;width:100%;border:0;border-radius:6px;padding:9px 6px;margin:2px 0;background:transparent;color:inherit;cursor:pointer}
+      #FranchiseExplorerConfigPage .fx-tree-item[aria-current="true"]{background:rgba(120,153,194,.24);font-weight:700}
+      #FranchiseExplorerConfigPage .fx-muted{opacity:.78;font-size:.85rem}
+      #FranchiseExplorerConfigPage .fx-link{border-top:1px solid rgba(128,128,128,.25);padding:9px 0;display:flex;gap:12px;align-items:center;justify-content:space-between}
+      #FranchiseExplorerConfigPage .fx-note{min-height:22px;font-size:.87rem}
+      #FranchiseExplorerConfigPage .fx-hidden{display:none!important}
+      @media(max-width:780px){#FranchiseExplorerConfigPage .fx-columns{grid-template-columns:1fr}}
+    </style>
+</head>
+<body>
+<div id="FranchiseExplorerConfigPage" data-role="page" class="page type-interior pluginConfigurationPage">
+  <div data-role="content" class="fx-wrap">
+    <h1>Franchise Explorer <small>v0.2 experimental preview</small></h1>
+    <div class="fx-warning" role="alert">
+      <strong>UNFINISHED PROJECT — USE WITH EXTREME CAUTION.</strong>
+      <p>This is an early, unverified preview. It saves virtual group definitions and item IDs <strong>only in the plugin's configuration</strong>.
+         It does not reorganize files, create Jellyfin collections, upload artwork, show a native Franchises library, or play media.
+         Use only on a backed-up test server.</p>
+    </div>
+    <p class="fx-muted">Create virtual franchises, eras, phases, and references. All changes stay unsaved until you click <strong>Save plugin configuration</strong>.</p>
+    <div class="fx-row">
+      <button type="button" id="fx-demo">Insert example groups</button>
+      <button type="button" id="fx-export">Export backup JSON</button>
+      <button type="button" id="fx-import-button">Import backup JSON</button>
+      <input type="file" accept="application/json,.json" id="fx-import-file" class="fx-hidden" />
+      <button type="button" id="fx-reload">Discard unsaved changes</button>
+    </div>
+    <div class="fx-columns">
+      <section class="fx-panel">
+        <h2>Virtual franchises</h2>
+        <div class="fx-row">
+          <button type="button" id="fx-add-root">+ Franchise</button>
+          <button type="button" id="fx-add-child">+ Subgroup</button>
+        </div>
+        <div id="fx-tree" role="tree" aria-label="Franchise hierarchy"></div>
+        <p class="fx-muted" id="fx-tree-count"></p>
+      </section>
+      <section class="fx-panel">
+        <h2>Selected group</h2>
+        <div id="fx-no-selection" class="fx-muted">Select a franchise or add one to start.</div>
+        <div id="fx-selected" class="fx-hidden">
+          <label class="fx-field"><span>Name</span><input type="text" id="fx-name" maxlength="120" /></label>
+          <label class="fx-field"><span>Group type</span>
+            <select id="fx-type">
+              <option>Franchise</option><option>Era</option><option>Phase</option><option>Saga</option><option>Character</option><option>Collection</option><option>Custom</option>
+            </select>
+          </label>
+          <label class="fx-field"><span>Description</span><textarea id="fx-overview" rows="3" maxlength="1500"></textarea></label>
+          <label class="fx-field"><span>Sort order (number)</span><input type="number" id="fx-sort" min="0" max="100000" /></label>
+          <h3>Artwork references (metadata only)</h3>
+          <p class="fx-muted">These fields save optional HTTPS or relative-image references. Artwork is <strong>not uploaded or shown</strong> in v0.2.</p>
+          <label class="fx-field"><span>Poster (primary)</span><input id="fx-primary" type="text" maxlength="1000" placeholder="https://..." /></label>
+          <label class="fx-field"><span>Backdrop</span><input id="fx-backdrop" type="text" maxlength="1000" /></label>
+          <label class="fx-field"><span>Clearlogo</span><input id="fx-logo" type="text" maxlength="1000" /></label>
+          <label class="fx-field"><span>Thumb / icon</span><input id="fx-thumb" type="text" maxlength="1000" /></label>
+          <label class="fx-field"><span>Banner</span><input id="fx-banner" type="text" maxlength="1000" /></label>
+          <div class="fx-row"><button type="button" id="fx-delete">Delete selected virtual group</button></div>
+          <h3>Virtual media references</h3>
+          <p class="fx-muted">Paste an existing Jellyfin item ID. This preview stores it but does not check whether the item exists.</p>
+          <div id="fx-links"></div>
+          <label class="fx-field"><span>Jellyfin item ID (GUID)</span><input id="fx-item-id" type="text" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" /></label>
+          <label class="fx-field"><span>Display label</span><input id="fx-item-name" type="text" maxlength="150" placeholder="Example: Thor: Ragnarok" /></label>
+          <label class="fx-field"><span>Item kind</span><select id="fx-item-type"><option>Movie</option><option>Series</option><option>Season</option><option>Episode</option><option>Collection</option></select></label>
+          <label class="fx-field"><span>Timeline name</span><input id="fx-view-order" type="text" value="Custom" maxlength="80" /></label>
+          <label class="fx-field"><span>Timeline position</span><input id="fx-position" type="number" min="0" max="100000" value="0" /></label>
+          <div class="fx-row"><button type="button" id="fx-add-link">Add virtual reference</button></div>
+        </div>
+      </section>
+    </div>
+    <div class="fx-panel">
+      <label class="fx-field"><span>Future navigation label</span><input id="fx-nav-label" type="text" maxlength="64" value="Franchises" /></label>
+      <p class="fx-muted">This is metadata only. The current plugin does not add a navigation entry to Jellyfin clients.</p>
+      <div class="fx-row"><button type="button" id="fx-save" class="button-submit raised">Save plugin configuration</button><strong id="fx-dirty-label">No unsaved edits</strong></div>
+      <div id="fx-status" class="fx-note" role="status" aria-live="polite"></div>
+    </div>
+  </div>
+<script type="text/javascript">
+(function () {
+  'use strict';
+  const page = document.getElementById('FranchiseExplorerConfigPage');
+  if (!page || page.dataset.fxInitialized === 'yes') return;
+  page.dataset.fxInitialized = 'yes';
+  const pluginId = '6bc7820b-7c6d-4e64-a139-dfb90b8d6f42';
+  const byId = id => page.querySelector('#' + id);
+  const validGuid = s => /^[0-9a-f]{32}$|^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+  const guid = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.floor(Math.random() * 16); return (c === 'x' ? r : (r & 3 | 8)).toString(16); });
+  const emptyArt = () => ({ PrimaryUrl:'', BackdropUrl:'', LogoUrl:'', ThumbUrl:'', BannerUrl:'' });
+  let model = { NavigationLabel:'Franchises', Nodes:[], MediaLinks:[] };
+  let selected = '';
+  let dirty = false;
+  const setStatus = (message, error) => { byId('fx-status').textContent = message; byId('fx-status').style.color = error ? '#f2a49d' : ''; };
+  const setDirty = value => { dirty = value; byId('fx-dirty-label').textContent = dirty ? 'Unsaved edits — remember to save' : 'No unsaved edits'; };
+  const num = (v) => Number.isFinite(Number(v)) ? Math.max(0, Math.min(100000, Math.trunc(Number(v)))) : 0;
+  const artRef = v => { v = String(v || '').trim(); if (v && !(v.startsWith('https://') || v.startsWith('/'))) throw new Error('Artwork references must use HTTPS or a relative path starting with /.'); return v; };
+  function normalize(raw) {
+    if (!raw || typeof raw !== 'object') throw new Error('Invalid backup format.');
+    const nodes = Array.isArray(raw.Nodes) ? raw.Nodes : [];
+    const links = Array.isArray(raw.MediaLinks) ? raw.MediaLinks : [];
+    if (nodes.length > 250 || links.length > 3000) throw new Error('Preview limits: 250 groups and 3,000 links.');
+    const safeNodes = nodes.map(n => {
+      if (!n || !validGuid(String(n.Id || ''))) throw new Error('Invalid virtual group ID.');
+      const a = n.Artwork || {};
+      return {Id:String(n.Id), ParentId:String(n.ParentId || ''), Name:String(n.Name || '').trim().slice(0,120), NodeType:String(n.NodeType || 'Custom').slice(0,40), Overview:String(n.Overview || '').slice(0,1500), SortOrder:num(n.SortOrder),Artwork:{PrimaryUrl:artRef(a.PrimaryUrl),BackdropUrl:artRef(a.BackdropUrl),LogoUrl:artRef(a.LogoUrl),ThumbUrl:artRef(a.ThumbUrl),BannerUrl:artRef(a.BannerUrl)}};
+    });
+    const ids = new Set(safeNodes.map(n => n.Id.toLowerCase()));
+    if (ids.size !== safeNodes.length) throw new Error('Duplicate group IDs.');
+    for (const n of safeNodes) {
+      if (!n.Name) throw new Error('Every group requires a name.');
+      if (n.ParentId && !ids.has(n.ParentId.toLowerCase())) throw new Error('A group points to a nonexistent parent.');
+      let current = n, visited = new Set();
+      while (current && current.ParentId) {
+        if (visited.has(current.Id.toLowerCase())) throw new Error('Circular parent relationship detected.');
+        visited.add(current.Id.toLowerCase());
+        current = safeNodes.find(t => t.Id.toLowerCase() === current.ParentId.toLowerCase());
+      }
+    }
+    const safeLinks = links.map(l => {
+      if (!l || !validGuid(String(l.Id || '')) || !validGuid(String(l.JellyfinItemId || '')) || !ids.has(String(l.NodeId || '').toLowerCase())) throw new Error('Invalid virtual media link.');
+      return {Id:String(l.Id),NodeId:String(l.NodeId),JellyfinItemId:String(l.JellyfinItemId),DisplayName:String(l.DisplayName || '').slice(0,150),ItemType:String(l.ItemType || 'Movie').slice(0,40),ViewingOrder:String(l.ViewingOrder || 'Custom').slice(0,80),Position:num(l.Position)};
+    });
+    if (new Set(safeLinks.map(l=>l.Id.toLowerCase())).size !== safeLinks.length) throw new Error('Duplicate link IDs.');
+    return { NavigationLabel:String(raw.NavigationLabel || 'Franchises').trim().slice(0,64) || 'Franchises', Nodes:safeNodes, MediaLinks:safeLinks };
+  }
+  function children(parent) {
+    return model.Nodes.filter(n => n.ParentId === parent).sort((a,b) => a.SortOrder-b.SortOrder || a.Name.localeCompare(b.Name));
+  }
+  function treeNode(node, depth) {
+    const b = document.createElement('button');
+    b.type='button'; b.className='fx-tree-item'; b.setAttribute('role','treeitem'); b.setAttribute('aria-current',String(node.Id===selected));
+    b.style.paddingLeft = (8 + depth*18)+'px';
+    b.textContent = (depth ? '↳ ' : '▣ ') + node.Name + ' ('+node.NodeType+')';
+    b.addEventListener('click', () => { selected=node.Id; render(); });
+    byId('fx-tree').appendChild(b);
+    children(node.Id).forEach(x => treeNode(x,depth+1));
+  }
+  function render() {
+    const tree=byId('fx-tree'); tree.replaceChildren();
+    children('').forEach(n=>treeNode(n,0));
+    byId('fx-tree-count').textContent = model.Nodes.length + ' groups · ' + model.MediaLinks.length + ' virtual links';
+    const node = model.Nodes.find(n=>n.Id===selected);
+    byId('fx-selected').classList.toggle('fx-hidden',!node);
+    byId('fx-no-selection').classList.toggle('fx-hidden',!!node);
+    byId('fx-add-child').disabled=!node;
+    byId('fx-nav-label').value=model.NavigationLabel;
+    if (!node) return;
+    byId('fx-name').value=node.Name;
+    byId('fx-type').value=node.NodeType;
+    byId('fx-overview').value=node.Overview;
+    byId('fx-sort').value=node.SortOrder;
+    for (const [id,key] of [['fx-primary','PrimaryUrl'],['fx-backdrop','BackdropUrl'],['fx-logo','LogoUrl'],['fx-thumb','ThumbUrl'],['fx-banner','BannerUrl']]) byId(id).value=node.Artwork[key] || '';
+    renderLinks(node.Id);
+  }
+  function renderLinks(nodeId) {
+    const container=byId('fx-links'); container.replaceChildren();
+    const links=model.MediaLinks.filter(l=>l.NodeId===nodeId).sort((a,b)=>a.ViewingOrder.localeCompare(b.ViewingOrder)||a.Position-b.Position);
+    if (!links.length) { const p=document.createElement('p');p.className='fx-muted';p.textContent='No media references yet.';container.appendChild(p); }
+    links.forEach(l=>{
+      const item=document.createElement('div');item.className='fx-link';
+      const text=document.createElement('div');text.textContent=(l.DisplayName||l.JellyfinItemId)+' · '+l.ItemType+' · '+l.ViewingOrder+' #'+l.Position;
+      const button=document.createElement('button');button.type='button';button.textContent='Remove link';
+      button.addEventListener('click',()=>{if(!confirm('Remove this virtual link only? Original media will not be changed.')) return;model.MediaLinks=model.MediaLinks.filter(x=>x.Id!==l.Id);setDirty(true);render();});
+      item.append(text,button);container.appendChild(item);
+    });
+  }
+  function edit(field,value) {
+    const node=model.Nodes.find(n=>n.Id===selected);
+    if (!node) return;
+    if (field.startsWith('Artwork.')) node.Artwork[field.split('.')[1]]=value;
+    else node[field]=value;
+    setDirty(true);
+    if (field==='Name'||field==='NodeType'||field==='SortOrder') { const old=selected;render();selected=old; }
+  }
+  for(const [id,key] of [['fx-name','Name'],['fx-type','NodeType'],['fx-overview','Overview'],['fx-sort','SortOrder'],['fx-primary','Artwork.PrimaryUrl'],['fx-backdrop','Artwork.BackdropUrl'],['fx-logo','Artwork.LogoUrl'],['fx-thumb','Artwork.ThumbUrl'],['fx-banner','Artwork.BannerUrl']]) {
+    byId(id).addEventListener('change',e=>edit(key,key==='SortOrder'?num(e.target.value):e.target.value));
+  }
+  byId('fx-nav-label').addEventListener('change',e=>{model.NavigationLabel=e.target.value;setDirty(true);});
+  function addNode(parent, name, type) {
+    if(model.Nodes.length >= 250) throw new Error('Preview group limit reached.');
+    const n={Id:guid(),ParentId:parent||'',Name:name||'New group',NodeType:type||'Custom',Overview:'',SortOrder:model.Nodes.filter(x=>x.ParentId===(parent||'')).length,Artwork:emptyArt()};
+    model.Nodes.push(n);selected=n.Id;setDirty(true);render();
+    return n;
+  }
+  byId('fx-add-root').addEventListener('click',()=>{try{addNode('','New franchise','Franchise');}catch(e){setStatus(e.message,true);}});
+  byId('fx-add-child').addEventListener('click',()=>{try{addNode(selected,'New subgroup','Era');}catch(e){setStatus(e.message,true);}});
+  byId('fx-delete').addEventListener('click',()=>{
+    const node=model.Nodes.find(n=>n.Id===selected);if(!node) return;
+    const remove=new Set([node.Id]);let size;
+    do{size=remove.size;model.Nodes.filter(n=>remove.has(n.ParentId)).forEach(n=>remove.add(n.Id));}while(size!==remove.size);
+    if(!confirm('Delete '+remove.size+' virtual group(s) and associated virtual links? This cannot affect real media.'))return;
+    model.Nodes=model.Nodes.filter(n=>!remove.has(n.Id));model.MediaLinks=model.MediaLinks.filter(l=>!remove.has(l.NodeId));
+    selected='';setDirty(true);render();
+  });
+  byId('fx-add-link').addEventListener('click',()=>{
+    if(!selected)return;
+    const itemId=byId('fx-item-id').value.trim();
+    if(!validGuid(itemId)){setStatus('Enter a valid 32-digit or hyphenated Jellyfin item GUID.',true);return;}
+    if(model.MediaLinks.length>=3000){setStatus('Preview link limit reached.',true);return;}
+    model.MediaLinks.push({Id:guid(),NodeId:selected,JellyfinItemId:itemId,DisplayName:byId('fx-item-name').value.trim(),ItemType:byId('fx-item-type').value,ViewingOrder:byId('fx-view-order').value.trim()||'Custom',Position:num(byId('fx-position').value)});
+    byId('fx-item-id').value='';byId('fx-item-name').value='';setDirty(true);setStatus('Virtual reference added locally. Save to persist.');render();
+  });
+  async function load() {
+    try{
+      setStatus('Loading plugin configuration...');
+      const cfg=await ApiClient.getPluginConfiguration(pluginId);
+      model=normalize(cfg);selected='';setDirty(false);render();setStatus('Loaded. No media or collections were changed.');
+    }catch(e){setStatus('Could not load configuration: '+(e.message||e),true);}
+  }
+  byId('fx-save').addEventListener('click',async()=>{
+    try {
+      const data=normalize(model);
+      const cfg=await ApiClient.getPluginConfiguration(pluginId);
+      cfg.NavigationLabel=data.NavigationLabel;cfg.Nodes=data.Nodes;cfg.MediaLinks=data.MediaLinks;
+      const result=await ApiClient.updatePluginConfiguration(pluginId,cfg);
+      model=data;setDirty(false);setStatus('Saved plugin-owned virtual data only.');
+      if (typeof Dashboard !== 'undefined' && Dashboard.processPluginConfigurationUpdateResult) Dashboard.processPluginConfigurationUpdateResult(result);
+    }catch(e){setStatus('Save failed: '+(e.message||e),true);}
+  });
+  byId('fx-reload').addEventListener('click',()=>{if(!dirty||confirm('Discard all unsaved franchise edits?'))load();});
+  byId('fx-demo').addEventListener('click',()=>{
+    if(model.Nodes.length && !confirm('Append sample franchises to your existing virtual groups?')) return;
+    const sw=addNode('','Star Wars','Franchise');addNode(sw.Id,'Fall of the Jedi','Era');addNode(sw.Id,'Reign of the Empire','Era');
+    const mcu=addNode('','Marvel Cinematic Universe','Franchise');addNode(mcu.Id,'Phase One','Phase');addNode(mcu.Id,'Phase Two','Phase');addNode(mcu.Id,'Thor Collection','Character');
+    setStatus('Example folders inserted locally. Click Save to persist.');
+  });
+  byId('fx-export').addEventListener('click',()=>{
+    try {
+      const json=JSON.stringify({schemaVersion:1,exportedAt:new Date().toISOString(),...normalize(model)},null,2);
+      const url=URL.createObjectURL(new Blob([json],{type:'application/json'}));
+      const a=document.createElement('a');a.href=url;a.download='franchise-explorer-backup.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
+      setStatus('JSON backup exported locally. It may include your Jellyfin item IDs.');
+    }catch(e){setStatus('Export failed: '+(e.message||e),true);}
+  });
+  byId('fx-import-button').addEventListener('click',()=>byId('fx-import-file').click());
+  byId('fx-import-file').addEventListener('change',async e=>{
+    const file=e.target.files && e.target.files[0];if(!file)return;
+    if(file.size>2000000){setStatus('Backup exceeds 2 MB safety limit.',true);e.target.value='';return;}
+    try {
+      const parsed=JSON.parse(await file.text());
+      if(parsed.schemaVersion!==1) throw new Error('Unsupported backup schema. Expected version 1.');
+      const imported=normalize(parsed);
+      if(!confirm('Replace the unsaved franchise workspace with this backup? Your real Jellyfin media is unaffected.')) return;
+      model=imported;selected='';setDirty(true);render();setStatus('Backup loaded locally; click Save to persist.');
+    } catch(err) {setStatus('Import rejected: '+(err.message||err),true);} finally{e.target.value='';}
+  });
+  page.addEventListener('pageshow',load);
+  if(!page.classList.contains('hide')) load();
+})();
+</script>
+</div>
+</body>
+</html>

@@ -1,13 +1,17 @@
+using System;
+
 namespace Jellyfin.Plugin.FranchiseExplorer.Models;
 
-/// <summary>Virtual group with an optional parent and independent artwork.</summary>
+/// <summary>
+/// Virtual hierarchy node. Id and ParentId are string GUIDs for a portable JSON export.
+/// </summary>
 public sealed class FranchiseNode
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
-    public Guid? ParentId { get; set; }
+    public string Id { get; set; } = Guid.NewGuid().ToString("D");
+    public string ParentId { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
-    public string GroupType { get; set; } = "Franchise";
-    public string? Overview { get; set; }
+    public string NodeType { get; set; } = "Franchise";
+    public string Overview { get; set; } = string.Empty;
     public int SortOrder { get; set; }
-    public Dictionary<string, string> ImagePaths { get; set; } = new();
+    public ArtworkMetadata Artwork { get; set; } = new();
 }
