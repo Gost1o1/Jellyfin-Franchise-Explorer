@@ -1,95 +1,165 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <title>Franchise Explorer — Experimental</title>
-    <style>
-      #FranchiseExplorerConfigPage .fx-wrap{max-width:1050px;margin:0 auto;padding:16px 20px 60px}
-      #FranchiseExplorerConfigPage .fx-warning{border:2px solid #cb8f2c;border-radius:10px;padding:15px;margin:14px 0;background:rgba(203,143,44,.12)}
-      #FranchiseExplorerConfigPage .fx-columns{display:grid;grid-template-columns:minmax(230px,1fr) minmax(280px,1.5fr);gap:18px}
-      #FranchiseExplorerConfigPage .fx-panel{border:1px solid rgba(128,128,128,.35);border-radius:12px;padding:16px;margin:10px 0}
-      #FranchiseExplorerConfigPage .fx-field{display:block;margin:12px 0}
-      #FranchiseExplorerConfigPage .fx-field>span{display:block;font-size:.88rem;margin-bottom:5px}
-      #FranchiseExplorerConfigPage .fx-field input,#FranchiseExplorerConfigPage .fx-field textarea,#FranchiseExplorerConfigPage .fx-field select{box-sizing:border-box;width:100%;padding:9px;border:1px solid #777;border-radius:5px;background:var(--background,#262626);color:inherit}
-      #FranchiseExplorerConfigPage .fx-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
-      #FranchiseExplorerConfigPage .fx-row button{padding:9px 12px;border:1px solid #888;border-radius:6px;cursor:pointer;background:rgba(128,128,128,.16);color:inherit}
-      #FranchiseExplorerConfigPage .fx-row button:disabled{cursor:not-allowed;opacity:.4}
-      #FranchiseExplorerConfigPage .fx-tree-item{display:block;text-align:left;width:100%;border:0;border-radius:6px;padding:9px 6px;margin:2px 0;background:transparent;color:inherit;cursor:pointer}
-      #FranchiseExplorerConfigPage .fx-tree-item[aria-current="true"]{background:rgba(120,153,194,.24);font-weight:700}
-      #FranchiseExplorerConfigPage .fx-muted{opacity:.78;font-size:.85rem}
-      #FranchiseExplorerConfigPage .fx-link{border-top:1px solid rgba(128,128,128,.25);padding:9px 0;display:flex;gap:12px;align-items:center;justify-content:space-between}
-      #FranchiseExplorerConfigPage .fx-note{min-height:22px;font-size:.87rem}
-      #FranchiseExplorerConfigPage .fx-hidden{display:none!important}
-      @media(max-width:780px){#FranchiseExplorerConfigPage .fx-columns{grid-template-columns:1fr}}
-    </style>
-</head>
+<head><meta charset="utf-8"><title>Franchise Explorer — Experimental</title></head>
 <body>
 <div id="FranchiseExplorerConfigPage" data-role="page" class="page type-interior pluginConfigurationPage">
-  <div data-role="content" class="fx-wrap">
-    <h1>Franchise Explorer <small>v0.2 experimental preview</small></h1>
-    <div class="fx-warning" role="alert">
-      <strong>UNFINISHED PROJECT — USE WITH EXTREME CAUTION.</strong>
-      <p>This is an early, unverified preview. It saves virtual group definitions and item IDs <strong>only in the plugin's configuration</strong>.
-         It does not reorganize files, create Jellyfin collections, upload artwork, show a native Franchises library, or play media.
-         Use only on a backed-up test server.</p>
-    </div>
-    <p class="fx-muted">Create virtual franchises, eras, phases, and references. All changes stay unsaved until you click <strong>Save plugin configuration</strong>.</p>
-    <div class="fx-row">
-      <button type="button" id="fx-demo">Insert example groups</button>
-      <button type="button" id="fx-export">Export backup JSON</button>
-      <button type="button" id="fx-import-button">Import backup JSON</button>
-      <input type="file" accept="application/json,.json" id="fx-import-file" class="fx-hidden" />
-      <button type="button" id="fx-reload">Discard unsaved changes</button>
-    </div>
-    <div class="fx-columns">
-      <section class="fx-panel">
-        <h2>Virtual franchises</h2>
-        <div class="fx-row">
-          <button type="button" id="fx-add-root">+ Franchise</button>
-          <button type="button" id="fx-add-child">+ Subgroup</button>
-        </div>
-        <div id="fx-tree" role="tree" aria-label="Franchise hierarchy"></div>
-        <p class="fx-muted" id="fx-tree-count"></p>
-      </section>
-      <section class="fx-panel">
-        <h2>Selected group</h2>
-        <div id="fx-no-selection" class="fx-muted">Select a franchise or add one to start.</div>
-        <div id="fx-selected" class="fx-hidden">
-          <label class="fx-field"><span>Name</span><input type="text" id="fx-name" maxlength="120" /></label>
-          <label class="fx-field"><span>Group type</span>
-            <select id="fx-type">
-              <option>Franchise</option><option>Era</option><option>Phase</option><option>Saga</option><option>Character</option><option>Collection</option><option>Custom</option>
-            </select>
-          </label>
-          <label class="fx-field"><span>Description</span><textarea id="fx-overview" rows="3" maxlength="1500"></textarea></label>
-          <label class="fx-field"><span>Sort order (number)</span><input type="number" id="fx-sort" min="0" max="100000" /></label>
-          <h3>Artwork references (metadata only)</h3>
-          <p class="fx-muted">These fields save optional HTTPS or relative-image references. Artwork is <strong>not uploaded or shown</strong> in v0.2.</p>
-          <label class="fx-field"><span>Poster (primary)</span><input id="fx-primary" type="text" maxlength="1000" placeholder="https://..." /></label>
-          <label class="fx-field"><span>Backdrop</span><input id="fx-backdrop" type="text" maxlength="1000" /></label>
-          <label class="fx-field"><span>Clearlogo</span><input id="fx-logo" type="text" maxlength="1000" /></label>
-          <label class="fx-field"><span>Thumb / icon</span><input id="fx-thumb" type="text" maxlength="1000" /></label>
-          <label class="fx-field"><span>Banner</span><input id="fx-banner" type="text" maxlength="1000" /></label>
-          <div class="fx-row"><button type="button" id="fx-delete">Delete selected virtual group</button></div>
-          <h3>Virtual media references</h3>
-          <p class="fx-muted">Paste an existing Jellyfin item ID. This preview stores it but does not check whether the item exists.</p>
-          <div id="fx-links"></div>
-          <label class="fx-field"><span>Jellyfin item ID (GUID)</span><input id="fx-item-id" type="text" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" /></label>
-          <label class="fx-field"><span>Display label</span><input id="fx-item-name" type="text" maxlength="150" placeholder="Example: Thor: Ragnarok" /></label>
-          <label class="fx-field"><span>Item kind</span><select id="fx-item-type"><option>Movie</option><option>Series</option><option>Season</option><option>Episode</option><option>Collection</option></select></label>
-          <label class="fx-field"><span>Timeline name</span><input id="fx-view-order" type="text" value="Custom" maxlength="80" /></label>
-          <label class="fx-field"><span>Timeline position</span><input id="fx-position" type="number" min="0" max="100000" value="0" /></label>
-          <div class="fx-row"><button type="button" id="fx-add-link">Add virtual reference</button></div>
-        </div>
-      </section>
-    </div>
-    <div class="fx-panel">
-      <label class="fx-field"><span>Future navigation label</span><input id="fx-nav-label" type="text" maxlength="64" value="Franchises" /></label>
-      <p class="fx-muted">This is metadata only. The current plugin does not add a navigation entry to Jellyfin clients.</p>
-      <div class="fx-row"><button type="button" id="fx-save" class="button-submit raised">Save plugin configuration</button><strong id="fx-dirty-label">No unsaved edits</strong></div>
-      <div id="fx-status" class="fx-note" role="status" aria-live="polite"></div>
+<style id="fx-live-css">
+/* All visual styles are inside the loaded page, not <head> (which Jellyfin may discard). */
+#FranchiseExplorerConfigPage { --fx-card: #202328; --fx-border: rgba(180,191,206,.2); --fx-text: #edf0f3; --fx-muted: #a9b4c1; --fx-accent: #11b3c8; color:var(--fx-text); width:100%; box-sizing:border-box; }
+#FranchiseExplorerConfigPage * {box-sizing:border-box}
+#FranchiseExplorerConfigPage .fx-wrap {max-width:1370px;margin:0 auto;padding:22px 24px 90px}
+#FranchiseExplorerConfigPage .fx-heading {display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;margin:0 0 18px}
+#FranchiseExplorerConfigPage .fx-eyebrow {text-transform:uppercase;letter-spacing:.13em;color:var(--fx-accent);font-size:.73rem;font-weight:750}
+#FranchiseExplorerConfigPage h1 {font-size:2rem;line-height:1.18;margin:4px 0 8px;font-weight:750}
+#FranchiseExplorerConfigPage h1 small {font-size:.78rem;vertical-align:middle;border:1px solid var(--fx-border);border-radius:18px;padding:4px 9px;font-weight:500;margin-left:4px}
+#FranchiseExplorerConfigPage h2 {font-size:1.2rem;margin:0;font-weight:700}
+#FranchiseExplorerConfigPage h3 {font-size:1.04rem;margin:0 0 5px;font-weight:660}
+#FranchiseExplorerConfigPage p {line-height:1.52;margin:6px 0 12px}
+#FranchiseExplorerConfigPage .fx-muted {color:var(--fx-muted);font-size:.88rem;line-height:1.5}
+#FranchiseExplorerConfigPage .fx-warning {border-left:4px solid #e4af47;border-radius:9px;padding:12px 16px;margin:0 0 18px;background:rgba(228,175,71,.10);font-size:.9rem}
+#FranchiseExplorerConfigPage .fx-warning strong {color:#ffd88a}
+#FranchiseExplorerConfigPage .fx-warning p {margin:4px 0 0;color:#d8d9dc}
+#FranchiseExplorerConfigPage .fx-toolbar {display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:0 0 18px}
+#FranchiseExplorerConfigPage .fx-toolbar-left, #FranchiseExplorerConfigPage .fx-toolbar-right {display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+#FranchiseExplorerConfigPage button {font:inherit;cursor:pointer}
+#FranchiseExplorerConfigPage .fx-btn {background:#30363e!important;color:#f5f5f5!important;border:1px solid #58616d!important;border-radius:8px!important;padding:9px 13px!important;font-size:.88rem!important;font-weight:600!important;min-height:39px}
+#FranchiseExplorerConfigPage .fx-btn:hover {background:#414c57!important}
+#FranchiseExplorerConfigPage .fx-btn:focus-visible {outline:2px solid #36cfe4;outline-offset:2px}
+#FranchiseExplorerConfigPage .fx-btn:disabled {opacity:.38;cursor:not-allowed}
+#FranchiseExplorerConfigPage .fx-btn-primary {background:#069eb1!important;border-color:#069eb1!important;color:#061416!important}
+#FranchiseExplorerConfigPage .fx-btn-primary:hover {background:#1fc0d3!important}
+#FranchiseExplorerConfigPage .fx-btn-danger {border-color:rgba(248,105,105,.35)!important;color:#ffadad!important;background:rgba(192,55,55,.12)!important}
+#FranchiseExplorerConfigPage .fx-btn-small {padding:6px 10px!important;min-height:32px;font-size:.79rem!important}
+#FranchiseExplorerConfigPage .fx-grid {display:grid;grid-template-columns:minmax(280px, 340px) minmax(0,1fr);gap:18px;align-items:start}
+#FranchiseExplorerConfigPage .fx-panel {background:var(--fx-card);border:1px solid var(--fx-border);border-radius:12px;padding:22px;min-width:0;box-shadow:0 5px 20px rgba(0,0,0,.08)}
+#FranchiseExplorerConfigPage .fx-sticky {position:sticky;top:16px}
+#FranchiseExplorerConfigPage .fx-panel-title {display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+#FranchiseExplorerConfigPage .fx-counter {font-size:.78rem;padding:4px 8px;border-radius:20px;background:rgba(166,184,205,.13);color:var(--fx-muted)}
+#FranchiseExplorerConfigPage .fx-row {display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0 16px}
+#FranchiseExplorerConfigPage .fx-field {display:block;margin:12px 0;min-width:0}
+#FranchiseExplorerConfigPage .fx-field>span {display:block;font-size:.87rem;font-weight:650;margin-bottom:7px}
+#FranchiseExplorerConfigPage .fx-field input,#FranchiseExplorerConfigPage .fx-field textarea,#FranchiseExplorerConfigPage .fx-field select,#FranchiseExplorerConfigPage input.fx-input {font:inherit;color:#f4f5f7!important;background:#151a20!important;border:1px solid #596471!important;border-radius:7px!important;padding:10px 11px!important;box-sizing:border-box;width:100%;outline:none}
+#FranchiseExplorerConfigPage .fx-field textarea {resize:vertical;min-height:88px}
+#FranchiseExplorerConfigPage .fx-field input:focus,#FranchiseExplorerConfigPage .fx-field textarea:focus,#FranchiseExplorerConfigPage .fx-field select:focus,#FranchiseExplorerConfigPage input.fx-input:focus {border-color:#1bc7dc!important;box-shadow:0 0 0 2px rgba(27,199,220,.15)}
+#FranchiseExplorerConfigPage .fx-field select option {background:#202328;color:#f4f5f7}
+#FranchiseExplorerConfigPage .fx-two {display:grid;grid-template-columns:minmax(0,1fr) minmax(130px,.42fr);gap:14px}
+#FranchiseExplorerConfigPage .fx-divider {border:0;border-top:1px solid var(--fx-border);margin:20px 0}
+#FranchiseExplorerConfigPage .fx-tree {display:flex;flex-direction:column;gap:4px;max-height:67vh;overflow:auto;margin:12px -6px;padding:0 6px}
+#FranchiseExplorerConfigPage .fx-tree-item {display:flex;align-items:center;gap:7px;text-align:left;width:100%;border:1px solid transparent;border-radius:7px;padding:10px 9px;margin:0;background:transparent;color:#dce3eb;cursor:pointer;overflow:hidden}
+#FranchiseExplorerConfigPage .fx-tree-item:hover {background:rgba(163,198,216,.11)}
+#FranchiseExplorerConfigPage .fx-tree-item[aria-current="true"] {background:rgba(10,176,201,.18);border-color:rgba(38,193,214,.50);color:#d9faff;font-weight:700}
+#FranchiseExplorerConfigPage .fx-tree-item .fx-tree-icon {width:18px;opacity:.85;text-align:center;flex-shrink:0}
+#FranchiseExplorerConfigPage .fx-tree-item .fx-tree-name {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+#FranchiseExplorerConfigPage .fx-tree-item .fx-tree-type {font-size:.73rem;color:#afbbc5;flex-shrink:0}
+#FranchiseExplorerConfigPage .fx-empty {border:1px dashed rgba(189,201,215,.28);border-radius:10px;padding:20px;color:#adb8c4;text-align:center;margin:12px 0}
+#FranchiseExplorerConfigPage .fx-artwork {display:grid;grid-template-columns:160px minmax(0,1fr);gap:14px;align-items:start;margin-top:12px}
+#FranchiseExplorerConfigPage .fx-art-preview {border:1px dashed #566577;border-radius:9px;min-height:198px;background:linear-gradient(130deg,#141b26,#263440);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+#FranchiseExplorerConfigPage .fx-art-preview img {height:198px;width:100%;object-fit:contain}
+#FranchiseExplorerConfigPage .fx-art-preview .fx-art-placeholder {text-align:center;color:#9ab3c0;font-size:.78rem;padding:8px}
+#FranchiseExplorerConfigPage .fx-mini-art {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
+#FranchiseExplorerConfigPage .fx-mini-art img {width:100%;height:80px;object-fit:cover;border:1px solid #57616b;border-radius:7px;background:#161b20}
+#FranchiseExplorerConfigPage .fx-section-intro {margin:0 0 15px}
+#FranchiseExplorerConfigPage .fx-result-list {display:flex;flex-direction:column;gap:5px;max-height:300px;overflow-y:auto}
+#FranchiseExplorerConfigPage .fx-result {display:flex;align-items:center;gap:12px;background:rgba(154,178,196,.07);border:1px solid rgba(175,195,210,.16);border-radius:7px;padding:8px;text-align:left;color:#f1f6fa;width:100%}
+#FranchiseExplorerConfigPage .fx-result:hover {background:rgba(65,183,202,.18);border-color:rgba(65,183,202,.45)}
+#FranchiseExplorerConfigPage .fx-result img,#FranchiseExplorerConfigPage .fx-thumb-placeholder {width:39px;height:57px;border-radius:4px;object-fit:cover;background:#343f4c;flex-shrink:0}
+#FranchiseExplorerConfigPage .fx-thumb-placeholder {display:flex;align-items:center;justify-content:center;color:#adbeca;font-size:1.2rem}
+#FranchiseExplorerConfigPage .fx-result-info {flex:1;min-width:0}
+#FranchiseExplorerConfigPage .fx-result-info strong {display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#FranchiseExplorerConfigPage .fx-result-info small {display:block;color:#abb9c5;margin-top:4px}
+#FranchiseExplorerConfigPage .fx-link {border-top:1px solid var(--fx-border);padding:11px 0;display:flex;gap:12px;align-items:center;justify-content:space-between}
+#FranchiseExplorerConfigPage .fx-link strong {font-size:.88rem}
+#FranchiseExplorerConfigPage .fx-link small {color:#b0bbc8;display:block;margin-top:5px}
+#FranchiseExplorerConfigPage .fx-link-actions {display:flex;flex-direction:column;gap:5px}
+#FranchiseExplorerConfigPage .fx-status {border-radius:8px;background:rgba(77,150,184,.12);padding:10px 12px;margin:12px 0 0;min-height:40px;font-size:.87rem}
+#FranchiseExplorerConfigPage .fx-footer {margin-top:20px}
+#FranchiseExplorerConfigPage .fx-footer-actions {display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+#FranchiseExplorerConfigPage .fx-hidden {display:none!important}
+#FranchiseExplorerConfigPage .fx-sm-pad {margin-top:4px}
+@media(max-width:900px){#FranchiseExplorerConfigPage .fx-grid{grid-template-columns:1fr}#FranchiseExplorerConfigPage .fx-sticky{position:static}#FranchiseExplorerConfigPage .fx-tree{max-height:300px}}
+@media(max-width:570px){#FranchiseExplorerConfigPage .fx-wrap{padding:16px 10px 60px}#FranchiseExplorerConfigPage .fx-panel{padding:14px}#FranchiseExplorerConfigPage .fx-artwork,#FranchiseExplorerConfigPage .fx-two{grid-template-columns:1fr}#FranchiseExplorerConfigPage h1{font-size:1.6rem}}
+</style>
+<div data-role="content" class="fx-wrap">
+  <div class="fx-heading">
+    <div>
+      <div class="fx-eyebrow">Jellyfin plugin • Early development</div>
+      <h1>Franchise Explorer <small>v0.3 preview</small></h1>
+      <p class="fx-muted">Organize virtual franchises, eras, phases and viewing references without moving media files.</p>
     </div>
   </div>
+  <div class="fx-warning" role="alert">
+    <strong>UNFINISHED PROJECT — USE WITH EXTREME CAUTION.</strong>
+    <p>Early experimental administration-only release. Existing groups from v0.2 are retained. Links are saved in plugin settings; no files or native collections are changed. Artwork previews use URLs only. There is no native Franchises category, timeline player or artwork upload yet. Back up your Jellyfin configuration before installing.</p>
+  </div>
+  <div class="fx-toolbar">
+    <div class="fx-toolbar-left">
+      <button type="button" id="fx-add-root" class="fx-btn fx-btn-primary">+ New franchise</button>
+      <button type="button" id="fx-add-child" class="fx-btn">+ Subgroup</button>
+      <button type="button" id="fx-demo" class="fx-btn">Insert example groups</button>
+    </div>
+    <div class="fx-toolbar-right">
+      <button type="button" id="fx-export" class="fx-btn">Export backup</button>
+      <button type="button" id="fx-import-button" class="fx-btn">Import backup</button>
+      <input type="file" accept="application/json,.json" id="fx-import-file" class="fx-hidden">
+      <button type="button" id="fx-reload" class="fx-btn">Discard edits</button>
+    </div>
+  </div>
+  <div class="fx-grid">
+    <aside class="fx-panel fx-sticky" aria-label="Virtual franchise hierarchy">
+      <div class="fx-panel-title"><h2>Your franchises</h2><span class="fx-counter" id="fx-tree-count">0 groups</span></div>
+      <label class="fx-field"><span>Filter groups</span><input class="fx-input" type="search" id="fx-tree-search" placeholder="Find a franchise, era or phase..." autocomplete="off"></label>
+      <div id="fx-tree" class="fx-tree" role="tree" aria-label="Franchise hierarchy"></div>
+      <div class="fx-muted">These folders are virtual references, not physical media directories.</div>
+    </aside>
+    <main class="fx-panel">
+      <div class="fx-panel-title"><h2>Group details</h2><span class="fx-counter">Editor</span></div>
+      <div id="fx-no-selection" class="fx-empty">Choose a franchise on the left, or create your first one.</div>
+      <div id="fx-selected" class="fx-hidden">
+        <div class="fx-two">
+          <label class="fx-field"><span>Name</span><input type="text" id="fx-name" maxlength="120"></label>
+          <label class="fx-field"><span>Group type</span><select id="fx-type"><option>Franchise</option><option>Era</option><option>Phase</option><option>Saga</option><option>Character</option><option>Collection</option><option>Custom</option></select></label>
+        </div>
+        <label class="fx-field"><span>Description</span><textarea id="fx-overview" rows="3" maxlength="1500" placeholder="Describe this franchise or era..."></textarea></label>
+        <label class="fx-field"><span>Sort position</span><input type="number" id="fx-sort" min="0" max="100000"></label>
+        <hr class="fx-divider">
+        <h3>Collection-style artwork</h3>
+        <p class="fx-muted fx-section-intro">Paste HTTPS or Jellyfin-relative image URLs for now. Poster, backdrop, logo, thumb and banner are stored independently for every virtual group.</p>
+        <div class="fx-artwork">
+          <div class="fx-art-preview" id="fx-primary-preview"><span class="fx-art-placeholder">No poster selected</span></div>
+          <div>
+            <label class="fx-field"><span>Primary poster URL</span><input id="fx-primary" type="text" maxlength="1000" placeholder="https://..."></label>
+            <label class="fx-field"><span>Backdrop URL</span><input id="fx-backdrop" type="text" maxlength="1000" placeholder="https://..."></label>
+            <label class="fx-field"><span>Clearlogo URL</span><input id="fx-logo" type="text" maxlength="1000" placeholder="https://..."></label>
+            <label class="fx-field"><span>Thumb / icon URL</span><input id="fx-thumb" type="text" maxlength="1000" placeholder="https://..."></label>
+            <label class="fx-field"><span>Banner URL</span><input id="fx-banner" type="text" maxlength="1000" placeholder="https://..."></label>
+          </div>
+        </div>
+        <div class="fx-row"><button type="button" id="fx-delete" class="fx-btn fx-btn-danger">Delete virtual group</button></div>
+        <hr class="fx-divider">
+        <h3>Linked Jellyfin media</h3>
+        <p class="fx-muted">Search your existing Jellyfin library and choose an item to create a reference. No movies or shows will be moved, copied, or deleted.</p>
+        <label class="fx-field"><span>Search movies, shows and episodes</span><input class="fx-input" type="search" id="fx-media-search" placeholder="Search for Thor, Andor, The Clone Wars..." autocomplete="off"></label>
+        <div class="fx-muted" id="fx-search-status" role="status">Enter at least two characters to search.</div>
+        <div id="fx-search-results" class="fx-result-list" aria-label="Matching Jellyfin items"></div>
+        <div id="fx-links" aria-label="Current virtual links" style="margin-top:14px"></div>
+        <details id="fx-manual-details" style="margin-top:14px"><summary>Advanced: manually add an item ID</summary>
+          <label class="fx-field"><span>Jellyfin item ID (GUID)</span><input id="fx-item-id" type="text" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"></label>
+          <label class="fx-field"><span>Display label</span><input id="fx-item-name" type="text" maxlength="150" placeholder="Example: Thor: Ragnarok"></label>
+          <label class="fx-field"><span>Item kind</span><select id="fx-item-type"><option>Movie</option><option>Series</option><option>Season</option><option>Episode</option><option>Collection</option></select></label>
+          <label class="fx-field"><span>Timeline name</span><input id="fx-view-order" type="text" value="Custom" maxlength="80"></label>
+          <label class="fx-field"><span>Timeline position</span><input id="fx-position" type="number" min="0" max="100000" value="0"></label>
+          <div class="fx-row"><button type="button" id="fx-add-link" class="fx-btn">Add reference by ID</button></div>
+        </details>
+      </div>
+    </main>
+  </div>
+  <section class="fx-panel fx-footer">
+    <div class="fx-two"><label class="fx-field"><span>Future navigation label</span><input type="text" id="fx-nav-label" maxlength="64" value="Franchises"></label></div>
+    <p class="fx-muted">For future development only: this setting does not yet add a new Jellyfin navigation category.</p>
+    <div class="fx-footer-actions"><button type="button" id="fx-save" class="fx-btn fx-btn-primary">Save plugin configuration</button><strong id="fx-dirty-label">No unsaved edits</strong></div>
+    <div id="fx-status" class="fx-status" role="status" aria-live="polite"></div>
+  </section>
+</div>
 <script type="text/javascript">
 (function () {
   'use strict';
@@ -107,7 +177,7 @@
   const setStatus = (message, error) => { byId('fx-status').textContent = message; byId('fx-status').style.color = error ? '#f2a49d' : ''; };
   const setDirty = value => { dirty = value; byId('fx-dirty-label').textContent = dirty ? 'Unsaved edits — remember to save' : 'No unsaved edits'; };
   const num = (v) => Number.isFinite(Number(v)) ? Math.max(0, Math.min(100000, Math.trunc(Number(v)))) : 0;
-  const artRef = v => { v = String(v || '').trim(); if (v && !(v.startsWith('https://') || v.startsWith('/'))) throw new Error('Artwork references must use HTTPS or a relative path starting with /.'); return v; };
+  const artRef = v => { v = String(v || '').trim(); if (v && !(v.startsWith('https://') || (v.startsWith('/') && !v.startsWith('//')))) throw new Error('Artwork references must use HTTPS or a relative path starting with /.'); return v; };
   function normalize(raw) {
     if (!raw || typeof raw !== 'object') throw new Error('Invalid backup format.');
     const nodes = Array.isArray(raw.Nodes) ? raw.Nodes : [];
@@ -140,43 +210,86 @@
   function children(parent) {
     return model.Nodes.filter(n => n.ParentId === parent).sort((a,b) => a.SortOrder-b.SortOrder || a.Name.localeCompare(b.Name));
   }
-  function treeNode(node, depth) {
+  function treeNode(node, depth, query) {
+    if (query && !matchesTree(node, query)) return;
     const b = document.createElement('button');
-    b.type='button'; b.className='fx-tree-item'; b.setAttribute('role','treeitem'); b.setAttribute('aria-current',String(node.Id===selected));
-    b.style.paddingLeft = (8 + depth*18)+'px';
-    b.textContent = (depth ? '↳ ' : '▣ ') + node.Name + ' ('+node.NodeType+')';
-    b.addEventListener('click', () => { selected=node.Id; render(); });
+    b.type='button'; b.className='fx-tree-item'; b.setAttribute('role','treeitem');
+    b.setAttribute('aria-current',String(node.Id===selected));
+    b.style.paddingLeft=(8 + depth*15)+'px';
+    const glyph=document.createElement('span');glyph.className='fx-tree-icon';glyph.textContent=depth?'↳':'▣';
+    const name=document.createElement('span');name.className='fx-tree-name';name.textContent=node.Name;
+    const type=document.createElement('span');type.className='fx-tree-type';type.textContent=node.NodeType;
+    b.append(glyph,name,type);
+    b.addEventListener('click', () => { selected=node.Id; searchSequence++; byId('fx-media-search').value=''; byId('fx-search-results').replaceChildren(); showSearchStatus('Enter at least two characters to search.'); render(); });
     byId('fx-tree').appendChild(b);
-    children(node.Id).forEach(x => treeNode(x,depth+1));
+    children(node.Id).forEach(x=>treeNode(x,depth+1,query));
   }
+  function matchesTree(node, query) {
+    if (!query) return true;
+    if (node.Name.toLowerCase().includes(query)||node.NodeType.toLowerCase().includes(query)) return true;
+    return children(node.Id).some(c=>matchesTree(c,query));
+  }
+  function renderTree() {
+    const tree=byId('fx-tree');tree.replaceChildren();
+    const query=(byId('fx-tree-search').value||'').trim().toLowerCase();
+    children('').forEach(n=>treeNode(n,0,query));
+    if(!tree.children.length){const p=document.createElement('p');p.className='fx-empty';p.textContent=model.Nodes.length?'No matching groups.':'No franchises yet.';tree.appendChild(p);}
+    byId('fx-tree-count').textContent=model.Nodes.length+' groups · '+model.MediaLinks.length+' links';
+  }
+  function setPreview(url) {
+    const container=byId('fx-primary-preview');container.replaceChildren();
+    if(!url || !validArtworkPreview(url)) {
+      const el=document.createElement('span');el.className='fx-art-placeholder';el.textContent=url?'Preview unavailable for this URL':'No poster selected';container.appendChild(el);return;
+    }
+    const im=document.createElement('img');im.loading='lazy';im.referrerPolicy='no-referrer';im.alt='Virtual group poster preview';
+    im.addEventListener('error',()=>{container.replaceChildren();const p=document.createElement('span');p.className='fx-art-placeholder';p.textContent='Unable to load poster preview';container.appendChild(p);});
+    im.src=url;container.appendChild(im);
+  }
+  function validArtworkPreview(url) {return /^https:\/\/[^\s]+$/i.test(url) || (url.startsWith('/') && !url.startsWith('//'));}
   function render() {
-    const tree=byId('fx-tree'); tree.replaceChildren();
-    children('').forEach(n=>treeNode(n,0));
-    byId('fx-tree-count').textContent = model.Nodes.length + ' groups · ' + model.MediaLinks.length + ' virtual links';
+    renderTree();
     const node = model.Nodes.find(n=>n.Id===selected);
     byId('fx-selected').classList.toggle('fx-hidden',!node);
     byId('fx-no-selection').classList.toggle('fx-hidden',!!node);
     byId('fx-add-child').disabled=!node;
     byId('fx-nav-label').value=model.NavigationLabel;
-    if (!node) return;
+    if (!node) {setPreview('');return;}
     byId('fx-name').value=node.Name;
     byId('fx-type').value=node.NodeType;
     byId('fx-overview').value=node.Overview;
     byId('fx-sort').value=node.SortOrder;
     for (const [id,key] of [['fx-primary','PrimaryUrl'],['fx-backdrop','BackdropUrl'],['fx-logo','LogoUrl'],['fx-thumb','ThumbUrl'],['fx-banner','BannerUrl']]) byId(id).value=node.Artwork[key] || '';
+    setPreview(node.Artwork.PrimaryUrl || '');
     renderLinks(node.Id);
   }
   function renderLinks(nodeId) {
-    const container=byId('fx-links'); container.replaceChildren();
+    const container=byId('fx-links');container.replaceChildren();
     const links=model.MediaLinks.filter(l=>l.NodeId===nodeId).sort((a,b)=>a.ViewingOrder.localeCompare(b.ViewingOrder)||a.Position-b.Position);
-    if (!links.length) { const p=document.createElement('p');p.className='fx-muted';p.textContent='No media references yet.';container.appendChild(p); }
+    const title=document.createElement('h3');title.textContent='Current references ('+links.length+')';container.appendChild(title);
+    if(!links.length){const p=document.createElement('p');p.className='fx-muted';p.textContent='No media linked to this group yet.';container.appendChild(p);}
     links.forEach(l=>{
       const item=document.createElement('div');item.className='fx-link';
-      const text=document.createElement('div');text.textContent=(l.DisplayName||l.JellyfinItemId)+' · '+l.ItemType+' · '+l.ViewingOrder+' #'+l.Position;
-      const button=document.createElement('button');button.type='button';button.textContent='Remove link';
-      button.addEventListener('click',()=>{if(!confirm('Remove this virtual link only? Original media will not be changed.')) return;model.MediaLinks=model.MediaLinks.filter(x=>x.Id!==l.Id);setDirty(true);render();});
-      item.append(text,button);container.appendChild(item);
+      const label=document.createElement('div');
+      const name=document.createElement('strong');name.textContent=l.DisplayName||l.JellyfinItemId;
+      const details=document.createElement('small');details.textContent=l.ItemType+' · '+l.ViewingOrder+' · position '+l.Position;
+      label.append(name,details);
+      const actions=document.createElement('div');actions.className='fx-link-actions';
+      const minus=document.createElement('button');minus.type='button';minus.className='fx-btn fx-btn-small';minus.textContent='↑ Earlier';
+      minus.addEventListener('click',()=>moveLink(l,-1,nodeId));
+      const plus=document.createElement('button');plus.type='button';plus.className='fx-btn fx-btn-small';plus.textContent='↓ Later';
+      plus.addEventListener('click',()=>moveLink(l,1,nodeId));
+      const remove=document.createElement('button');remove.type='button';remove.className='fx-btn fx-btn-small fx-btn-danger';remove.textContent='Remove';
+      remove.addEventListener('click',()=>{if(!confirm('Remove this virtual link only? Original media will not be changed.'))return;model.MediaLinks=model.MediaLinks.filter(x=>x.Id!==l.Id);setDirty(true);render();});
+      actions.append(minus,plus,remove);item.append(label,actions);container.appendChild(item);
     });
+  }
+  function moveLink(link,direction,nodeId) {
+    const ordered=model.MediaLinks.filter(l=>l.NodeId===nodeId&&l.ViewingOrder===link.ViewingOrder).sort((a,b)=>a.Position-b.Position||a.DisplayName.localeCompare(b.DisplayName));
+    const index=ordered.findIndex(l=>l.Id===link.Id);const swap=index+direction;
+    if(index<0||swap<0||swap>=ordered.length)return;
+    [ordered[index],ordered[swap]]=[ordered[swap],ordered[index]];
+    ordered.forEach((l,i)=>{l.Position=i+1;});
+    setDirty(true);renderLinks(nodeId);
   }
   function edit(field,value) {
     const node=model.Nodes.find(n=>n.Id===selected);
@@ -184,11 +297,13 @@
     if (field.startsWith('Artwork.')) node.Artwork[field.split('.')[1]]=value;
     else node[field]=value;
     setDirty(true);
-    if (field==='Name'||field==='NodeType'||field==='SortOrder') { const old=selected;render();selected=old; }
+    if (field==='Name'||field==='NodeType'||field==='SortOrder') renderTree(); if(field==='Artwork.PrimaryUrl')setPreview(value);
   }
   for(const [id,key] of [['fx-name','Name'],['fx-type','NodeType'],['fx-overview','Overview'],['fx-sort','SortOrder'],['fx-primary','Artwork.PrimaryUrl'],['fx-backdrop','Artwork.BackdropUrl'],['fx-logo','Artwork.LogoUrl'],['fx-thumb','Artwork.ThumbUrl'],['fx-banner','Artwork.BannerUrl']]) {
     byId(id).addEventListener('change',e=>edit(key,key==='SortOrder'?num(e.target.value):e.target.value));
   }
+  byId('fx-tree-search').addEventListener('input',renderTree);
+  byId('fx-primary').addEventListener('input',e=>setPreview(e.target.value.trim()));
   byId('fx-nav-label').addEventListener('change',e=>{model.NavigationLabel=e.target.value;setDirty(true);});
   function addNode(parent, name, type) {
     if(model.Nodes.length >= 250) throw new Error('Preview group limit reached.');
@@ -234,6 +349,7 @@
   byId('fx-reload').addEventListener('click',()=>{if(!dirty||confirm('Discard all unsaved franchise edits?'))load();});
   byId('fx-demo').addEventListener('click',()=>{
     if(model.Nodes.length && !confirm('Append sample franchises to your existing virtual groups?')) return;
+    if(model.Nodes.some(n=>n.Name==='Star Wars' && !n.ParentId)){setStatus('Star Wars already exists; example groups were not duplicated.');return;}
     const sw=addNode('','Star Wars','Franchise');addNode(sw.Id,'Fall of the Jedi','Era');addNode(sw.Id,'Reign of the Empire','Era');
     const mcu=addNode('','Marvel Cinematic Universe','Franchise');addNode(mcu.Id,'Phase One','Phase');addNode(mcu.Id,'Phase Two','Phase');addNode(mcu.Id,'Thor Collection','Character');
     setStatus('Example folders inserted locally. Click Save to persist.');
@@ -258,10 +374,71 @@
       model=imported;selected='';setDirty(true);render();setStatus('Backup loaded locally; click Save to persist.');
     } catch(err) {setStatus('Import rejected: '+(err.message||err),true);} finally{e.target.value='';}
   });
+
+  // All queries use Jellyfin's authenticated ApiClient. No external service or background scan.
+  let searchSequence=0;
+  let searchTimer=null;
+  function showSearchStatus(message,error) {const el=byId('fx-search-status');el.textContent=message;el.style.color=error?'#ffa0a0':'';}
+  function mediaImageUrl(item) {
+    if (!item || !item.ImageTags || !item.ImageTags.Primary || typeof ApiClient.getImageUrl!=='function') return '';
+    try{return ApiClient.getImageUrl(item.Id,{type:'Primary',maxWidth:90});}catch(_){return '';}
+  }
+  function addResult(item) {
+    if(!selected){setStatus('Select a franchise or subgroup first.',true);return;}
+    if(!validGuid(String(item.Id||''))){setStatus('Selected media has no valid Jellyfin item ID.',true);return;}
+    if(model.MediaLinks.some(l=>l.NodeId===selected&&l.JellyfinItemId.toLowerCase()===item.Id.toLowerCase())){
+      setStatus('This group already links to that media item.',true);return;
+    }
+    if(model.MediaLinks.length>=3000){setStatus('Preview link limit reached.',true);return;}
+    const position=model.MediaLinks.filter(l=>l.NodeId===selected&&l.ViewingOrder==='Custom').reduce((m,l)=>Math.max(m,num(l.Position)),0)+1;
+    model.MediaLinks.push({Id:guid(),NodeId:selected,JellyfinItemId:item.Id,DisplayName:String(item.Name||'Untitled').slice(0,150),ItemType:item.Type||'Movie',ViewingOrder:'Custom',Position:position});
+    setDirty(true);renderLinks(selected);renderTree();setStatus('Linked '+(item.Name||'media item')+' virtually. Click Save to persist.');
+  }
+  function renderResults(items){
+    const results=byId('fx-search-results');results.replaceChildren();
+    if(!items.length){showSearchStatus('No matching media found. Try another title.');return;}
+    showSearchStatus('Showing '+items.length+' matching item(s). Click an item to link it.');
+    items.forEach(item=>{
+      const b=document.createElement('button');b.type='button';b.className='fx-result';
+      const imageUrl=mediaImageUrl(item);
+      if(imageUrl){const img=document.createElement('img');img.loading='lazy';img.alt='';img.src=imageUrl;b.appendChild(img);}
+      else{const symbol=document.createElement('span');symbol.className='fx-thumb-placeholder';symbol.textContent='▶';b.appendChild(symbol);}
+      const info=document.createElement('span');info.className='fx-result-info';
+      const label=document.createElement('strong');label.textContent=item.Name||'Untitled';
+      const meta=document.createElement('small');meta.textContent=[item.Type,item.ProductionYear].filter(Boolean).join(' · ');
+      info.append(label,meta);b.appendChild(info);
+      const plus=document.createElement('span');plus.textContent='+ Link';b.appendChild(plus);
+      b.addEventListener('click',()=>addResult(item));results.appendChild(b);
+    });
+  }
+  async function searchMedia(query,sequence){
+    if(!selected){showSearchStatus('Select a franchise or subgroup first.');return;}
+    showSearchStatus('Searching your Jellyfin library...');
+    const params={searchTerm:query,recursive:true,includeItemTypes:'Movie,Series,Season,Episode,BoxSet',limit:25,startIndex:0,enableImages:true,enableTotalRecordCount:false};
+    try{
+      const userId=typeof ApiClient.getCurrentUserId==='function'?ApiClient.getCurrentUserId():undefined;
+      let result;
+      if(typeof ApiClient.getItems==='function')result=await ApiClient.getItems(userId,params);
+      else if(typeof ApiClient.getJSON==='function' && typeof ApiClient.getUrl==='function')result=await ApiClient.getJSON(ApiClient.getUrl('Items',{...params,userId}));
+      else throw new Error('Jellyfin API search is unavailable in this client.');
+      if(sequence!==searchSequence)return; // stale results must never override newer searches.
+      renderResults(Array.isArray(result&&result.Items)?result.Items:[]);
+    }catch(err){
+      if(sequence!==searchSequence)return;
+      byId('fx-search-results').replaceChildren();
+      showSearchStatus('Search failed: '+(err.message||err)+' — manual ID entry remains available.',true);
+    }
+  }
+  byId('fx-media-search').addEventListener('input',e=>{
+    const query=e.target.value.trim();const seq=++searchSequence;
+    if(searchTimer)clearTimeout(searchTimer);
+    byId('fx-search-results').replaceChildren();
+    if(query.length<2){showSearchStatus('Enter at least two characters to search.');return;}
+    searchTimer=setTimeout(()=>searchMedia(query,seq),380);
+  });
+
   page.addEventListener('pageshow',load);
   if(!page.classList.contains('hide')) load();
 })();
 </script>
-</div>
-</body>
-</html>
+</div></body></html>

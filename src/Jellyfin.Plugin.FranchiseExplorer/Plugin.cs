@@ -28,7 +28,7 @@ public sealed class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     public override Guid Id => PluginId;
 
     public override string Description =>
-        "Experimental virtual franchise organizer (configuration-only preview).";
+        "Experimental virtual franchise editor with media search and artwork previews.";
 
     public IEnumerable<PluginPageInfo> GetPages()
     {

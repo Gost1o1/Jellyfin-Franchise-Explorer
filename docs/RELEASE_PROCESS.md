@@ -13,7 +13,7 @@ Open **Actions → Build and validate**. A green run indicates a successful .NET
 ## Controlled pre-release (only after isolated testing)
 
 1. Open **Actions → Publish experimental release (manual approval only)**.
-2. Select **Run workflow**, main branch, version `0.2.0.0` and enter exactly `RELEASE_EXPERIMENTAL` in the confirmation field.
+2. Select **Run workflow**, main branch, version `0.3.0.0` and enter exactly `RELEASE_EXPERIMENTAL` in the confirmation field.
 3. The workflow builds the DLL, packages a minimal ZIP, makes a GitHub **prerelease**, then computes its Jellyfin-compatible checksum and commits the updated `manifest.json`.
 4. Verify the release asset, the manifest's `sourceUrl` and `checksum`, and that GitHub Actions was successful.
 5. Copy the Jellyfin repository URL only after that: `https://raw.githubusercontent.com/Gost1o1/Jellyfin-Franchise-Explorer/main/manifest.json`.
@@ -27,3 +27,5 @@ Until then, `manifest.json` is intentionally `[]`, so the Jellyfin Catalog corre
 - Do not publish merely because a build passes. First test loading on an isolated Jellyfin 12.2 instance.
 - GitHub Actions needs repository Actions enabled and workflow `contents: write` permission to commit the manifest and publish a release.
 - Prerelease visibility/installation behavior may vary by client; verify in a disposable environment.
+
+**v0.3 specific:** Keep the existing v0.2 manifest entry; do not replace `manifest.json` with `[]`. Run the UI contract test with `node scripts/ui_contract_tests.js`.
