@@ -1,0 +1,84 @@
+
+name: Publish experimental release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version'
+        required: true
+        default: '0.2.0.0'
+        type: string
+      confirm:
+        description: 'Type RELEASE_EXPERIMENTAL to publish'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: franchise-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main' && inputs.confirm == 'RELEASE_EXPERIMENTAL'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Validate repository and version
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          python3 scripts/check_repo.py
+          python3 scripts/smoke_tests.py
+          python3 scripts/check_version.py "$RELEASE_VERSION"
+
+      - name: Build plugin
+        run: |
+          dotnet restore src/Jellyfin.Plugin.FranchiseExplorer/Jellyfin.Plugin.FranchiseExplorer.csproj
+          dotnet build src/Jellyfin.Plugin.FranchiseExplorer/Jellyfin.Plugin.FranchiseExplorer.csproj -c Release --no-restore
+
+      - name: Package plugin
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          mkdir -p dist
+          cd src/Jellyfin.Plugin.FranchiseExplorer/bin/Release/net10.0
+          zip -j "$GITHUB_WORKSPACE/dist/franchise-explorer_${RELEASE_VERSION}.zip" Jellyfin.Plugin.FranchiseExplorer.dll
+
+      - name: Publish GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          gh release create "v${RELEASE_VERSION}" "dist/franchise-explorer_${RELEASE_VERSION}.zip" \
+            --prerelease \
+            --title "Franchise Explorer ${RELEASE_VERSION} (EXPERIMENTAL)" \
+            --notes "Unfinished experimental plugin for Jellyfin 12.x. Use with extreme caution. Back up your Jellyfin server before installing."
+
+      - name: Generate Jellyfin manifest
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          python3 scripts/publish_manifest.py \
+            --version "$RELEASE_VERSION" \
+            --archive "dist/franchise-explorer_${RELEASE_VERSION}.zip" \
+            --repository "$GITHUB_REPOSITORY"
+
+      - name: Commit manifest
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add manifest.json
+          git commit -m "Publish experimental Jellyfin catalog release"
+          git push origin HEAD:main
