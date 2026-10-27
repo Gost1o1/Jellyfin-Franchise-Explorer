@@ -15,4 +15,11 @@ public sealed class MediaLink
     public string ItemType { get; set; } = "Movie";
     public string ViewingOrder { get; set; } = "Custom";
     public int Position { get; set; }
+
+    /// <summary>Full, Seasons or Episodes. Range entries reference an existing TV show and are metadata-only for now.</summary>
+    public string RangeMode { get; set; } = "Full";
+    public int StartSeason { get; set; }
+    public int EndSeason { get; set; }
+    public int StartEpisode { get; set; }
+    public int EndEpisode { get; set; }
 }

@@ -5,9 +5,9 @@
 <div id="FranchiseExplorerConfigPage" data-role="page" class="page type-interior pluginConfigurationPage">
 <style id="fx-live-css">
 /* All visual styles are inside the loaded page, not <head> (which Jellyfin may discard). */
-#FranchiseExplorerConfigPage { --fx-card: #202328; --fx-border: rgba(180,191,206,.2); --fx-text: #edf0f3; --fx-muted: #a9b4c1; --fx-accent: #11b3c8; color:var(--fx-text); width:100%; box-sizing:border-box; }
+#FranchiseExplorerConfigPage { --fx-card: #202328; --fx-border: rgba(180,191,206,.2); --fx-text: #edf0f3; --fx-muted: #a9b4c1; --fx-accent: #11b3c8; color:var(--fx-text); width:100%!important; max-width:100%!important; min-width:0!important; padding:0!important; box-sizing:border-box; overflow-x:clip; }
 #FranchiseExplorerConfigPage * {box-sizing:border-box}
-#FranchiseExplorerConfigPage .fx-wrap {max-width:1370px;margin:0 auto;padding:22px 24px 90px}
+#FranchiseExplorerConfigPage .fx-wrap {width:100%!important;max-width:1370px!important;min-width:0;margin-inline:auto!important;padding:22px clamp(12px,2vw,24px) 90px;box-sizing:border-box;container-type:inline-size}
 #FranchiseExplorerConfigPage .fx-heading {display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;margin:0 0 18px}
 #FranchiseExplorerConfigPage .fx-eyebrow {text-transform:uppercase;letter-spacing:.13em;color:var(--fx-accent);font-size:.73rem;font-weight:750}
 #FranchiseExplorerConfigPage h1 {font-size:2rem;line-height:1.18;margin:4px 0 8px;font-weight:750}
@@ -19,7 +19,7 @@
 #FranchiseExplorerConfigPage .fx-warning {border-left:4px solid #e4af47;border-radius:9px;padding:12px 16px;margin:0 0 18px;background:rgba(228,175,71,.10);font-size:.9rem}
 #FranchiseExplorerConfigPage .fx-warning strong {color:#ffd88a}
 #FranchiseExplorerConfigPage .fx-warning p {margin:4px 0 0;color:#d8d9dc}
-#FranchiseExplorerConfigPage .fx-toolbar {display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:0 0 18px}
+#FranchiseExplorerConfigPage .fx-toolbar {width:100%;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:0 0 18px}
 #FranchiseExplorerConfigPage .fx-toolbar-left, #FranchiseExplorerConfigPage .fx-toolbar-right {display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 #FranchiseExplorerConfigPage button {font:inherit;cursor:pointer}
 #FranchiseExplorerConfigPage .fx-btn {background:#30363e!important;color:#f5f5f5!important;border:1px solid #58616d!important;border-radius:8px!important;padding:9px 13px!important;font-size:.88rem!important;font-weight:600!important;min-height:39px}
@@ -30,8 +30,8 @@
 #FranchiseExplorerConfigPage .fx-btn-primary:hover {background:#1fc0d3!important}
 #FranchiseExplorerConfigPage .fx-btn-danger {border-color:rgba(248,105,105,.35)!important;color:#ffadad!important;background:rgba(192,55,55,.12)!important}
 #FranchiseExplorerConfigPage .fx-btn-small {padding:6px 10px!important;min-height:32px;font-size:.79rem!important}
-#FranchiseExplorerConfigPage .fx-grid {display:grid;grid-template-columns:minmax(280px, 340px) minmax(0,1fr);gap:18px;align-items:start}
-#FranchiseExplorerConfigPage .fx-panel {background:var(--fx-card);border:1px solid var(--fx-border);border-radius:12px;padding:22px;min-width:0;box-shadow:0 5px 20px rgba(0,0,0,.08)}
+#FranchiseExplorerConfigPage .fx-grid {width:100%;min-width:0;max-width:100%;display:grid;grid-template-columns:minmax(280px, 340px) minmax(0,1fr);gap:18px;align-items:start}
+#FranchiseExplorerConfigPage .fx-panel {max-width:100%;overflow-wrap:anywhere;background:var(--fx-card);border:1px solid var(--fx-border);border-radius:12px;padding:22px;min-width:0;box-shadow:0 5px 20px rgba(0,0,0,.08)}
 #FranchiseExplorerConfigPage .fx-sticky {position:sticky;top:16px}
 #FranchiseExplorerConfigPage .fx-panel-title {display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
 #FranchiseExplorerConfigPage .fx-counter {font-size:.78rem;padding:4px 8px;border-radius:20px;background:rgba(166,184,205,.13);color:var(--fx-muted)}
@@ -59,6 +59,16 @@
 #FranchiseExplorerConfigPage .fx-mini-art {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
 #FranchiseExplorerConfigPage .fx-mini-art img {width:100%;height:80px;object-fit:cover;border:1px solid #57616b;border-radius:7px;background:#161b20}
 #FranchiseExplorerConfigPage .fx-section-intro {margin:0 0 15px}
+#FranchiseExplorerConfigPage .fx-tree-item[draggable="true"] {cursor:grab}
+#FranchiseExplorerConfigPage .fx-tree-item.fx-dragging {opacity:.4}
+#FranchiseExplorerConfigPage .fx-tree-item.fx-drop-before {box-shadow:inset 0 3px 0 #11b3c8}
+#FranchiseExplorerConfigPage .fx-tree-item.fx-drop-after {box-shadow:inset 0 -3px 0 #11b3c8}
+#FranchiseExplorerConfigPage .fx-tree-item.fx-drop-inside {outline:2px dashed #11b3c8;outline-offset:-2px}
+#FranchiseExplorerConfigPage .fx-action-head {display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin:0 0 12px}
+#FranchiseExplorerConfigPage .fx-scope {background:#152730;border:1px solid #42606a;border-radius:8px;padding:11px 13px;margin:12px 0;color:#c1e4e9}
+#FranchiseExplorerConfigPage .fx-tv-range {border:1px solid #547080;border-radius:10px;padding:14px;margin:12px 0;background:#18252b}
+#FranchiseExplorerConfigPage .fx-range-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#FranchiseExplorerConfigPage .fx-range-grid .fx-field {margin:4px 0}
 #FranchiseExplorerConfigPage .fx-result-list {display:flex;flex-direction:column;gap:5px;max-height:300px;overflow-y:auto}
 #FranchiseExplorerConfigPage .fx-result {display:flex;align-items:center;gap:12px;background:rgba(154,178,196,.07);border:1px solid rgba(175,195,210,.16);border-radius:7px;padding:8px;text-align:left;color:#f1f6fa;width:100%}
 #FranchiseExplorerConfigPage .fx-result:hover {background:rgba(65,183,202,.18);border-color:rgba(65,183,202,.45)}
@@ -67,10 +77,10 @@
 #FranchiseExplorerConfigPage .fx-result-info {flex:1;min-width:0}
 #FranchiseExplorerConfigPage .fx-result-info strong {display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #FranchiseExplorerConfigPage .fx-result-info small {display:block;color:#abb9c5;margin-top:4px}
-#FranchiseExplorerConfigPage .fx-link {border-top:1px solid var(--fx-border);padding:11px 0;display:flex;gap:12px;align-items:center;justify-content:space-between}
+#FranchiseExplorerConfigPage .fx-link {min-width:0;border-top:1px solid var(--fx-border);padding:11px 0;display:flex;gap:12px;align-items:center;justify-content:space-between}
 #FranchiseExplorerConfigPage .fx-link strong {font-size:.88rem}
 #FranchiseExplorerConfigPage .fx-link small {color:#b0bbc8;display:block;margin-top:5px}
-#FranchiseExplorerConfigPage .fx-link-actions {display:flex;flex-direction:column;gap:5px}
+#FranchiseExplorerConfigPage .fx-link-actions {display:flex;flex-direction:row;gap:5px;flex-wrap:wrap;justify-content:flex-end}
 #FranchiseExplorerConfigPage .fx-status {border-radius:8px;background:rgba(77,150,184,.12);padding:10px 12px;margin:12px 0 0;min-height:40px;font-size:.87rem}
 #FranchiseExplorerConfigPage .fx-footer {margin-top:20px}
 #FranchiseExplorerConfigPage .fx-footer-actions {display:flex;gap:12px;flex-wrap:wrap;align-items:center}
@@ -85,10 +95,36 @@
 #FranchiseExplorerConfigPage .fx-selection-actions {display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0}
 #FranchiseExplorerConfigPage .fx-result-check {width:19px;height:19px;flex-shrink:0;accent-color:#11b3c8}
 
-@media(max-width:900px){#FranchiseExplorerConfigPage .fx-grid{grid-template-columns:1fr}#FranchiseExplorerConfigPage .fx-sticky{position:static}#FranchiseExplorerConfigPage .fx-tree{max-height:300px}}
-@media(max-width:570px){#FranchiseExplorerConfigPage .fx-wrap{padding:16px 10px 60px}#FranchiseExplorerConfigPage .fx-panel{padding:14px}#FranchiseExplorerConfigPage .fx-artwork,#FranchiseExplorerConfigPage .fx-two{grid-template-columns:1fr}#FranchiseExplorerConfigPage h1{font-size:1.6rem}}
+/* The Jellyfin dashboard can constrain a plugin page independently of viewport width.
+   Container queries follow the width ACTUALLY available to the editor. */
+@container (max-width: 1120px) {
+  #FranchiseExplorerConfigPage .fx-grid { grid-template-columns:minmax(0,1fr); }
+  #FranchiseExplorerConfigPage .fx-sticky { position:static; }
+  #FranchiseExplorerConfigPage .fx-tree { max-height:340px; }
+}
+@container (max-width: 740px) {
+  #FranchiseExplorerConfigPage .fx-two,
+  #FranchiseExplorerConfigPage .fx-artwork,
+  #FranchiseExplorerConfigPage .fx-image-grid { grid-template-columns:minmax(0,1fr); }
+  #FranchiseExplorerConfigPage .fx-link { flex-wrap:wrap; }
+  #FranchiseExplorerConfigPage .fx-link-actions { justify-content:flex-start; }
+  #FranchiseExplorerConfigPage .fx-toolbar-left,
+  #FranchiseExplorerConfigPage .fx-toolbar-right { width:100%; }
+  #FranchiseExplorerConfigPage .fx-panel { padding:16px; }
+}
+@container (max-width: 480px) {
+  #FranchiseExplorerConfigPage .fx-range-grid { grid-template-columns:minmax(0,1fr); }
+  #FranchiseExplorerConfigPage .fx-toolbar .fx-btn { flex:1 1 auto; }
+  #FranchiseExplorerConfigPage .fx-panel { padding:12px; }
+  #FranchiseExplorerConfigPage h1 { font-size:1.55rem; }
+  #FranchiseExplorerConfigPage .fx-image-tile { padding:10px; }
+}
+/* Fallback for WebViews without CSS container queries. */
+@media(max-width:1150px){#FranchiseExplorerConfigPage .fx-grid{grid-template-columns:minmax(0,1fr)}#FranchiseExplorerConfigPage .fx-sticky{position:static}}
+@media(max-width:690px){#FranchiseExplorerConfigPage .fx-artwork,#FranchiseExplorerConfigPage .fx-two,#FranchiseExplorerConfigPage .fx-image-grid{grid-template-columns:minmax(0,1fr)}#FranchiseExplorerConfigPage .fx-link{flex-wrap:wrap}#FranchiseExplorerConfigPage .fx-link-actions{justify-content:flex-start}}
+@media(max-width:570px){#FranchiseExplorerConfigPage .fx-wrap{padding:16px 10px 60px}#FranchiseExplorerConfigPage .fx-panel{padding:12px}#FranchiseExplorerConfigPage h1{font-size:1.55rem}}
 
-#FranchiseExplorerConfigPage .fx-image-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+#FranchiseExplorerConfigPage .fx-image-grid{min-width:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
 #FranchiseExplorerConfigPage .fx-image-tile{border:1px solid var(--fx-border);border-radius:10px;padding:13px;min-width:0;background:rgba(0,0,0,.08)}
 #FranchiseExplorerConfigPage .fx-image-tile h4{margin:0 0 8px;font-size:.91rem;font-weight:650}
 #FranchiseExplorerConfigPage .fx-image-display{height:118px;display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px dashed #516072;border-radius:7px;background:#171d24;color:var(--fx-muted);font-size:.8rem}
@@ -101,13 +137,13 @@
   <div class="fx-heading">
     <div>
       <div class="fx-eyebrow">Jellyfin plugin • Early development</div>
-      <h1>Franchise Explorer <small>v0.5 preview</small></h1>
+      <h1>Franchise Explorer <small>v0.6.1 preview</small></h1>
       <p class="fx-muted">Organize virtual franchises, eras, phases and viewing references without moving media files.</p>
     </div>
   </div>
   <div class="fx-warning" role="alert">
     <strong>UNFINISHED PROJECT — USE WITH EXTREME CAUTION.</strong>
-    <p>Experimental administration editor. Franchise artwork inherits existing Jellyfin images unless a custom override is uploaded. Connecting/importing existing collections creates virtual links only; original media and native collections stay untouched. There is no native Franchises navigation or timeline player. Back up Jellyfin before installing.</p>
+    <p>Experimental administration editor. Franchise artwork inherits existing Jellyfin images unless a custom override is uploaded. Connecting/importing existing collections creates virtual links only; original media and native collections stay untouched. There is no native Franchises navigation or timeline player; TV Show ranges are saved as virtual metadata only. Back up Jellyfin before installing.</p>
   </div>
   <div class="fx-toolbar">
     <div class="fx-toolbar-left">
@@ -127,12 +163,18 @@
       <div class="fx-panel-title"><h2>Your franchises</h2><span class="fx-counter" id="fx-tree-count">0 groups</span></div>
       <label class="fx-field"><span>Filter groups</span><input class="fx-input" type="search" id="fx-tree-search" placeholder="Find a franchise, era or phase..." autocomplete="off"></label>
       <div id="fx-tree" class="fx-tree" role="tree" aria-label="Franchise hierarchy"></div>
-      <div class="fx-muted">These folders are virtual references, not physical media directories.</div>
+      <div class="fx-muted">Drag a group above, below, or onto another group to reorder or nest it. Save to keep the new positions. These folders do not move media files.</div>
     </aside>
     <main class="fx-panel">
       <div class="fx-panel-title"><h2>Group details</h2><span class="fx-counter">Editor</span></div>
+      <div class="fx-action-head fx-hidden" id="fx-group-actions">
+        <button type="button" id="fx-move-up" class="fx-btn fx-btn-small">↑ Move up</button>
+        <button type="button" id="fx-move-down" class="fx-btn fx-btn-small">↓ Move down</button>
+        <button type="button" id="fx-delete" class="fx-btn fx-btn-small fx-btn-danger">Delete virtual group</button>
+      </div>
       <div id="fx-no-selection" class="fx-empty">Choose a franchise on the left, or create your first one.</div>
       <div id="fx-selected" class="fx-hidden">
+        <div id="fx-artwork-scope" class="fx-scope">Artwork belongs to the selected group only.</div>
         <div class="fx-two">
           <label class="fx-field"><span>Name</span><input type="text" id="fx-name" maxlength="120"></label>
           <label class="fx-field"><span>Group type</span><select id="fx-type"><option>Franchise</option><option>Era</option><option>Phase</option><option>Saga</option><option>Character</option><option>Collection</option><option>Custom</option></select></label>
@@ -153,7 +195,7 @@
         <div class="fx-collection-results" id="fx-collection-results"></div>
         <hr class="fx-divider">
         <h3>Edit Images</h3>
-        <p class="fx-muted fx-section-intro">Images are inherited automatically from an associated Jellyfin collection, parent group, or linked media. You can upload a separate image (JPG, PNG or WebP, max 8 MB) to override any individual slot. Click Restore inherited to remove its override. Existing Jellyfin images and media folders remain unchanged.</p>
+        <p class="fx-muted fx-section-intro">Each image belongs to the currently selected franchise or subgroup. Images are inherited automatically from an associated Jellyfin collection, parent group, or linked media. You can upload a separate image (JPG, PNG or WebP, max 8 MB) to override any individual slot. Click Restore inherited to remove its override. Existing Jellyfin images and media folders remain unchanged.</p>
         <div class="fx-image-grid">
           <div class="fx-image-tile" data-slot="primary">
             <h4>Primary poster</h4>
@@ -207,11 +249,10 @@
           </div>
         </div>
         <p class="fx-muted">An override takes priority over any inherited image. Restoring inheritance never changes the Jellyfin source image; uploaded file bytes may remain in plugin storage until cleaned up.</p>
-        <div class="fx-row"><button type="button" id="fx-delete" class="fx-btn fx-btn-danger">Delete virtual group</button></div>
         <hr class="fx-divider">
         <h3>Linked Jellyfin media</h3>
-        <p class="fx-muted">Search your existing Jellyfin library and choose an item to create a reference. No movies or shows will be moved, copied, or deleted.</p>
-        <label class="fx-field"><span>Search movies, shows and episodes</span><input class="fx-input" type="search" id="fx-media-search" placeholder="Search for Thor, Andor, The Clone Wars..." autocomplete="off"></label>
+        <p class="fx-muted">Search your existing Jellyfin library and choose an item to create a reference. For TV shows, choose a complete show or specify a season/episode range. No movies or shows will be moved, copied, or deleted.</p>
+        <label class="fx-field"><span>Search movies, TV shows and episodes</span><input class="fx-input" type="search" id="fx-media-search" placeholder="Search for Thor, Andor, The Clone Wars..." autocomplete="off"></label>
         <div class="fx-muted" id="fx-search-status" role="status">Enter at least two characters to search.</div>
         <div id="fx-search-results" class="fx-result-list" aria-label="Matching Jellyfin items"></div>
         <div class="fx-selection-actions">
@@ -219,11 +260,27 @@
           <button type="button" class="fx-btn fx-btn-small" id="fx-clear-results">Clear selection</button>
           <button type="button" class="fx-btn fx-btn-small fx-btn-primary" id="fx-add-selected-results" disabled>Add selected media (0)</button>
         </div>
+        <div id="fx-tv-range" class="fx-tv-range fx-hidden">
+          <h3 id="fx-range-title">Add TV Show range</h3>
+          <p class="fx-muted">Create a virtual reference to seasons or episodes within a TV show. This does not currently create a playable timeline or alter Jellyfin episodes.</p>
+          <label class="fx-field"><span>Range type</span><select id="fx-range-mode"><option value="Seasons">Whole seasons</option><option value="Episodes">Specific episodes</option></select></label>
+          <div class="fx-range-grid">
+            <label class="fx-field"><span>From season</span><input type="number" min="0" max="999" step="1" id="fx-start-season" value="1"></label>
+            <label class="fx-field"><span>To season</span><input type="number" min="0" max="999" step="1" id="fx-end-season" value="1"></label>
+            <label class="fx-field fx-episode-field fx-hidden"><span>From episode</span><input type="number" min="1" max="999" step="1" id="fx-start-episode" value="1"></label>
+            <label class="fx-field fx-episode-field fx-hidden"><span>To episode</span><input type="number" min="1" max="999" step="1" id="fx-end-episode" value="1"></label>
+          </div>
+          <div class="fx-row">
+            <button type="button" class="fx-btn fx-btn-small fx-btn-primary" id="fx-save-range">Add TV Show range</button>
+            <button type="button" class="fx-btn fx-btn-small" id="fx-cancel-range">Cancel</button>
+          </div>
+          <div class="fx-muted">Ranges are virtual annotations. Check the chosen season/episode numbers against Jellyfin before saving.</div>
+        </div>
         <div id="fx-links" aria-label="Current virtual links" style="margin-top:14px"></div>
         <details id="fx-manual-details" style="margin-top:14px"><summary>Advanced: manually add an item ID</summary>
           <label class="fx-field"><span>Jellyfin item ID (GUID)</span><input id="fx-item-id" type="text" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"></label>
           <label class="fx-field"><span>Display label</span><input id="fx-item-name" type="text" maxlength="150" placeholder="Example: Thor: Ragnarok"></label>
-          <label class="fx-field"><span>Item kind</span><select id="fx-item-type"><option>Movie</option><option>Series</option><option>Season</option><option>Episode</option><option>Collection</option></select></label>
+          <label class="fx-field"><span>Item kind</span><select id="fx-item-type"><option>Movie</option><option value="Series">TV Show</option><option>Season</option><option>Episode</option><option>Collection</option></select></label>
           <label class="fx-field"><span>Timeline name</span><input id="fx-view-order" type="text" value="Custom" maxlength="80"></label>
           <label class="fx-field"><span>Timeline position</span><input id="fx-position" type="number" min="0" max="100000" value="0"></label>
           <div class="fx-row"><button type="button" id="fx-add-link" class="fx-btn">Add reference by ID</button></div>
@@ -255,6 +312,26 @@
   const setStatus = (message, error) => { byId('fx-status').textContent = message; byId('fx-status').style.color = error ? '#f2a49d' : ''; };
   const setDirty = value => { dirty = value; byId('fx-dirty-label').textContent = dirty ? 'Unsaved edits — remember to save' : 'No unsaved edits'; };
   const num = (v) => Number.isFinite(Number(v)) ? Math.max(0, Math.min(100000, Math.trunc(Number(v)))) : 0;
+  const displayType = type => type === 'Series' ? 'TV Show' : (type || 'Media');
+  const intRange = (value,min,max) => Number.isInteger(Number(value)) && Number(value)>=min && Number(value)<=max ? Number(value) : null;
+  function rangeFields(link) {
+    const mode=String(link.RangeMode||'Full');
+    if(!['Full','Seasons','Episodes'].includes(mode))throw new Error('Invalid TV Show range type.');
+    if(mode==='Full')return {RangeMode:'Full',StartSeason:0,EndSeason:0,StartEpisode:0,EndEpisode:0};
+    if(link.ItemType!=='Series')throw new Error('Season/episode ranges require a Jellyfin TV Show.');
+    const ss=intRange(link.StartSeason,0,999),es=intRange(link.EndSeason,0,999);
+    if(ss===null||es===null||ss>es)throw new Error('Invalid TV Show season range.');
+    if(mode==='Seasons')return {RangeMode:mode,StartSeason:ss,EndSeason:es,StartEpisode:0,EndEpisode:0};
+    const se=intRange(link.StartEpisode,1,999),ee=intRange(link.EndEpisode,1,999);
+    if(se===null||ee===null||(ss===es && se>ee))throw new Error('Invalid TV Show episode range.');
+    return {RangeMode:mode,StartSeason:ss,EndSeason:es,StartEpisode:se,EndEpisode:ee};
+  }
+  function linkRangeLabel(l) {
+    if(l.RangeMode==='Seasons')return l.StartSeason===l.EndSeason?'Season '+l.StartSeason:'Seasons '+l.StartSeason+'–'+l.EndSeason;
+    if(l.RangeMode==='Episodes')return 'S'+l.StartSeason+'E'+l.StartEpisode+' – S'+l.EndSeason+'E'+l.EndEpisode;
+    return 'Complete title';
+  }
+  function linkIdentity(l) {return [String(l.JellyfinItemId).toLowerCase(),l.RangeMode||'Full',l.StartSeason||0,l.EndSeason||0,l.StartEpisode||0,l.EndEpisode||0].join(':');}
   const artRef = v => { v = String(v || '').trim(); if (v && !(v.startsWith('https://') || (v.startsWith('/') && !v.startsWith('//')))) throw new Error('Artwork references must use HTTPS or a relative path starting with /.'); return v; };
   function normalize(raw) {
     if (!raw || typeof raw !== 'object') throw new Error('Invalid backup format.');
@@ -282,7 +359,8 @@
     }
     const safeLinks = links.map(l => {
       if (!l || !validGuid(String(l.Id || '')) || !validGuid(String(l.JellyfinItemId || '')) || !ids.has(String(l.NodeId || '').toLowerCase())) throw new Error('Invalid virtual media link.');
-      return {Id:String(l.Id),NodeId:String(l.NodeId),JellyfinItemId:String(l.JellyfinItemId),DisplayName:String(l.DisplayName || '').slice(0,150),ItemType:String(l.ItemType || 'Movie').slice(0,40),ViewingOrder:String(l.ViewingOrder || 'Custom').slice(0,80),Position:num(l.Position)};
+      const basic={Id:String(l.Id),NodeId:String(l.NodeId),JellyfinItemId:String(l.JellyfinItemId),DisplayName:String(l.DisplayName || '').slice(0,150),ItemType:String(l.ItemType || 'Movie').slice(0,40),ViewingOrder:String(l.ViewingOrder || 'Custom').slice(0,80),Position:num(l.Position)};
+      return {...basic,...rangeFields({...l,ItemType:basic.ItemType})};
     });
     if (new Set(safeLinks.map(l=>l.Id.toLowerCase())).size !== safeLinks.length) throw new Error('Duplicate link IDs.');
     return { NavigationLabel:String(raw.NavigationLabel || 'Franchises').trim().slice(0,64) || 'Franchises', Nodes:safeNodes, MediaLinks:safeLinks };
@@ -290,17 +368,67 @@
   function children(parent) {
     return model.Nodes.filter(n => n.ParentId === parent).sort((a,b) => a.SortOrder-b.SortOrder || a.Name.localeCompare(b.Name));
   }
+  function normalizeSiblingPositions(parentId) {
+    children(parentId).forEach((n,i)=>{n.SortOrder=i+1;});
+  }
+  function isDescendant(candidateParent,sourceId) {
+    let id=candidateParent;
+    const visited=new Set();
+    while(id) {
+      if(id===sourceId)return true;
+      if(visited.has(id))return true;
+      visited.add(id);
+      const node=model.Nodes.find(n=>n.Id===id);
+      id=node?node.ParentId:'';
+    }
+    return false;
+  }
+  // Drop on upper/lower quarter => sibling; center => make target the new parent.
+  // Reordering never affects any Jellyfin file or native collection.
+  function repositionNode(sourceId,targetId,placement) {
+    const source=model.Nodes.find(n=>n.Id===sourceId),target=model.Nodes.find(n=>n.Id===targetId);
+    if(!source||!target||sourceId===targetId)return false;
+    const newParent=placement==='inside'?target.Id:target.ParentId;
+    if(isDescendant(newParent,sourceId))return false;
+    const oldParent=source.ParentId;
+    source.ParentId=newParent;
+    const order=children(newParent).filter(n=>n.Id!==sourceId);
+    const idx=placement==='inside'?order.length:Math.max(0,order.findIndex(n=>n.Id===targetId)+(placement==='after'?1:0));
+    order.splice(idx,0,source);
+    order.forEach((n,i)=>{n.SortOrder=i+1;});
+    if(oldParent!==newParent)normalizeSiblingPositions(oldParent);
+    setDirty(true);render();return true;
+  }
+  let draggedNodeId='';
+  function clearDropMarkers() {
+    byId('fx-tree').querySelectorAll('.fx-drop-before,.fx-drop-after,.fx-drop-inside,.fx-dragging').forEach(n=>n.classList.remove('fx-drop-before','fx-drop-after','fx-drop-inside','fx-dragging'));
+  }
   function treeNode(node, depth, query) {
     if (query && !matchesTree(node, query)) return;
     const b = document.createElement('button');
-    b.type='button'; b.className='fx-tree-item'; b.setAttribute('role','treeitem');
+    b.type='button'; b.className='fx-tree-item'; b.setAttribute('role','treeitem');b.draggable=true;
     b.setAttribute('aria-current',String(node.Id===selected));
     b.style.paddingLeft=(8 + depth*15)+'px';
     const glyph=document.createElement('span');glyph.className='fx-tree-icon';glyph.textContent=depth?'↳':'▣';
     const name=document.createElement('span');name.className='fx-tree-name';name.textContent=node.Name;
     const type=document.createElement('span');type.className='fx-tree-type';type.textContent=node.NodeType;
     b.append(glyph,name,type);
-    b.addEventListener('click', () => { selected=node.Id; collectionSearchSequence++;byId('fx-collection-results').replaceChildren();byId('fx-collection-search').value='';byId('fx-collection-status').textContent='Choose an existing Jellyfin collection above.';searchSequence++; byId('fx-media-search').value=''; byId('fx-search-results').replaceChildren(); showSearchStatus('Enter at least two characters to search.'); render(); });
+    b.addEventListener('dragstart',e=>{draggedNodeId=node.Id; e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',node.Id);b.classList.add('fx-dragging');});
+    b.addEventListener('dragover',e=>{
+      if(!draggedNodeId||draggedNodeId===node.Id)return;
+      e.preventDefault();e.dataTransfer.dropEffect='move';clearDropMarkers();
+      const box=b.getBoundingClientRect(),fraction=(e.clientY-box.top)/Math.max(box.height,1);
+      b.classList.add(fraction<.27?'fx-drop-before':fraction>.73?'fx-drop-after':'fx-drop-inside');
+    });
+    b.addEventListener('drop',e=>{
+      e.preventDefault();
+      const placement=b.classList.contains('fx-drop-before')?'before':b.classList.contains('fx-drop-after')?'after':'inside';
+      const id=draggedNodeId;draggedNodeId='';clearDropMarkers();
+      if(!repositionNode(id,node.Id,placement))setStatus('Cannot move a group into itself or its descendants.',true);
+      else setStatus('Hierarchy reordered. Click Save plugin configuration to persist.');
+    });
+    b.addEventListener('dragend',()=>{draggedNodeId='';clearDropMarkers();});
+    b.addEventListener('click', () => { selected=node.Id;closeRangeEditor(); collectionSearchSequence++;byId('fx-collection-results').replaceChildren();byId('fx-collection-search').value='';byId('fx-collection-status').textContent='Choose an existing Jellyfin collection above.';searchSequence++; byId('fx-media-search').value=''; byId('fx-search-results').replaceChildren(); showSearchStatus('Enter at least two characters to search.'); render(); });
     byId('fx-tree').appendChild(b);
     children(node.Id).forEach(x=>treeNode(x,depth+1,query));
   }
@@ -387,7 +515,7 @@
     return null;
   }
   async function artworkPreview(ref,slot,sequence,caption) {
-    if(!isManagedArt(ref)) {showSlot(slot,ref,caption);return;}
+    if(!isManagedArt(ref)) {if(sequence===previewEpoch)showSlot(slot,ref,caption);return;}
     try {
       const response=await fetch(artApiUrl(ref),{headers:authHeaders(),cache:'no-store'});
       if(!response.ok) throw new Error('HTTP '+response.status);
@@ -423,7 +551,7 @@
       if(!node) {showSlot(slot,'','Select a group');continue;}
       if(ref) {
         showSlot(slot,'','Loading custom override...');
-        void artworkPreview(ref,slot,sequence,'Custom override · upload or saved image reference');
+        void artworkPreview(ref,slot,sequence,'Custom override for '+node.Name+' · linked media cannot replace this image');
       } else {
         showSlot(slot,'','Finding inherited Jellyfin artwork...');
         (async()=>{
@@ -546,7 +674,7 @@
       if(model.MediaLinks.length+unseen.length>3000)throw new Error('The preview limit is 3,000 virtual media references.');
       if(!confirm('Add '+unseen.length+' existing movies/shows as virtual links to '+node.Name+'? No files or original collections will change. '+excluded+' other entries will be skipped.'))return;
       let position=model.MediaLinks.filter(l=>l.NodeId===nodeId).reduce((max,l)=>Math.max(max,num(l.Position)),0);
-      for(const item of unseen){model.MediaLinks.push({Id:guid(),NodeId:nodeId,JellyfinItemId:item.Id,DisplayName:String(item.Name||'Untitled').slice(0,150),ItemType:item.Type,ViewingOrder:'Custom',Position:++position});}
+      for(const item of unseen){model.MediaLinks.push({Id:guid(),NodeId:nodeId,JellyfinItemId:item.Id,DisplayName:String(item.Name||'Untitled').slice(0,150),ItemType:item.Type,ViewingOrder:'Custom',Position:++position,...rangeFields({ItemType:item.Type})});}
       setDirty(true);renderTree();renderLinks(nodeId);renderArtwork();
       collectionStatus('Imported '+unseen.length+' new virtual references; skipped '+excluded+' unsupported entries. Save configuration to persist. Snapshot only, not live sync.');
     }catch(err){collectionStatus('Import failed: '+(err.message||err),true);}
@@ -558,6 +686,14 @@
     byId('fx-selected').classList.toggle('fx-hidden',!node);
     byId('fx-no-selection').classList.toggle('fx-hidden',!!node);
     byId('fx-add-child').disabled=!node;
+    byId('fx-group-actions').classList.toggle('fx-hidden',!node);
+    if(node) {
+      const parent=model.Nodes.find(n=>n.Id===node.ParentId);
+      byId('fx-artwork-scope').textContent='Editing '+node.NodeType+': '+node.Name+' · Artwork uploaded here overrides this group only.'+(parent?' Parent: '+parent.Name+'. Parent images remain unchanged.':' This is a top-level franchise.');
+      const siblings=children(node.ParentId),index=siblings.findIndex(n=>n.Id===node.Id);
+      byId('fx-move-up').disabled=index<=0;
+      byId('fx-move-down').disabled=index<0||index>=siblings.length-1;
+    }
     byId('fx-nav-label').value=model.NavigationLabel;
     if (!node) {renderArtwork();return;}
     byId('fx-name').value=node.Name;
@@ -577,7 +713,7 @@
       const item=document.createElement('div');item.className='fx-link';
       const label=document.createElement('div');
       const name=document.createElement('strong');name.textContent=l.DisplayName||l.JellyfinItemId;
-      const details=document.createElement('small');details.textContent=l.ItemType+' · '+l.ViewingOrder+' · position '+l.Position;
+      const details=document.createElement('small');details.textContent=displayType(l.ItemType)+' · '+(l.RangeMode&&l.RangeMode!=='Full'?linkRangeLabel(l)+' · ':'')+l.ViewingOrder+' · position '+l.Position;
       label.append(name,details);
       const actions=document.createElement('div');actions.className='fx-link-actions';
       const minus=document.createElement('button');minus.type='button';minus.className='fx-btn fx-btn-small';minus.textContent='↑ Earlier';
@@ -617,6 +753,16 @@
   }
   byId('fx-add-root').addEventListener('click',()=>{try{addNode('','New franchise','Franchise');}catch(e){setStatus(e.message,true);}});
   byId('fx-add-child').addEventListener('click',()=>{try{addNode(selected,'New subgroup','Era');}catch(e){setStatus(e.message,true);}});
+  function moveGroupByButton(direction) {
+    const node=model.Nodes.find(n=>n.Id===selected);if(!node)return;
+    const siblings=children(node.ParentId),index=siblings.findIndex(n=>n.Id===node.Id),swap=index+direction;
+    if(swap<0||swap>=siblings.length)return;
+    [siblings[index],siblings[swap]]=[siblings[swap],siblings[index]];
+    siblings.forEach((n,i)=>n.SortOrder=i+1);
+    setDirty(true);render();setStatus('Group reordered. Save configuration to persist.');
+  }
+  byId('fx-move-up').addEventListener('click',()=>moveGroupByButton(-1));
+  byId('fx-move-down').addEventListener('click',()=>moveGroupByButton(1));
   byId('fx-delete').addEventListener('click',()=>{
     const node=model.Nodes.find(n=>n.Id===selected);if(!node) return;
     const remove=new Set([node.Id]);let size;
@@ -630,7 +776,7 @@
     const itemId=byId('fx-item-id').value.trim();
     if(!validGuid(itemId)){setStatus('Enter a valid 32-digit or hyphenated Jellyfin item GUID.',true);return;}
     if(model.MediaLinks.length>=3000){setStatus('Preview link limit reached.',true);return;}
-    model.MediaLinks.push({Id:guid(),NodeId:selected,JellyfinItemId:itemId,DisplayName:byId('fx-item-name').value.trim(),ItemType:byId('fx-item-type').value,ViewingOrder:byId('fx-view-order').value.trim()||'Custom',Position:num(byId('fx-position').value)});
+    model.MediaLinks.push({Id:guid(),NodeId:selected,JellyfinItemId:itemId,DisplayName:byId('fx-item-name').value.trim(),ItemType:byId('fx-item-type').value,ViewingOrder:byId('fx-view-order').value.trim()||'Custom',Position:num(byId('fx-position').value),...rangeFields({ItemType:byId('fx-item-type').value})});
     byId('fx-item-id').value='';byId('fx-item-name').value='';setDirty(true);setStatus('Virtual reference added locally. Save to persist.');render();
   });
   async function load() {
@@ -690,12 +836,12 @@
   function addResult(item) {
     if(!selected){setStatus('Select a franchise or subgroup first.',true);return;}
     if(!validGuid(String(item.Id||''))){setStatus('Selected media has no valid Jellyfin item ID.',true);return;}
-    if(model.MediaLinks.some(l=>l.NodeId===selected&&l.JellyfinItemId.toLowerCase()===item.Id.toLowerCase())){
+    if(model.MediaLinks.some(l=>l.NodeId===selected&&l.JellyfinItemId.toLowerCase()===item.Id.toLowerCase()&&(!l.RangeMode||l.RangeMode==='Full'))){
       setStatus('This group already links to that media item.',true);return;
     }
     if(model.MediaLinks.length>=3000){setStatus('Preview link limit reached.',true);return;}
     const position=model.MediaLinks.filter(l=>l.NodeId===selected&&l.ViewingOrder==='Custom').reduce((m,l)=>Math.max(m,num(l.Position)),0)+1;
-    model.MediaLinks.push({Id:guid(),NodeId:selected,JellyfinItemId:item.Id,DisplayName:String(item.Name||'Untitled').slice(0,150),ItemType:item.Type||'Movie',ViewingOrder:'Custom',Position:position});
+    model.MediaLinks.push({Id:guid(),NodeId:selected,JellyfinItemId:item.Id,DisplayName:String(item.Name||'Untitled').slice(0,150),ItemType:item.Type||'Movie',ViewingOrder:'Custom',Position:position,...rangeFields({ItemType:item.Type||'Movie'})});
     setDirty(true);renderLinks(selected);renderTree();renderArtwork();setStatus('Linked '+(item.Name||'media item')+' virtually. Click Save to persist.');
   }
   let currentResults=[];
@@ -705,6 +851,41 @@
     byId('fx-add-selected-results').disabled=!count||!selected;
     byId('fx-add-selected-results').textContent='Add selected media ('+count+')';
   }
+  let pendingRangeItem=null;
+  function updateRangeFields() {
+    const isEpisodes=byId('fx-range-mode').value==='Episodes';
+    page.querySelectorAll('.fx-episode-field').forEach(n=>n.classList.toggle('fx-hidden',!isEpisodes));
+  }
+  byId('fx-range-mode').addEventListener('change',updateRangeFields);
+  function openRangeEditor(item) {
+    if(!selected||item.Type!=='Series'||!validGuid(String(item.Id||'')))return;
+    pendingRangeItem={Id:item.Id,Name:item.Name||'TV Show',Type:'Series'};
+    byId('fx-range-title').textContent='Add range from '+pendingRangeItem.Name;
+    byId('fx-range-mode').value='Seasons';
+    byId('fx-start-season').value='1';byId('fx-end-season').value='1';
+    byId('fx-start-episode').value='1';byId('fx-end-episode').value='1';
+    updateRangeFields();byId('fx-tv-range').classList.remove('fx-hidden');
+    byId('fx-tv-range').scrollIntoView({block:'nearest',behavior:'smooth'});
+  }
+  function closeRangeEditor() {pendingRangeItem=null;byId('fx-tv-range').classList.add('fx-hidden');}
+  byId('fx-cancel-range').addEventListener('click',closeRangeEditor);
+  byId('fx-save-range').addEventListener('click',()=>{
+    if(!selected||!pendingRangeItem)return;
+    const item=pendingRangeItem;
+    let range;
+    try{range=rangeFields({ItemType:'Series',RangeMode:byId('fx-range-mode').value,
+      StartSeason:byId('fx-start-season').value,EndSeason:byId('fx-end-season').value,
+      StartEpisode:byId('fx-start-episode').value,EndEpisode:byId('fx-end-episode').value});}
+    catch(err){setStatus(err.message,true);return;}
+    const existing=model.MediaLinks.filter(l=>l.NodeId===selected);
+    const candidate={JellyfinItemId:item.Id,...range};
+    if(existing.some(l=>linkIdentity(l)===linkIdentity(candidate))){setStatus('That TV Show range is already linked to this group.',true);return;}
+    if(model.MediaLinks.length>=3000){setStatus('Preview link limit reached.',true);return;}
+    model.MediaLinks.push({Id:guid(),NodeId:selected,JellyfinItemId:item.Id,DisplayName:item.Name,
+      ItemType:'Series',ViewingOrder:'Custom',Position:existing.reduce((m,l)=>Math.max(m,num(l.Position)),0)+1,...range});
+    closeRangeEditor();setDirty(true);renderLinks(selected);renderTree();renderArtwork();
+    setStatus('Added '+item.Name+' ('+linkRangeLabel(candidate)+') as a virtual range. Save to persist. Playback of ranges is not yet implemented.');
+  });
   function renderResults(items){
     currentResults=items.filter(item=>validGuid(String(item.Id||'')));
     resultSelection.clear();updateResultButton();
@@ -721,10 +902,15 @@
       else{const symbol=document.createElement('span');symbol.className='fx-thumb-placeholder';symbol.textContent='▶';row.appendChild(symbol);}
       const info=document.createElement('span');info.className='fx-result-info';
       const label=document.createElement('strong');label.textContent=item.Name||'Untitled';
-      const meta=document.createElement('small');meta.textContent=[item.Type,item.ProductionYear].filter(Boolean).join(' · ');
+      const meta=document.createElement('small');meta.textContent=[displayType(item.Type),item.ProductionYear].filter(Boolean).join(' · ');
       info.append(label,meta);row.appendChild(info);
       const single=document.createElement('button');single.type='button';single.className='fx-btn fx-btn-small';single.textContent='+ Link';
-      single.addEventListener('click',()=>addResult(item));row.appendChild(single);results.appendChild(row);
+      single.addEventListener('click',()=>addResult(item));row.appendChild(single);
+      if(item.Type==='Series') {
+        const range=document.createElement('button');range.type='button';range.className='fx-btn fx-btn-small';range.textContent='+ Season/episode range';
+        range.addEventListener('click',()=>openRangeEditor(item));row.appendChild(range);
+      }
+      results.appendChild(row);
     });
   }
   byId('fx-select-all-results').addEventListener('click',()=>{resultSelection.clear();currentResults.forEach(i=>resultSelection.add(i.Id));byId('fx-search-results').querySelectorAll('input.fx-result-check').forEach(c=>c.checked=true);updateResultButton();});
@@ -732,7 +918,7 @@
   byId('fx-add-selected-results').addEventListener('click',()=>{
     if(!selected || !resultSelection.size)return;
     const nodeId=selected;
-    const existing=new Set(model.MediaLinks.filter(l=>l.NodeId===nodeId).map(l=>l.JellyfinItemId.toLowerCase()));
+    const existing=new Set(model.MediaLinks.filter(l=>l.NodeId===nodeId&&(!l.RangeMode||l.RangeMode==='Full')).map(l=>l.JellyfinItemId.toLowerCase()));
     const adding=currentResults.filter(i=>resultSelection.has(i.Id)&&!existing.has(i.Id.toLowerCase()));
     if(model.MediaLinks.length+adding.length>3000){setStatus('Preview link limit reached.',true);return;}
     let position=model.MediaLinks.filter(l=>l.NodeId===nodeId).reduce((m,l)=>Math.max(m,num(l.Position)),0);

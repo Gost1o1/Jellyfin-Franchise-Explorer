@@ -1,6 +1,6 @@
 # Jellyfin Franchise Explorer development roadmap
 
-## Experimental v0.5 source implementation
+## Experimental v0.6 source implementation
 - Existing persisted nested groups and virtual media links.
 - Styled administrator UI with search, checkbox bulk linking, image uploads and backups.
 - Dynamic image inheritance per slot: user override → associated Jellyfin BoxSet → parent → linked media → placeholder.
