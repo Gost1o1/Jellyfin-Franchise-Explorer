@@ -1,3 +1,13 @@
+## 0.6.2.0 — Visible-width and TV Show range dialog patch (experimental)
+
+- Constrain the administration editor to the actual visible space even when a Jellyfin dashboard ancestor has an oversized layout; stop offscreen centering and reliably stack narrow layouts.
+- Replace the hidden inline TV Show range form with a real dialog offering Entire TV Show, Season to season, and Season/episode to season/episode choices.
+- Open the range dialog for single-TV-Show search results; preserve fast bulk addition of complete titles.
+- Add Edit TV Show range to already-linked shows without removing and re-adding their virtual references.
+- Add validation feedback within the dialog, Escape/cancel/close controls, and keyboard focus handling.
+- Retain existing plugin GUID, v0.2–v0.6.1 configuration data, virtual item references and artwork overrides.
+- Browser regression checks with mocked Jellyfin APIs, plus structural and offline range tests. Live Jellyfin host verification remains pending.
+
 ## 0.6.1.0 — Responsive editor hotfix
 
 - Fix main page running past the right edge of Jellyfin when the browser or dashboard content area is narrower.

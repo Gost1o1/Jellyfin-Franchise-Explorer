@@ -5,7 +5,13 @@
 <div id="FranchiseExplorerConfigPage" data-role="page" class="page type-interior pluginConfigurationPage">
 <style id="fx-live-css">
 /* All visual styles are inside the loaded page, not <head> (which Jellyfin may discard). */
-#FranchiseExplorerConfigPage { --fx-card: #202328; --fx-border: rgba(180,191,206,.2); --fx-text: #edf0f3; --fx-muted: #a9b4c1; --fx-accent: #11b3c8; color:var(--fx-text); width:100%!important; max-width:100%!important; min-width:0!important; padding:0!important; box-sizing:border-box; overflow-x:clip; }
+#FranchiseExplorerConfigPage { --fx-card: #202328; --fx-border: rgba(180,191,206,.2); --fx-text: #edf0f3; --fx-muted: #a9b4c1; --fx-accent: #11b3c8; color:var(--fx-text); width:100%!important; max-width:100%!important; min-width:0!important; padding:0!important; margin:0!important; box-sizing:border-box; overflow-x:hidden; }
+/* Prevent Jellyfin dashboard ancestors, oversize plugins, or embedded webview width from pushing content off screen. */
+#FranchiseExplorerConfigPage, #FranchiseExplorerConfigPage .fx-wrap, #FranchiseExplorerConfigPage .fx-panel, #FranchiseExplorerConfigPage .fx-grid { min-inline-size:0!important; }
+#FranchiseExplorerConfigPage .fx-wrap { overflow-wrap:anywhere; }
+#FranchiseExplorerConfigPage input, #FranchiseExplorerConfigPage textarea, #FranchiseExplorerConfigPage select { max-inline-size:100%; min-inline-size:0; }
+#FranchiseExplorerConfigPage .fx-panel, #FranchiseExplorerConfigPage .fx-toolbar { inline-size:100%; }
+
 #FranchiseExplorerConfigPage * {box-sizing:border-box}
 #FranchiseExplorerConfigPage .fx-wrap {width:100%!important;max-width:1370px!important;min-width:0;margin-inline:auto!important;padding:22px clamp(12px,2vw,24px) 90px;box-sizing:border-box;container-type:inline-size}
 #FranchiseExplorerConfigPage .fx-heading {display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;margin:0 0 18px}
@@ -30,7 +36,7 @@
 #FranchiseExplorerConfigPage .fx-btn-primary:hover {background:#1fc0d3!important}
 #FranchiseExplorerConfigPage .fx-btn-danger {border-color:rgba(248,105,105,.35)!important;color:#ffadad!important;background:rgba(192,55,55,.12)!important}
 #FranchiseExplorerConfigPage .fx-btn-small {padding:6px 10px!important;min-height:32px;font-size:.79rem!important}
-#FranchiseExplorerConfigPage .fx-grid {width:100%;min-width:0;max-width:100%;display:grid;grid-template-columns:minmax(280px, 340px) minmax(0,1fr);gap:18px;align-items:start}
+#FranchiseExplorerConfigPage .fx-grid {width:100%;min-width:0;max-width:100%;display:grid;grid-template-columns:minmax(230px, 310px) minmax(0,1fr);gap:16px;align-items:start}
 #FranchiseExplorerConfigPage .fx-panel {max-width:100%;overflow-wrap:anywhere;background:var(--fx-card);border:1px solid var(--fx-border);border-radius:12px;padding:22px;min-width:0;box-shadow:0 5px 20px rgba(0,0,0,.08)}
 #FranchiseExplorerConfigPage .fx-sticky {position:sticky;top:16px}
 #FranchiseExplorerConfigPage .fx-panel-title {display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
@@ -132,12 +138,40 @@
 #FranchiseExplorerConfigPage .fx-image-tile .fx-row{margin:9px 0 0}
 #FranchiseExplorerConfigPage .fx-image-tile small{display:block;color:var(--fx-muted);margin-top:5px;overflow-wrap:anywhere}
 @media(max-width:690px){#FranchiseExplorerConfigPage .fx-image-grid{grid-template-columns:1fr}}
+/* Last-mile layout overrides: the host dashboard may be narrower than the viewport. */
+#FranchiseExplorerConfigPage .fx-wrap.fx-compact .fx-grid,
+#FranchiseExplorerConfigPage .fx-wrap.fx-medium .fx-grid {grid-template-columns:minmax(0,1fr)!important}
+#FranchiseExplorerConfigPage .fx-wrap.fx-compact .fx-sticky,
+#FranchiseExplorerConfigPage .fx-wrap.fx-medium .fx-sticky {position:static}
+#FranchiseExplorerConfigPage .fx-wrap.fx-compact .fx-tree,
+#FranchiseExplorerConfigPage .fx-wrap.fx-medium .fx-tree {max-height:300px}
+#FranchiseExplorerConfigPage .fx-wrap.fx-compact .fx-two,
+#FranchiseExplorerConfigPage .fx-wrap.fx-compact .fx-artwork,
+#FranchiseExplorerConfigPage .fx-wrap.fx-compact .fx-image-grid,
+#FranchiseExplorerConfigPage .fx-wrap.fx-compact .fx-range-grid {grid-template-columns:minmax(0,1fr)!important}
+#FranchiseExplorerConfigPage .fx-wrap.fx-compact .fx-toolbar-left,
+#FranchiseExplorerConfigPage .fx-wrap.fx-compact .fx-toolbar-right {inline-size:100%;min-width:0}
+#FranchiseExplorerConfigPage .fx-wrap.fx-compact .fx-result {flex-wrap:wrap}
+#FranchiseExplorerConfigPage .fx-wrap.fx-compact .fx-panel {padding:12px}
+#FranchiseExplorerConfigPage .fx-wrap.fx-compact .fx-link {flex-wrap:wrap}
+#FranchiseExplorerConfigPage .fx-wrap.fx-compact .fx-link-actions {justify-content:flex-start}
+#FranchiseExplorerConfigPage .fx-result > .fx-btn {flex:0 1 auto;white-space:normal}
+#FranchiseExplorerConfigPage .fx-toolbar, #FranchiseExplorerConfigPage .fx-row {min-inline-size:0}
+#FranchiseExplorerConfigPage .fx-modal-overlay {position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;z-index:2147483000!important;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;box-sizing:border-box}
+#FranchiseExplorerConfigPage .fx-modal-dialog {width:min(100%,540px);max-height:calc(100dvh - 32px);overflow-y:auto;min-width:0;border:1px solid #627383;border-radius:14px;box-shadow:0 20px 75px #000b;background:#20252b;padding:20px;color:#f0f3f6}
+#FranchiseExplorerConfigPage .fx-modal-dialog h3 {font-size:1.2rem;margin:0}
+#FranchiseExplorerConfigPage .fx-modal-header {display:flex;gap:12px;justify-content:space-between;align-items:center}
+#FranchiseExplorerConfigPage .fx-modal-dialog p {color:#b6c2cd}
+#FranchiseExplorerConfigPage .fx-modal-dialog .fx-row {margin-bottom:0}
+#FranchiseExplorerConfigPage .fx-modal-dialog .fx-range-grid {grid-template-columns:repeat(2,minmax(0,1fr))}
+#FranchiseExplorerConfigPage .fx-wrap.fx-compact .fx-modal-dialog .fx-range-grid {grid-template-columns:minmax(0,1fr)}
+@media(max-width:550px){#FranchiseExplorerConfigPage .fx-modal-dialog{padding:14px}#FranchiseExplorerConfigPage .fx-modal-dialog .fx-range-grid{grid-template-columns:minmax(0,1fr)}}
 </style>
 <div data-role="content" class="fx-wrap">
   <div class="fx-heading">
     <div>
       <div class="fx-eyebrow">Jellyfin plugin • Early development</div>
-      <h1>Franchise Explorer <small>v0.6.1 preview</small></h1>
+      <h1>Franchise Explorer <small>v0.6.2 preview</small></h1>
       <p class="fx-muted">Organize virtual franchises, eras, phases and viewing references without moving media files.</p>
     </div>
   </div>
@@ -260,21 +294,24 @@
           <button type="button" class="fx-btn fx-btn-small" id="fx-clear-results">Clear selection</button>
           <button type="button" class="fx-btn fx-btn-small fx-btn-primary" id="fx-add-selected-results" disabled>Add selected media (0)</button>
         </div>
-        <div id="fx-tv-range" class="fx-tv-range fx-hidden">
-          <h3 id="fx-range-title">Add TV Show range</h3>
-          <p class="fx-muted">Create a virtual reference to seasons or episodes within a TV show. This does not currently create a playable timeline or alter Jellyfin episodes.</p>
-          <label class="fx-field"><span>Range type</span><select id="fx-range-mode"><option value="Seasons">Whole seasons</option><option value="Episodes">Specific episodes</option></select></label>
-          <div class="fx-range-grid">
-            <label class="fx-field"><span>From season</span><input type="number" min="0" max="999" step="1" id="fx-start-season" value="1"></label>
-            <label class="fx-field"><span>To season</span><input type="number" min="0" max="999" step="1" id="fx-end-season" value="1"></label>
-            <label class="fx-field fx-episode-field fx-hidden"><span>From episode</span><input type="number" min="1" max="999" step="1" id="fx-start-episode" value="1"></label>
-            <label class="fx-field fx-episode-field fx-hidden"><span>To episode</span><input type="number" min="1" max="999" step="1" id="fx-end-episode" value="1"></label>
+        <div id="fx-tv-range" class="fx-modal-overlay fx-hidden" role="dialog" aria-modal="true" aria-labelledby="fx-range-title" aria-describedby="fx-range-help">
+          <div class="fx-modal-dialog" tabindex="-1">
+            <div class="fx-modal-header"><h3 id="fx-range-title">Choose TV Show range</h3><button type="button" class="fx-btn fx-btn-small" id="fx-close-range" aria-label="Close TV show range dialog">✕</button></div>
+            <p class="fx-muted" id="fx-range-help">Choose how much of this TV show belongs in the selected franchise. This saves a virtual reference only; it does not edit or play Jellyfin episodes.</p>
+            <label class="fx-field"><span>Include</span><select id="fx-range-mode"><option value="Full">Entire TV Show</option><option value="Seasons">Season to season</option><option value="Episodes">Season/episode to season/episode</option></select></label>
+            <div id="fx-range-endpoints" class="fx-range-grid fx-hidden">
+              <label class="fx-field"><span>Starting season</span><input type="number" min="0" max="999" step="1" id="fx-start-season" value="1"></label>
+              <label class="fx-field"><span>Ending season</span><input type="number" min="0" max="999" step="1" id="fx-end-season" value="1"></label>
+              <label class="fx-field fx-episode-field fx-hidden"><span>Starting episode</span><input type="number" min="1" max="999" step="1" id="fx-start-episode" value="1"></label>
+              <label class="fx-field fx-episode-field fx-hidden"><span>Ending episode</span><input type="number" min="1" max="999" step="1" id="fx-end-episode" value="1"></label>
+            </div>
+            <p class="fx-muted">Specials use Season 0. Enter season and episode numbers as listed in Jellyfin. Range playback is not available yet.</p>
+            <div class="fx-row">
+              <button type="button" class="fx-btn fx-btn-primary" id="fx-save-range">Add to franchise</button>
+              <button type="button" class="fx-btn" id="fx-cancel-range">Cancel</button>
+            </div>
+            <div id="fx-range-error" role="alert" class="fx-muted fx-hidden" style="color:#ffb0a5"></div>
           </div>
-          <div class="fx-row">
-            <button type="button" class="fx-btn fx-btn-small fx-btn-primary" id="fx-save-range">Add TV Show range</button>
-            <button type="button" class="fx-btn fx-btn-small" id="fx-cancel-range">Cancel</button>
-          </div>
-          <div class="fx-muted">Ranges are virtual annotations. Check the chosen season/episode numbers against Jellyfin before saving.</div>
         </div>
         <div id="fx-links" aria-label="Current virtual links" style="margin-top:14px"></div>
         <details id="fx-manual-details" style="margin-top:14px"><summary>Advanced: manually add an item ID</summary>
@@ -303,6 +340,39 @@
   page.dataset.fxInitialized = 'yes';
   const pluginId = '6bc7820b-7c6d-4e64-a139-dfb90b8d6f42';
   const byId = id => page.querySelector('#' + id);
+  // Jellyfin may give an embedded plugin a page wider than the visible browser.
+  // Constrain this editor to the actual pixels available to the RIGHT of its rendered left edge.
+  const wrap = page.querySelector('.fx-wrap');
+  function fitEditorToViewport() {
+    if(!page.isConnected || !wrap) return;
+    const pageRect = page.getBoundingClientRect();
+    const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
+    const visibleFromLeft = Math.max(0, pageRect.left);
+    const available = Math.max(240, Math.floor(viewportWidth - visibleFromLeft - 14));
+    const parentWidth = page.parentElement ? page.parentElement.getBoundingClientRect().width : available;
+    const usable = Math.max(240, Math.min(available, parentWidth || available, 1370));
+    wrap.style.setProperty('width', usable + 'px', 'important');
+    wrap.style.setProperty('max-width', usable + 'px', 'important');
+    // When Jellyfin's host is wider than the visible region, auto-margins would
+    // center the reduced editor inside the OFFSCREEN host and clip the right edge.
+    const hostOverflows = pageRect.right > viewportWidth - 2;
+    wrap.style.setProperty('margin-left', hostOverflows ? '0px' : 'auto', 'important');
+    wrap.style.setProperty('margin-right', hostOverflows ? '0px' : 'auto', 'important');
+    wrap.classList.toggle('fx-medium', usable < 990);
+    wrap.classList.toggle('fx-compact', usable < 700);
+  }
+  let resizeFrame = 0;
+  function requestEditorFit() {
+    if(resizeFrame) cancelAnimationFrame(resizeFrame);
+    resizeFrame = requestAnimationFrame(() => { resizeFrame = 0; fitEditorToViewport(); });
+  }
+  window.addEventListener('resize',requestEditorFit);
+  if(window.ResizeObserver && page.parentElement) {
+    const observer = new ResizeObserver(requestEditorFit);
+    observer.observe(page.parentElement);
+  }
+  requestEditorFit();
+  page.addEventListener('pageshow',requestEditorFit);
   const validGuid = s => /^[0-9a-f]{32}$|^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
   const guid = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.floor(Math.random() * 16); return (c === 'x' ? r : (r & 3 | 8)).toString(16); });
   const emptyArt = () => ({ PrimaryUrl:'', BackdropUrl:'', LogoUrl:'', ThumbUrl:'', BannerUrl:'' });
@@ -722,6 +792,11 @@
       plus.addEventListener('click',()=>moveLink(l,1,nodeId));
       const remove=document.createElement('button');remove.type='button';remove.className='fx-btn fx-btn-small fx-btn-danger';remove.textContent='Remove';
       remove.addEventListener('click',()=>{if(!confirm('Remove this virtual link only? Original media will not be changed.'))return;model.MediaLinks=model.MediaLinks.filter(x=>x.Id!==l.Id);setDirty(true);render();});
+      if(l.ItemType==='Series') {
+        const editRange=document.createElement('button');editRange.type='button';editRange.className='fx-btn fx-btn-small';editRange.textContent='Edit TV Show range';
+        editRange.addEventListener('click',()=>openRangeEditor({Id:l.JellyfinItemId,Name:l.DisplayName||'TV Show',Type:'Series'},l));
+        actions.appendChild(editRange);
+      }
       actions.append(minus,plus,remove);item.append(label,actions);container.appendChild(item);
     });
   }
@@ -849,26 +924,56 @@
   function updateResultButton() {
     const count=resultSelection.size;
     byId('fx-add-selected-results').disabled=!count||!selected;
-    byId('fx-add-selected-results').textContent='Add selected media ('+count+')';
+    byId('fx-add-selected-results').textContent='Add selected whole titles ('+count+')';
   }
   let pendingRangeItem=null;
+  let editingRangeId='';
+  let previousFocus=null;
   function updateRangeFields() {
-    const isEpisodes=byId('fx-range-mode').value==='Episodes';
-    page.querySelectorAll('.fx-episode-field').forEach(n=>n.classList.toggle('fx-hidden',!isEpisodes));
+    const mode=byId('fx-range-mode').value;
+    byId('fx-range-endpoints').classList.toggle('fx-hidden',mode==='Full');
+    page.querySelectorAll('.fx-episode-field').forEach(n=>n.classList.toggle('fx-hidden',mode!=='Episodes'));
   }
   byId('fx-range-mode').addEventListener('change',updateRangeFields);
-  function openRangeEditor(item) {
+  function openRangeEditor(item,existingLink) {
     if(!selected||item.Type!=='Series'||!validGuid(String(item.Id||'')))return;
+    previousFocus=document.activeElement;
+    editingRangeId=existingLink ? existingLink.Id : '';
     pendingRangeItem={Id:item.Id,Name:item.Name||'TV Show',Type:'Series'};
-    byId('fx-range-title').textContent='Add range from '+pendingRangeItem.Name;
-    byId('fx-range-mode').value='Seasons';
-    byId('fx-start-season').value='1';byId('fx-end-season').value='1';
-    byId('fx-start-episode').value='1';byId('fx-end-episode').value='1';
-    updateRangeFields();byId('fx-tv-range').classList.remove('fx-hidden');
-    byId('fx-tv-range').scrollIntoView({block:'nearest',behavior:'smooth'});
+    byId('fx-range-title').textContent=(existingLink?'Edit':'Add')+' TV Show: '+pendingRangeItem.Name;
+    byId('fx-save-range').textContent=existingLink?'Save TV Show range':'Add to franchise';
+    byId('fx-range-mode').value=existingLink?(existingLink.RangeMode||'Full'):'Full';
+    byId('fx-start-season').value=existingLink&&existingLink.RangeMode!=='Full'?existingLink.StartSeason:'1';
+    byId('fx-end-season').value=existingLink&&existingLink.RangeMode!=='Full'?existingLink.EndSeason:'1';
+    byId('fx-start-episode').value=existingLink&&existingLink.RangeMode==='Episodes'?existingLink.StartEpisode:'1';
+    byId('fx-end-episode').value=existingLink&&existingLink.RangeMode==='Episodes'?existingLink.EndEpisode:'1';
+    byId('fx-range-error').classList.add('fx-hidden');
+    updateRangeFields();
+    byId('fx-tv-range').classList.remove('fx-hidden');
+    byId('fx-range-mode').focus();
   }
-  function closeRangeEditor() {pendingRangeItem=null;byId('fx-tv-range').classList.add('fx-hidden');}
+  function closeRangeEditor() {
+    pendingRangeItem=null;editingRangeId='';
+    byId('fx-tv-range').classList.add('fx-hidden');
+    if(previousFocus && previousFocus.isConnected && previousFocus.focus) previousFocus.focus();
+    previousFocus=null;
+  }
+  function rangeError(message) {
+    const el=byId('fx-range-error');el.textContent=message;el.classList.remove('fx-hidden');
+  }
   byId('fx-cancel-range').addEventListener('click',closeRangeEditor);
+  byId('fx-close-range').addEventListener('click',closeRangeEditor);
+  byId('fx-tv-range').addEventListener('click',e=>{if(e.target===byId('fx-tv-range'))closeRangeEditor();});
+  document.addEventListener('keydown',e=>{
+    if(byId('fx-tv-range').classList.contains('fx-hidden'))return;
+    if(e.key==='Escape'){e.preventDefault();closeRangeEditor();}
+    if(e.key==='Tab') {
+      const controls=Array.from(byId('fx-tv-range').querySelectorAll('button,select,input')).filter(el=>!el.disabled && el.getClientRects().length);
+      if(!controls.length)return;
+      if(e.shiftKey && document.activeElement===controls[0]){e.preventDefault();controls[controls.length-1].focus();}
+      else if(!e.shiftKey && document.activeElement===controls[controls.length-1]){e.preventDefault();controls[0].focus();}
+    }
+  });
   byId('fx-save-range').addEventListener('click',()=>{
     if(!selected||!pendingRangeItem)return;
     const item=pendingRangeItem;
@@ -876,22 +981,30 @@
     try{range=rangeFields({ItemType:'Series',RangeMode:byId('fx-range-mode').value,
       StartSeason:byId('fx-start-season').value,EndSeason:byId('fx-end-season').value,
       StartEpisode:byId('fx-start-episode').value,EndEpisode:byId('fx-end-episode').value});}
-    catch(err){setStatus(err.message,true);return;}
+    catch(err){rangeError(err.message);return;}
     const existing=model.MediaLinks.filter(l=>l.NodeId===selected);
     const candidate={JellyfinItemId:item.Id,...range};
-    if(existing.some(l=>linkIdentity(l)===linkIdentity(candidate))){setStatus('That TV Show range is already linked to this group.',true);return;}
-    if(model.MediaLinks.length>=3000){setStatus('Preview link limit reached.',true);return;}
-    model.MediaLinks.push({Id:guid(),NodeId:selected,JellyfinItemId:item.Id,DisplayName:item.Name,
-      ItemType:'Series',ViewingOrder:'Custom',Position:existing.reduce((m,l)=>Math.max(m,num(l.Position)),0)+1,...range});
+    if(existing.some(l=>l.Id!==editingRangeId&&linkIdentity(l)===linkIdentity(candidate))) {
+      rangeError('This TV Show with the same range is already linked to this group.');return;
+    }
+    if(editingRangeId) {
+      const link=existing.find(l=>l.Id===editingRangeId);
+      if(!link){rangeError('The original link was not found. Close and reopen the editor.');return;}
+      Object.assign(link,range);
+    } else {
+      if(model.MediaLinks.length>=3000){rangeError('Preview link limit reached.');return;}
+      model.MediaLinks.push({Id:guid(),NodeId:selected,JellyfinItemId:item.Id,DisplayName:item.Name,
+        ItemType:'Series',ViewingOrder:'Custom',Position:existing.reduce((m,l)=>Math.max(m,num(l.Position)),0)+1,...range});
+    }
     closeRangeEditor();setDirty(true);renderLinks(selected);renderTree();renderArtwork();
-    setStatus('Added '+item.Name+' ('+linkRangeLabel(candidate)+') as a virtual range. Save to persist. Playback of ranges is not yet implemented.');
+    setStatus('Saved '+item.Name+' ('+linkRangeLabel(candidate)+') as a virtual reference. Click Save plugin configuration to persist. Range playback is not yet implemented.');
   });
   function renderResults(items){
     currentResults=items.filter(item=>validGuid(String(item.Id||'')));
     resultSelection.clear();updateResultButton();
     const results=byId('fx-search-results');results.replaceChildren();
     if(!currentResults.length){showSearchStatus('No matching media found. Try another title.');return;}
-    showSearchStatus('Showing '+currentResults.length+' matching item(s). Select several, or use + Link to add one.');
+    showSearchStatus('Showing '+currentResults.length+' matching item(s). Select several, or use + Link to add one. TV Shows open a range picker.');
     currentResults.forEach(item=>{
       const row=document.createElement('div');row.className='fx-result';
       const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.className='fx-result-check';checkbox.setAttribute('aria-label','Select '+(item.Name||'media'));
@@ -904,12 +1017,8 @@
       const label=document.createElement('strong');label.textContent=item.Name||'Untitled';
       const meta=document.createElement('small');meta.textContent=[displayType(item.Type),item.ProductionYear].filter(Boolean).join(' · ');
       info.append(label,meta);row.appendChild(info);
-      const single=document.createElement('button');single.type='button';single.className='fx-btn fx-btn-small';single.textContent='+ Link';
-      single.addEventListener('click',()=>addResult(item));row.appendChild(single);
-      if(item.Type==='Series') {
-        const range=document.createElement('button');range.type='button';range.className='fx-btn fx-btn-small';range.textContent='+ Season/episode range';
-        range.addEventListener('click',()=>openRangeEditor(item));row.appendChild(range);
-      }
+      const single=document.createElement('button');single.type='button';single.className='fx-btn fx-btn-small';single.textContent=item.Type==='Series'?'+ Choose TV Show range':'+ Link';
+      single.addEventListener('click',()=>item.Type==='Series'?openRangeEditor(item):addResult(item));row.appendChild(single);
       results.appendChild(row);
     });
   }
@@ -925,7 +1034,7 @@
     for(const item of adding){model.MediaLinks.push({Id:guid(),NodeId:nodeId,JellyfinItemId:item.Id,DisplayName:String(item.Name||'Untitled').slice(0,150),ItemType:item.Type,ViewingOrder:'Custom',Position:++position});}
     resultSelection.clear();byId('fx-search-results').querySelectorAll('input.fx-result-check').forEach(c=>c.checked=false);updateResultButton();
     if(adding.length){setDirty(true);renderTree();renderLinks(nodeId);renderArtwork();}
-    setStatus('Added '+adding.length+' virtual media links ('+(currentResults.length-adding.length)+' already linked or unselected). Save configuration.');
+    setStatus('Added '+adding.length+' complete titles as virtual links. For individual season/episode ranges, use + Choose TV Show range. Save configuration.');
   });
   async function searchMedia(query,sequence){
     if(!selected){showSearchStatus('Select a franchise or subgroup first.');return;}

@@ -8,7 +8,21 @@
 
 Jellyfin Franchise Explorer manages **virtual** franchises, eras, phases, and media references without relocating or duplicating movies and shows. This code targets Jellyfin **12.2** / **.NET 10** and uses the same plugin GUID and backward-compatible configuration format as v0.2–v0.5.
 
-## Version 0.6.1.0: group organization and TV Show ranges
+## Version 0.6.2.0: fit to visible dashboard and TV Show range dialog
+
+**Experimental / not tested on a live Jellyfin server.** This update addresses two issues reported in the Jellyfin Web admin page:
+
+- **Visible-space layout:** the editor measures the available width to the right of the Jellyfin content area's on-screen left edge and constrains itself accordingly. It stacks the franchise tree above the details editor when needed. It no longer relies exclusively on browser or CSS container breakpoints, which could still center the editor inside an offscreen-sized dashboard container.
+- **TV Show pop-up:** click **+ Choose TV Show range** next to a TV Show in search results. A centered dialog opens with **Entire TV Show**, **Season to season**, or **Season/episode to season/episode**. Enter the starting and ending season/episode numbers and click **Add to franchise**. Existing TV Show references also have an **Edit TV Show range** button; editing retains that link's position, ID, and saved artwork association.
+- **Bulk selection:** checkbox bulk-adding explicitly creates complete-title links. To add only part of a TV Show, use the individual **+ Choose TV Show range** button. Multiple different ranges for the same TV Show are supported in one group; exact duplicates are blocked.
+
+Season/episode ranges are virtual metadata only; they cannot yet launch sequential playback. Nothing is moved or rewritten in the media library. The internal Jellyfin API media type remains `Series`, displayed as **TV Show** in the editor.
+
+**Version check:** The configuration page must say **v0.6.2 preview**. A page saying **v0.5 preview** is still running an older installed plugin. After updating through the catalog and restarting the Jellyfin Windows service, hard-refresh Jellyfin Web (Ctrl+Shift+R). If it still says v0.5, check Dashboard → Plugins → My Plugins for the installed version before diagnosing v0.6.2 functionality.
+
+Offline Chromium tests cover 390, 620, 800, 1150, and 1600-pixel viewports with deliberately overwide parent layouts, including adding, editing, and dismissing a TV Show range through a mocked Jellyfin API. **These do not establish live Jellyfin compatibility.**
+
+## Previous version 0.6.1.0: group organization and TV Show ranges
 
 **Experimental / runtime unverified.** This build adds drag-and-drop groups, Move up/Move down buttons, a clearly scoped artwork editor, and TV Show season and episode ranges. It preserves the existing configuration model and artwork uploads. It is **not** a complete chronological playback feature: ranges are currently saved as virtual metadata for future expansion.
 
@@ -63,9 +77,9 @@ Search for Jellyfin media within a selected group, use checkboxes and **Select a
 ## Safe update / GitHub publishing
 
 1. In your current installed version, export the **backup JSON** and back up the Jellyfin server's plugin configuration and `franchise-artwork` files. JSON backup contains metadata and references, **not the uploaded image bytes**.
-2. Extract the v0.6.1 repository ZIP and replace the project source and workflows in your existing GitHub clone. **Preserve your current root `manifest.json` if it contains newer published versions**; don't overwrite a live catalog with an older copy from the source ZIP. Both workflows must be in `.github/workflows/` exactly once.
+2. Extract the v0.6.2 repository ZIP and replace the project source and workflows in your existing GitHub clone. **Preserve your current root `manifest.json` if it contains newer published versions**; don't overwrite a live catalog with an older copy from the source ZIP. Both workflows must be in `.github/workflows/` exactly once.
 3. Commit and push to `main`. Confirm **Build and validate (no release)** completes successfully.
-4. Only after a successful build, manually run **Publish experimental release (manual approval only)** using version `0.6.1.0` and confirmation `RELEASE_EXPERIMENTAL`.
+4. Only after a successful build, manually run **Publish experimental release (manual approval only)** using version `0.6.2.0` and confirmation `RELEASE_EXPERIMENTAL`.
 5. Verify the GitHub Release ZIP and manifest before updating from Jellyfin's plugin Catalog. Restart the Windows Jellyfin service after updating.
 6. Select an existing group and verify its image override is unchanged when linking media. Try ordering groups and saving a TV Show range, then refresh and confirm persistence.
 
@@ -84,6 +98,10 @@ See [LICENSE](LICENSE): **PERSONAL AND NONCOMMERCIAL USE LICENSE (DRAFT)**, pres
 - [Official Jellyfin plugin template](https://github.com/jellyfin/jellyfin-plugin-template)
 - [Smart Collections](https://github.com/johnpc/jellyfin-plugin-smart-collections) (technical inspiration only)
 
-## Responsive layout improvement (v0.6.1)
+## Earlier responsive layout work (v0.6.1)
 
 The administration interface now responds to its available **Jellyfin content width**, not only the full browser window width. Its two columns stack as necessary, artwork tiles and form controls wrap, and the overall page stays within its containing region. This is a CSS-only layout change; franchise data, custom artwork, and media references are unchanged.
+
+## Development-only browser regression test
+
+Run `python3 scripts/test_live_ui_browser.py` only in an environment with Playwright and Chromium installed at `/usr/bin/chromium`. This test uses simulated Jellyfin responses and is **not** part of GitHub Actions (the hosted runner lacks that local Chromium test environment). The GitHub build executes the static layout and range-dialog contract checks.
