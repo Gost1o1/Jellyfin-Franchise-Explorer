@@ -1,19 +1,18 @@
-# Franchise Explorer roadmap
+# Jellyfin Franchise Explorer development roadmap
 
-## Current 0.2 preview (intended, pending build/load test)
-- Plugin dashboard page for virtual hierarchy editing.
-- Group types including franchise, era, phase, saga and character.
-- Virtual item ID references with display labels, item type and an ordered timeline label.
-- Metadata-only references for primary poster, backdrop, clearlogo, thumbnail/icon and banner.
-- JSON backup import/export; no real media file operations.
+## Experimental v0.5 source implementation
+- Existing persisted nested groups and virtual media links.
+- Styled administrator UI with search, checkbox bulk linking, image uploads and backups.
+- Dynamic image inheritance per slot: user override → associated Jellyfin BoxSet → parent → linked media → placeholder.
+- Optional native BoxSet association and opt-in one-time import of movie/show members.
+- No physical file reorganization, no modifications to native Jellyfin collections.
 
-## Next milestones
-- Dedicated plugin-owned persistence rather than growing an XML settings file; safe migrations and automated backups.
-- Authorized Jellyfin API integration to search/respect current-user item access and resolve existing item IDs.
-- Upload/display collection-style artwork, multiple backdrops, safe image validation and built-in media-image reuse.
-- Dedicated Franchises browsing interface within Jellyfin Web, followed by possible native navigation integration.
-- Playback and multiple named timelines across movies, seasons and individual episodes.
-- Optional live references to Jellyfin collections without changing native collection membership.
-- Cross-client research and real-life testing.
+## Not implemented
+- First-class **Franchises** navigation category and viewer-facing card page in Jellyfin Web.
+- Support across all Jellyfin TV/mobile clients, with client-specific extensions as needed.
+- Native Jellyfin Web right-click **Add to Franchise** menu action.
+- Live automatic collection synchronization; unassigned-title discovery and verified franchise matching.
+- Cross-title/episode chronological playback and per-user progress.
+- Larger-scale plugin-owned database and migration/backups.
 
-Nothing in this roadmap is an implementation promise. Native Jellyfin category integration differs across clients and may require a companion UI.
+All functionality requires CI compilation and live compatibility verification on Jellyfin 12.2. This plan does not promise that Jellyfin's supported plugin API can add a native navigation category by itself.

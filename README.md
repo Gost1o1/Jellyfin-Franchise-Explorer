@@ -4,58 +4,72 @@
 > **UNFINISHED EXPERIMENTAL PROJECT — USE WITH EXTREME CAUTION.**
 >
 > **I have not finalized this project. It is in its very early stages of development and should be used with extreme caution.**
-> Version 0.3 is experimental; test after backing up the Jellyfin configuration and exporting the plugin's JSON data. Do not rely on it for critical media management. This project is source-available, not OSI-approved open source.
+> This is a source-available project under a custom noncommercial license (not OSI-approved open source). Back up the Jellyfin server, plugin configuration, and plugin data before installing or upgrading.
 
-**Jellyfin Franchise Explorer** is an experimental plugin for organizing existing movies and television shows into **virtual** franchises, eras, phases, sagas, and viewing orders — without moving or duplicating any media files.
+Jellyfin Franchise Explorer manages **virtual** franchises, eras, phases, and media references without relocating or duplicating movies and shows. This code targets Jellyfin **12.2** / **.NET 10** and uses the same plugin GUID and configuration format as v0.2–v0.4.
 
-**Repository:** https://github.com/Gost1o1/Jellyfin-Franchise-Explorer
+## Version 0.5.0.0: automatic inheritance, collection import, bulk linking
 
-## v0.3.0.0 — what changed
+### Default: inherit existing Jellyfin artwork
 
-- Reworked administration page with a dark, responsive **two-column layout** and hierarchical folder navigator. Page-local styles now ship **inside** the embedded page, avoiding the missing styles seen in v0.2.
-- **Search your Jellyfin library** for movies, shows, seasons, and episodes using the authenticated Jellyfin API, and click to create a virtual reference. No copying GUIDs required; manual entry remains under **Advanced** as a fallback.
-- Preview a group's primary poster from a supplied HTTPS or same-origin relative URL. Store the other collection-style artwork URLs (backdrop, clearlogo, thumb/icon, banner) as metadata.
-- Filter existing groups by name or kind; display linked items with lightweight order adjustment.
-- Retain every v0.2 XML configuration property, plugin GUID and JSON export schema, so previously saved groups remain readable.
-- Prevent duplicate references to the same media item in one group from the search picker. Media remains untouched.
+Every group automatically displays the first available image for each **image type** in this order:
 
-### Known limitations
+1. **Explicit custom override** on that group (previously uploaded image or saved URL).
+2. An explicitly **connected Jellyfin collection (BoxSet)**.
+3. **Parent group's image**, including its effective inherited or custom image.
+4. An **existing linked movie/show image** indexed by Jellyfin.
+5. Placeholder if no suitable image exists.
 
-This is **only an administrator configuration page**. It does not create a new Franchises tab alongside Jellyfin's libraries, produce nested collection pages in clients, automatically generate artwork, upload images, or play chronological sequences. The picker depends on APIs available in your Jellyfin Web instance and may vary with browser/server versions. Artwork previews require a reachable URL and do not upload images to Jellyfin. No media files or native Jellyfin collections are changed. Media IDs are not validated server-side and references will not automatically reconnect after a library rebuild.
+Each poster, backdrop, logo, thumb, and banner is computed independently. A poster is **never** stretched into a logo or treated as an available backdrop. Existing files downloaded by Artwork/Fanart into movie folders are reused through Jellyfin's image metadata and API; **no filesystem scan or image copying is required**. If an upload is used, it overrides only its specific image type. Click **Restore inherited** to remove the override; the original images are never modified. This is dynamic: if Jellyfin changes the source image, the inherited image is resolved again on the next view. Some Jellyfin image types may not be present on every title.
 
-Timeline fields and numeric order exist, but **playback, custom playback progress, and episode-level chronological orchestration are not yet implemented**.
+**Important:** Artwork inheritance works in the plugin **administration page**. A public-facing Franchises section/home tile, native client integration, and playback are *not* available yet.
 
-## Important: Updating from v0.2
+### Import from your existing Jellyfin collections
 
-1. Open v0.2 settings and choose **Export backup JSON**. Keep the file in a safe location.
-2. Also back up your Jellyfin server's configuration. Your Windows service does not need any local .NET build tools for the GitHub release process.
-3. Replace the source files in your GitHub repository with the contents of this ZIP, preserving the `.github/workflows` paths. **Do not delete or overwrite v0.2's existing release or clear its `manifest.json`**. This ZIP includes a snapshot of the currently published v0.2 manifest so upgrading the source will not drop that catalog version.
-4. Wait for **Build and validate** to pass on GitHub Actions.
-5. Open **Publish experimental release**, run on `main` with version `0.3.0.0`, confirmation `RELEASE_EXPERIMENTAL`. It creates a new prerelease and prepends v0.3 to the manifest while retaining v0.2.
-6. Check `manifest.json` includes both versions and the `v0.3.0.0` GitHub Release has the DLL ZIP. Update through Jellyfin's Plugins catalog, restart your Jellyfin Windows service, and refresh the browser (`Ctrl+Shift+R`).
-7. Open the plugin settings. Verify your existing Star Wars/Marvel sample groups are still there **before making edits**. Test a Jellyfin library search. If results fail to load, the manual GUID workflow remains available.
+- Select a virtual franchise/era/phase; under **Existing Jellyfin collection**, search for a collection.
+- Click the collection to **connect it**. Its images become the default artwork for this group.
+- Click **Import collection members** to add its current movies/shows as **virtual references**, without changing the original collection or any file.
+- Existing links are deduplicated by item ID. The import is a **one-time snapshot**, **not** live syncing. Nested collection entries and other unsupported item types are skipped. Preview limits remain 250 groups, 3,000 virtual references, and 1,200 collection entries per import.
+- Confirm the preview prompt and click **Save plugin configuration** to persist.
 
-**One-click Jellyfin catalog URL** (after a release is published):
+### Bulk linking
 
+Search for Jellyfin media within a selected group, use checkboxes and **Select all results**, then **Add selected media**. Results are intentionally limited to 25 per search; refine search to find additional items. The added media are virtual references, not new physical copies.
+
+### Existing functionality retained
+
+- Editable nested groups, sortable virtual references, JSON metadata backup/restore.
+- Admin-only JPEG/PNG/WebP uploads up to 8 MB per image (five types).
+- Custom per-group poster/backdrop/logo/thumb/banner overrides.
+- Stable plugin configuration GUID and backwards-compatible `Nodes`, `MediaLinks` and artwork URL fields. New optional `CollectionId` is backward compatible.
+
+### Unavailable features
+
+- New Franchises library in Jellyfin's standard navigation or right-click context menu.
+- In-universe chronological playlist playback and automatic per-user franchise watch progression.
+- Ongoing collection membership synchronization, recognition of every possible ungrouped franchise item, or nested BoxSet expansion.
+- Broad Jellyfin client compatibility outside the installed Jellyfin Web administrator editor.
+
+## Safe update / GitHub publishing
+
+1. In v0.4, export the **backup JSON** and back up the Jellyfin server's plugin configuration and `franchise-artwork` files. JSON backup contains metadata and references, **not the uploaded image bytes**.
+2. Extract the v0.5 repository ZIP and replace the project source and workflows in your existing GitHub clone. **Preserve your current root `manifest.json` if it contains newer published versions**; don't overwrite a live catalog with an older copy from the source ZIP. Both workflows must be in `.github/workflows/` exactly once.
+3. Commit and push to `main`. Confirm **Build and validate (no release)** completes successfully.
+4. Only after a successful build, manually run **Publish experimental release (manual approval only)** using version `0.5.0.0` and confirmation `RELEASE_EXPERIMENTAL`.
+5. Verify the GitHub Release ZIP and manifest before updating from Jellyfin's plugin Catalog. Restart the Windows Jellyfin service after updating.
+6. Select an existing franchise and verify inherited images; try connecting an existing Jellyfin BoxSet and importing its contents. Save the configuration and refresh.
+
+Catalog URL, only after a published successful release:
 `https://raw.githubusercontent.com/Gost1o1/Jellyfin-Franchise-Explorer/main/manifest.json`
 
-For additional details see [Upgrade instructions](docs/UPGRADE_V03.md), [Release process](docs/RELEASE_PROCESS.md), and [Safe testing](docs/SAFE_TESTING.md).
-
-## Compatibility and data boundaries
-
-- Intended for **Jellyfin 12.2**, `.NET 10`, and plugin ABI `12.0.0.0`.
-- Stores data in the plugin's existing XML configuration; capacity limited to 250 virtual groups and 3,000 links. This is temporary storage for preview releases, not a scalable long-term database.
-- Changes only plugin-owned configuration records, not Jellyfin's original files, library database or native collections.
-- Search is a foreground action in the authenticated admin web UI; no scheduled library scans are created.
-- URL previews may request images from external domains you provide. Avoid untrusted image URLs; only HTTPS or single-leading-slash relative references are accepted.
+**Status:** Source code static tests can pass while a build or runtime API still fails. No Jellyfin 12.2 host integration test is claimed. Do not treat a green GitHub Actions checkmark as proof of runtime safety.
 
 ## License
 
-This project uses the root [PERSONAL AND NONCOMMERCIAL USE LICENSE (DRAFT)](LICENSE), **unchanged** from the project owner's supplied text. It is a non-OSI-approved custom source-available license and should receive legal review before wide redistribution, particularly for plugin/dependency license compatibility.
+See [LICENSE](LICENSE): **PERSONAL AND NONCOMMERCIAL USE LICENSE (DRAFT)**, preserved exactly as supplied by the project owner. Third-party dependencies remain subject to their own licenses. Seek legal review before broader distribution.
 
-## Development references
+## References
 
-- [Official Jellyfin Plugins Documentation](https://jellyfin.org/docs/general/server/plugins/)
-- [Official Jellyfin Plugin Template](https://github.com/jellyfin/jellyfin-plugin-template)
-- [Smart Collections](https://github.com/johnpc/jellyfin-plugin-smart-collections) (conceptual and packaging reference)
-- [JellyWatch Collections Guide](https://jellywatch.app/blog/jellyfin-collections-smart-playlists-organize-library-2026)
+- [Jellyfin Plugins documentation](https://jellyfin.org/docs/general/server/plugins/)
+- [Official Jellyfin plugin template](https://github.com/jellyfin/jellyfin-plugin-template)
+- [Smart Collections](https://github.com/johnpc/jellyfin-plugin-smart-collections) (technical inspiration only)

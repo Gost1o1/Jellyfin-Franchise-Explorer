@@ -1,31 +1,14 @@
-# Publish from GitHub only — no local SDK needed for installation
+# Release process — GitHub Actions only
 
-## Push the repository
+The repository ZIP contains source code, not an installable Jellyfin DLL. It is intended to replace files in your existing GitHub repository; Jellyfin installs releases through the generated `manifest.json` catalog entry.
 
-This repository ZIP contains **source files**, not an installable Jellyfin plugin. Extract the ZIP and add the files to your GitHub repo, keeping folders. Do not upload the ZIP as though Jellyfin could install it directly.
+1. Preserve your currently published `manifest.json` if it is newer than the packaged one. Export a backup of your plugin configuration and back up uploaded image files.
+2. Copy source files and `.github/workflows` into your GitHub clone; commit and push to `main`.
+3. Check **Actions → Build and validate (no release)** for a successful compilation and static tests. This is not a host integration test.
+4. When ready, run **Actions → Publish experimental release (manual approval only)** on `main` using version **`0.5.0.0`** and confirmation **`RELEASE_EXPERIMENTAL`**.
+5. The workflow checks the project version, builds the plugin, packages the DLL, creates a GitHub prerelease, computes the ZIP checksum, and updates the manifest. Verify the release and manifest manually.
+6. Use the existing catalog URL in Jellyfin and restart the service after updating. Validate your saved groups before importing collections.
 
-A GitHub Desktop clone/commit/push is a reliable way to replace files already in an existing repository, without using PowerShell or compiling locally. You can also use GitHub's web editor and file uploader while preserving folders.
+Catalog URL: `https://raw.githubusercontent.com/Gost1o1/Jellyfin-Franchise-Explorer/main/manifest.json`
 
-## Confirm CI
-
-Open **Actions → Build and validate**. A green run indicates a successful .NET build and basic file checks, **not** runtime compatibility.
-
-## Controlled pre-release (only after isolated testing)
-
-1. Open **Actions → Publish experimental release (manual approval only)**.
-2. Select **Run workflow**, main branch, version `0.3.0.0` and enter exactly `RELEASE_EXPERIMENTAL` in the confirmation field.
-3. The workflow builds the DLL, packages a minimal ZIP, makes a GitHub **prerelease**, then computes its Jellyfin-compatible checksum and commits the updated `manifest.json`.
-4. Verify the release asset, the manifest's `sourceUrl` and `checksum`, and that GitHub Actions was successful.
-5. Copy the Jellyfin repository URL only after that: `https://raw.githubusercontent.com/Gost1o1/Jellyfin-Franchise-Explorer/main/manifest.json`.
-
-Until then, `manifest.json` is intentionally `[]`, so the Jellyfin Catalog correctly shows **no installable release**. **Never invent a release URL or checksum.**
-
-## Critical safeguards
-
-- The workflow publishes only when manually invoked with the confirmation phrase and from `main`.
-- The version must exactly match the `.csproj` `<Version>`.
-- Do not publish merely because a build passes. First test loading on an isolated Jellyfin 12.2 instance.
-- GitHub Actions needs repository Actions enabled and workflow `contents: write` permission to commit the manifest and publish a release.
-- Prerelease visibility/installation behavior may vary by client; verify in a disposable environment.
-
-**v0.3 specific:** Keep the existing v0.2 manifest entry; do not replace `manifest.json` with `[]`. Run the UI contract test with `node scripts/ui_contract_tests.js`.
+The release workflow requires permission to publish GitHub Releases and commit `manifest.json` (`contents: write`). Never advertise a release before compilation succeeds. Prefer an isolated Jellyfin instance for runtime compatibility testing; without one, installing on the main service carries risk.

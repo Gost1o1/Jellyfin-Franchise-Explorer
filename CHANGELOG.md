@@ -1,16 +1,18 @@
 # Changelog
 
-## 0.3.0.0 — experimental upgrade (source)
-- Redesigned the embedded settings page and placed its scoped CSS inside the embedded page so Jellyfin can render it.
-- Added Jellyfin API media search (Movies, Series, Seasons, Episodes, BoxSets) and one-click virtual links.
-- Added URL-based poster previews, hierarchy filtering, easier link management and modest duplicate protection.
-- Preserved plugin GUID and v0.2 data model, including schema-version 1 JSON import/export.
-- Retained existing v0.2.0.0 manifest catalog entry when creating the v0.3 source package.
-- No media file moves, native collections modifications, artwork uploads, client navigation integration, or playback.
+## v0.5.0.0 (experimental / unverified)
+- Implemented automatic image inheritance from existing Jellyfin BoxSets, parent nodes, and linked media; no edits to original image files.
+- Added independent artwork overrides with **Restore inherited** for each image type.
+- Added a native BoxSet finder, persistent `CollectionId` association, and opt-in snapshot import of its current movie/show members.
+- Added select-all/checkbox bulk media linking to the existing Jellyfin search experience.
+- Preserved previous v0.2–v0.4 virtual groups, media links, uploaded artwork references, and custom license.
+- Retained explicit warning that a custom nav category/context-menu integration and timeline player remain unimplemented.
 
-## 0.2.0.0 — first user-installed experiment
-- Successfully built and installed via GitHub Actions and Jellyfin's plugin catalog on Jellyfin 12.2.
-- Verified the admin page loads and example franchises survive save and refresh.
-- Virtual group editing, media GUID references, artwork metadata and backups.
+## v0.4.0.0
+- Admin-only group artwork upload and preview endpoints.
 
-**Caution:** v0.3's new UI and media picker have not yet been runtime-tested on a Jellyfin host.
+## v0.3.0.0
+- Styled administration editor and Jellyfin item search.
+
+## v0.2.0.0
+- Nested virtual group editor, backup/restore, and media references.

@@ -11,6 +11,8 @@ public sealed class FranchiseNode
     public string ParentId { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string NodeType { get; set; } = "Franchise";
+    /// <summary>Optional existing Jellyfin BoxSet ID to inherit images and import members from.</summary>
+    public string CollectionId { get; set; } = string.Empty;
     public string Overview { get; set; } = string.Empty;
     public int SortOrder { get; set; }
     public ArtworkMetadata Artwork { get; set; } = new();

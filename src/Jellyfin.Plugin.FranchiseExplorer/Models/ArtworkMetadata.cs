@@ -1,7 +1,7 @@
 namespace Jellyfin.Plugin.FranchiseExplorer.Models;
 
 /// <summary>
-/// Descriptive references only. This preview does not fetch, upload, or serve artwork.
+/// Descriptive references only. Uploaded image references point to protected plugin-owned image endpoints.
 /// Simple properties are compatible with Jellyfin's XML configuration serializer.
 /// </summary>
 public sealed class ArtworkMetadata

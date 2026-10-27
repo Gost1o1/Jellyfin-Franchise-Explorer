@@ -28,7 +28,7 @@ public sealed class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     public override Guid Id => PluginId;
 
     public override string Description =>
-        "Experimental virtual franchise editor with media search and artwork previews.";
+        "Experimental virtual franchises with inherited Jellyfin artwork, overrides, and collection imports.";
 
     public IEnumerable<PluginPageInfo> GetPages()
     {
