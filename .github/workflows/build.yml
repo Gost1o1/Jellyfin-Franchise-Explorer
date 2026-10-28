@@ -1,36 +1,50 @@
-
-name: Build and validate
-
+name: Build and validate (no release)
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+  pull_request:
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout source
+      - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-
-      - name: Restore and build
+      - name: Validate repository and embedded JavaScript
         run: |
-          dotnet restore src/Jellyfin.Plugin.FranchiseExplorer/Jellyfin.Plugin.FranchiseExplorer.csproj
-          dotnet build src/Jellyfin.Plugin.FranchiseExplorer/Jellyfin.Plugin.FranchiseExplorer.csproj --configuration Release --no-restore
-
-      - name: Upload build artifact
+          python3 scripts/check_repo.py
+          python3 scripts/smoke_tests.py
+          node scripts/ui_contract_tests.js
+          python3 scripts/test_artwork_contract.py
+          node scripts/test_inheritance.js
+          node scripts/test_ranges_and_drag.js
+          node scripts/test_tv_dialog_contract.js
+          python3 scripts/test_responsive_layout.py
+          node --check src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-my-media.js
+          python3 scripts/test_my_media_tile_static.py
+          python3 scripts/test_rows_contract.py
+          python3 scripts/test_full_library_row_contract.py
+          python3 scripts/test_row_search_focus_contract.py
+          node scripts/test_timeline_engine.js
+          python3 scripts/test_timeline_contract.py
+          python3 scripts/test_local_web_handoff_contract.py
+      - name: Restore dependencies
+        run: dotnet restore src/Jellyfin.Plugin.FranchiseExplorer/Jellyfin.Plugin.FranchiseExplorer.csproj
+      - name: Build Jellyfin 12.2 plugin
+        run: dotnet build src/Jellyfin.Plugin.FranchiseExplorer/Jellyfin.Plugin.FranchiseExplorer.csproj --no-restore -c Release
+      - name: Prepare test-only DLL artifact
+        run: |
+          mkdir -p artifact
+          cp src/Jellyfin.Plugin.FranchiseExplorer/bin/Release/net10.0/Jellyfin.Plugin.FranchiseExplorer.dll artifact/
+      - name: Upload build artifact (NOT a release)
         uses: actions/upload-artifact@v4
         with:
-          name: Jellyfin-Franchise-Explorer
-          path: src/Jellyfin.Plugin.FranchiseExplorer/bin/Release/net10.0/
-          if-no-files-found: error
+          name: franchise-explorer-unverified-dll
+          path: artifact/*
+          retention-days: 14
