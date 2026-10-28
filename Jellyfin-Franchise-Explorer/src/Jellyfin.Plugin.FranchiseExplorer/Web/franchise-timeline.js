@@ -1,4 +1,4 @@
-/* Franchise Explorer v0.8.9.0 local Jellyfin Web playback handoff.
+/* Franchise Explorer v0.8.9.1 local Jellyfin Web playback handoff.
  * A Jellyfin PlayNow queue is built from item IDs, never from filenames.
  * Timeline state is separate from Jellyfin watched flags and user-specific.
  */
@@ -7,6 +7,17 @@
   const guid = v => /^[a-f\d]{32}$|^[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12}$/i.test(String(v || ''));
   const n = value => Math.max(0, Number.parseInt(value,10) || 0);
   const esc = v => String(v || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  // The Jellyfin 12.2 API host can return PascalCase even when plugin JSON
+  // storage uses camelCase. Normalize either shape before reading progress.
+  const timelineResponse = raw => {
+    const record = value => {
+      if(!value || typeof value!=='object' || Array.isArray(value))return value;
+      const output={};
+      for(const [key,item] of Object.entries(value))output[key[0].toLowerCase()+key.slice(1)]=item;
+      return output;
+    };
+    return Array.isArray(raw)?raw.map(record):record(raw);
+  };
   const rangeLabel = r => r.rangeMode === 'Seasons' ? `Seasons ${r.startSeason}–${r.endSeason}` :
     r.rangeMode === 'Episodes' ? `S${r.startSeason}E${r.startEpisode}–S${r.endSeason}E${r.endEpisode}` : 'Entire title';
   const epNumber = e => [n(e.ParentIndexNumber),n(e.IndexNumber)];
@@ -35,7 +46,9 @@
     async request(path,options={}) {
       const res=await fetch(this.url(path),{cache:'no-store',...options,headers:{...this.headers(),...(options.headers||{})}});
       if(!res.ok)throw new Error('Jellyfin returned HTTP '+res.status+' for '+path.split('?')[0]);
-      if(res.status===204)return null;return await res.json();
+      if(res.status===204)return null;
+      const value=await res.json();
+      return path.startsWith('/FranchiseExplorer/TimelineState')?timelineResponse(value):value;
     }
     async load(){
       try {const states=await this.request('/FranchiseExplorer/TimelineState');

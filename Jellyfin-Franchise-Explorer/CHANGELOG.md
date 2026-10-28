@@ -1,3 +1,24 @@
+## v0.8.9.1 — Timeline JSON response contract and local auto-next (experimental)
+
+- Fix a confirmed Jellyfin 12.2 mismatch: `TimelineState` API responses were
+  PascalCase (`RowId`, `CompletedKeys`, `PendingAutoAdvanceUtc`), while all
+  browser views and the local auto-next bridge read camelCase properties.
+- Make every timeline GET/PUT/Activate/Complete success response explicitly
+  serialized with the plugin's camelCase JSON settings, independent of the
+  host application's MVC serializer configuration.
+- Defensively normalize either response form in the browsing timeline script,
+  the optional home progress widget, and the injected Jellyfin Web bridge.
+- Preserve v0.8.9.0 server-side arming, completion persistence, session checks,
+  and the native My Media card's exact geometry and appearance.
+- Add regression tests using a synthetic PascalCase response matching the
+  real server's field names: 1/422 completed displays ~0.24%, the cursor is at
+  the next episode, and a fresh pending marker is followed in Jellyfin Web.
+
+**Live validation still required:** The prior server JSON actually had one
+completed key and a pending next-item marker, but its marker expired before
+inspection. This update does not replay stale transitions or alter history.
+Test with a new short movie-to-episode timeline on actual Jellyfin.
+
 ## v0.8.9.0 — Explicit timeline activation and completion diagnostics (experimental)
 
 - Before opening a local Jellyfin Web movie, persist a short-lived **armed**

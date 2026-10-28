@@ -81,6 +81,17 @@ public sealed class FranchiseTimelineController : ControllerBase
         => state.ArmedUtc.HasValue && state.ArmedUtc.Value <= DateTimeOffset.UtcNow.AddSeconds(5)
             && state.ArmedUtc.Value >= DateTimeOffset.UtcNow.AddMinutes(-2);
 
+    // Jellyfin 12.2 configures its MVC Ok(...) JSON serializer to emit
+    // PascalCase properties, even though the on-disk serializer uses Web
+    // camelCase. The browser expects rowId, completedKeys and the pending
+    // handoff marker. Serialize all timeline responses explicitly so the
+    // host's unrelated global MVC settings cannot silently break playback.
+    private IActionResult TimelineJson<T>(T state)
+    {
+        Response.Headers["Cache-Control"] = "no-store";
+        return Content(JsonSerializer.Serialize(state, JsonOptions), "application/json; charset=utf-8");
+    }
+
     [HttpGet]
     public IActionResult List()
     {
@@ -103,8 +114,7 @@ public sealed class FranchiseTimelineController : ControllerBase
                 catch (IOException) { /* A concurrent update may be underway. */ }
             }
         }
-        Response.Headers["Cache-Control"] = "no-store";
-        return Ok(rows.OrderByDescending(x => x.UpdatedUtc));
+        return TimelineJson(rows.OrderByDescending(x => x.UpdatedUtc).ToArray());
     }
 
     [HttpGet("{rowId:guid}")]
@@ -114,11 +124,10 @@ public sealed class FranchiseTimelineController : ControllerBase
         if (!ValidRow(rowId)) return NotFound();
         var path = PathFor(user, rowId);
         if (path is null) return StatusCode(503);
-        if (!System.IO.File.Exists(path)) return Ok(new TimelineProgress { RowId = rowId.ToString("D") });
+        if (!System.IO.File.Exists(path)) return TimelineJson(new TimelineProgress { RowId = rowId.ToString("D") });
         try
         {
-            Response.Headers["Cache-Control"] = "no-store";
-            return Ok(JsonSerializer.Deserialize<TimelineProgress>(System.IO.File.ReadAllText(path), JsonOptions));
+            return TimelineJson(JsonSerializer.Deserialize<TimelineProgress>(System.IO.File.ReadAllText(path), JsonOptions));
         }
         catch (IOException) { return StatusCode(503, "Timeline state temporarily unavailable."); }
         catch (JsonException) { return StatusCode(503, "Timeline state requires repair or backup restoration."); }
@@ -178,8 +187,7 @@ public sealed class FranchiseTimelineController : ControllerBase
             finally { if (System.IO.File.Exists(temporary)) System.IO.File.Delete(temporary); }
         }
         finally { WriteLock.Release(); }
-        Response.Headers["Cache-Control"] = "no-store";
-        return Ok(record);
+        return TimelineJson(record);
     }
     public sealed class TimelineCompletionRequest
     {
@@ -214,16 +222,16 @@ public sealed class FranchiseTimelineController : ControllerBase
             // rolling it back to the browser's earlier intent snapshot.
             if (state.PlaybackMode == "playing" && state.SessionId == request.SessionId
                 && state.PendingAutoAdvanceUtc.HasValue && MatchesItem(state.PendingAutoAdvanceFromKey, itemId))
-                return Ok(state);
+                return TimelineJson(state);
             if (!CurrentItemMatches(state, itemId)) return Conflict("The timeline has moved to a different item.");
-            if (state.PlaybackMode == "playing" && state.SessionId == request.SessionId) return Ok(state);
+            if (state.PlaybackMode == "playing" && state.SessionId == request.SessionId) return TimelineJson(state);
             if (state.PlaybackMode != "armed" || !RecentlyArmed(state)) return Conflict("The timeline is not awaiting this playback.");
             state.PlaybackMode = "playing";
             state.SessionId = request.SessionId;
             state.ArmedUtc = null;
             state.UpdatedUtc = DateTimeOffset.UtcNow;
             await WriteProgressAsync(path, state, cancellationToken).ConfigureAwait(false);
-            return Ok(state);
+            return TimelineJson(state);
         }
         finally { WriteLock.Release(); }
     }
@@ -254,7 +262,7 @@ public sealed class FranchiseTimelineController : ControllerBase
             bool SameItem(string key) => MatchesItem(key, itemId);
             if (state.Index > 0 && state.QueueKeys.Count > state.Index - 1
                 && SameItem(state.QueueKeys[state.Index - 1]) && state.PendingAutoAdvanceUtc.HasValue)
-                return Ok(state); // Server PlaybackStopped already advanced it.
+                return TimelineJson(state); // Server PlaybackStopped already advanced it.
             if (state.Index < 0 || state.Index >= state.QueueKeys.Count || !SameItem(state.QueueKeys[state.Index]))
                 return Conflict("The ended video is not the current timeline item.");
             var from = state.QueueKeys[state.Index];
@@ -279,7 +287,7 @@ public sealed class FranchiseTimelineController : ControllerBase
             }
             state.UpdatedUtc = DateTimeOffset.UtcNow;
             await WriteProgressAsync(path, state, cancellationToken).ConfigureAwait(false);
-            return Ok(state);
+            return TimelineJson(state);
         }
         finally { WriteLock.Release(); }
     }

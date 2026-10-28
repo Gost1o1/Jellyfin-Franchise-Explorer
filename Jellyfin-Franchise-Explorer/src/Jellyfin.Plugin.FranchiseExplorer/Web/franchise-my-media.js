@@ -1,5 +1,5 @@
 /*
- * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.0).
+ * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.1).
  * Adds ONE visual link in the existing "My Media" row. It does not create a
  * Jellyfin library, alter user preferences, or modify the server's media.
  * Requires a compatible JavaScript injector to run in jellyfin-web.
@@ -271,6 +271,14 @@
     return match?match[1]:'';
   };
   let lastFetch=0,busy=false;
+  function timelineResponse(raw){
+    const record=value=>{
+      if(!value||typeof value!=='object'||Array.isArray(value))return value;
+      const result={};for(const [key,item] of Object.entries(value))result[key[0].toLowerCase()+key.slice(1)]=item;
+      return result;
+    };
+    return Array.isArray(raw)?raw.map(record):record(raw);
+  }
   function credential(){
     let servers=[];
     try{servers=JSON.parse(localStorage.getItem('jellyfin_credentials')||'{}').Servers||[];}catch(_){}
@@ -283,7 +291,10 @@
     const prefix=((location.pathname||'').match(/^(.*?)\/web(?:\/|$)/i)||[])[1]||'';
     const r=await fetch(prefix+path,{cache:'no-store',...options,
       headers:{Authorization:'MediaBrowser Token="'+auth.AccessToken+'"',...(options.headers||{})}});
-    if(!r.ok)throw new Error('HTTP '+r.status);return r.status===204?null:r.json();
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    if(r.status===204)return null;
+    const value=await r.json();
+    return path.startsWith('/FranchiseExplorer/TimelineState')?timelineResponse(value):value;
   }
   function findHomeAnchor(){
     const headers=[...document.querySelectorAll('h1,h2,h3,h4,.sectionTitle')];
@@ -375,6 +386,14 @@
   let lastAutoplayItem='';
   let verifiedVideo = null;
   let completedVideoListener = null;
+  function timelineResponse(raw){
+    const record=value=>{
+      if(!value||typeof value!=='object'||Array.isArray(value))return value;
+      const result={};for(const [key,item] of Object.entries(value))result[key[0].toLowerCase()+key.slice(1)]=item;
+      return result;
+    };
+    return Array.isArray(raw)?raw.map(record):record(raw);
+  }
   function localCredentials(){
     try{
       const all=JSON.parse(localStorage.getItem('jellyfin_credentials')||'{}').Servers||[];
@@ -398,7 +417,9 @@
     const r=await fetch(prefix+path,{cache:'no-store',...options,
       headers:{Authorization:'MediaBrowser Token="'+auth.AccessToken+'"',...(options.headers||{})}});
     if(!r.ok)throw new Error('HTTP '+r.status);
-    return r.status===204?null:r.json();
+    if(r.status===204)return null;
+    const value=await r.json();
+    return path.startsWith('/FranchiseExplorer/TimelineState')?timelineResponse(value):value;
   }
   function itemMatch(a,b){return String(a||'').replace(/-/g,'').toLowerCase()===String(b||'').replace(/-/g,'').toLowerCase();}
   function deviceId(){return localStorage.getItem('_deviceId2')||localStorage.getItem('_deviceId')||'';}
