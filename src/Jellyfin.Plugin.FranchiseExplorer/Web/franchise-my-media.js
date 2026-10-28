@@ -31,10 +31,13 @@
     style.textContent = `
       #${TILE_ID} {
         display: block; position: relative; box-sizing: border-box;
-        flex: 0 0 auto; min-width: 0; max-width: 45vw;
+        flex: 0 0 auto; min-width: 0; max-width: none;
         color: inherit; cursor: pointer; text-decoration: none;
         -webkit-tap-highlight-color: transparent;
       }
+      /* Never cap this library tile to a viewport fraction. Jellyfin's own
+         home-library cards can be wider than 45vw on narrow phones. */
+      #${TILE_ID}.card { max-width: none !important; }
       #${TILE_ID} .fe-tile-art {
         position: relative; width: 100%; aspect-ratio: 16 / 9;
         overflow: hidden; border-radius: 4px;
@@ -111,12 +114,17 @@
 
   function fitTile(tile, reference) {
     if (!reference) return;
+    // Use a measured, *real* Jellyfin library card. Don't fall back to a
+    // fabricated 240px width before Jellyfin lays out the home carousel.
     const box = reference.getBoundingClientRect();
-    const computed = window.getComputedStyle(reference);
-    const width = box.width || parseFloat(computed.width) || 240;
-    if (Number.isFinite(width) && width >= 90 && width <= 800) {
-      tile.style.width = `${Math.round(width)}px`;
-      tile.style.flexBasis = `${Math.round(width)}px`;
+    const width = box.width;
+    if (Number.isFinite(width) && width >= 90 && width <= 1000) {
+      const measured = `${Math.round(width)}px`;
+      if (tile.style.width !== measured) {
+        tile.style.setProperty('width', measured, 'important');
+        tile.style.setProperty('min-width', measured, 'important');
+        tile.style.setProperty('flex-basis', measured, 'important');
+      }
     }
   }
 
@@ -243,7 +251,8 @@
     }))||(matching.length===1?matching[0]:null);
   }
   async function request(path,auth,options={}){
-    const r=await fetch(serverPrefix()+path,{cache:'no-store',...options,
+    const prefix=((location.pathname||'').match(/^(.*?)\/web(?:\/|$)/i)||[])[1]||'';
+    const r=await fetch(prefix+path,{cache:'no-store',...options,
       headers:{Authorization:'MediaBrowser Token="'+auth.AccessToken+'"',...(options.headers||{})}});
     if(!r.ok)throw new Error('HTTP '+r.status);return r.status===204?null:r.json();
   }
@@ -343,7 +352,7 @@
   }
   function clearMarker(p){
     const clean=new URLSearchParams(p);
-    clean.delete('feAutoPlay');clean.delete('feSubs');
+    clean.delete('feAutoPlay');clean.delete('feSubs');clean.delete('feLocalTimeline');
     try { history.replaceState(history.state,'',location.pathname+location.search+'#/details?'+clean.toString()); }
     catch (_) { location.hash='#/details?'+clean.toString(); }
   }
@@ -351,6 +360,115 @@
     for(const video of document.querySelectorAll('video')){
       try{for(const track of video.textTracks||[])track.mode='disabled';}catch(_){/* Not all browsers expose tracks */}
     }
+  }
+  // A local timeline intent is written by the Franchises browser. The native
+  // Jellyfin Web player must start first; 204 from /Sessions/Playing is never
+  // enough. This verification is scoped to the authenticated Jellyfin user.
+  const handoffPrefix='fe-local-timeline-v1:';
+  let pendingCheck=false;
+  let lastAutoplayItem='';
+  function localCredentials(){
+    try{
+      const all=JSON.parse(localStorage.getItem('jellyfin_credentials')||'{}').Servers||[];
+      return all.find(x=>x.UserId&&x.AccessToken&&
+        [x.ManualAddress,x.LocalAddress,x.RemoteAddress].some(a=>{
+          try{return new URL(a).origin===location.origin;}catch(_){return false;}
+        }))||(all.length===1?all[0]:null);
+    }catch(_){return null;}
+  }
+  function localIntent(auth){
+    if(!auth?.UserId)return null;
+    const key=handoffPrefix+String(auth.UserId).toLowerCase();
+    try{
+      const obj=JSON.parse(localStorage.getItem(key)||'null');
+      if(!obj||obj.version!==1||Date.now()-obj.created>120000){localStorage.removeItem(key);return null;}
+      return {key,...obj};
+    }catch(_){localStorage.removeItem(key);return null;}
+  }
+  async function api(path,auth,options={}){
+    const prefix=((location.pathname||'').match(/^(.*?)\/web(?:\/|$)/i)||[])[1]||'';
+    const r=await fetch(prefix+path,{cache:'no-store',...options,
+      headers:{Authorization:'MediaBrowser Token="'+auth.AccessToken+'"',...(options.headers||{})}});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    return r.status===204?null:r.json();
+  }
+  function itemMatch(a,b){return String(a||'').replace(/-/g,'').toLowerCase()===String(b||'').replace(/-/g,'').toLowerCase();}
+  function deviceId(){return localStorage.getItem('_deviceId2')||localStorage.getItem('_deviceId')||'';}
+  function showLocalNotice(message){
+    let notice=document.getElementById('fe-local-playback-notice');
+    if(!notice){
+      notice=document.createElement('div');notice.id='fe-local-playback-notice';
+      notice.setAttribute('role','alert');
+      notice.style.cssText='position:fixed;z-index:2147483640;top:75px;left:12px;right:12px;max-width:670px;margin:auto;background:#2b2320;color:#ffdfb3;border:1px solid #d3a04b;border-radius:10px;padding:13px 16px;box-shadow:0 8px 30px #0009;font:14px/1.45 sans-serif';
+      document.body.appendChild(notice);
+    }
+    notice.textContent=message;
+  }
+  function localVideoAdvancing(snapshot){
+    // Verify a real rendering player. Session NowPlayingItem alone may refer
+    // to a background/stale session, even when it reports an advancing clock.
+    for(const video of document.querySelectorAll('video')){
+      if(!video.paused && !video.ended && video.readyState>=2 && video.getClientRects().length){
+        const time=Number(video.currentTime)||0;
+        if(snapshot.has(video) && time-snapshot.get(video)>=0.4)return true;
+        if(!snapshot.has(video))snapshot.set(video,time);
+      }
+    }
+    return false;
+  }
+  async function confirmLocalTimeline(expectedId){
+    if(pendingCheck)return;
+    pendingCheck=true;
+    try{
+      const auth=localCredentials();const intent=localIntent(auth);
+      if(!intent||!itemMatch(intent.expectedId,expectedId))return;
+      let started=null;
+      const idOfThisDevice=deviceId();
+      const videoStart=new Map();
+      const firstTicks=new Map();
+      for(let i=0;i<24;i++){
+        await new Promise(resolve=>setTimeout(resolve,750));
+        const videoAdvancing=localVideoAdvancing(videoStart);
+        const sessions=await api('/Sessions?ControllableByUserId='+encodeURIComponent(auth.UserId),auth);
+        const matches=(sessions||[]).filter(s=>String(s.UserId||'').toLowerCase()===String(auth.UserId).toLowerCase()
+          &&itemMatch(s.NowPlayingItem?.Id,expectedId)
+          // Don't accidentally take another machine's Chrome session when
+          // this page is opened on the Android WebView or another browser.
+          &&(!idOfThisDevice||String(s.DeviceId||'')===idOfThisDevice));
+        for(const session of matches){
+          const position=Number(session.PlayState?.PositionTicks)||0;
+          const previous=firstTicks.get(session.Id);
+          if(previous===undefined)firstTicks.set(session.Id,position);
+          const advancing=previous!==undefined && position-previous>5000000;
+          const paused=!!session.PlayState?.IsPaused;
+          // Browser mode requires a *visible, advancing local video*. In a
+          // native Android player, same-device server progress may be the only
+          // accessible signal: never accept a Chrome session from elsewhere.
+          const nativePlayer=/jellyfin for android|android/i.test(session.Client||'')
+            &&idOfThisDevice && String(session.DeviceId||'')===idOfThisDevice;
+          if(!paused&&advancing&&(videoAdvancing||nativePlayer)){started=session;break;}
+        }
+        if(started)break;
+      }
+      if(!started){
+        const msg='Franchise Explorer could not verify video playback on THIS device. Timeline history was not changed. If Jellyfin opened details only, press its normal Play button. Local browser playback must actually start before chronology can advance.';
+        console.warn(msg);
+        showLocalNotice(msg);
+        // Preserve the expiring intent to allow manual Play to succeed.
+        return;
+      }
+      // If the intent is an independent replay, no timeline cursor/history is
+      // changed. Ordinary Jellyfin watched progress may still be affected.
+      if(!intent.replayOnly){
+        const state={...intent.state,sessionId:started.Id,playbackMode:'playing'};
+        await api('/FranchiseExplorer/TimelineState/'+encodeURIComponent(state.rowId),auth,{
+          method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});
+      }
+      localStorage.removeItem(intent.key);
+      lastAutoplayItem=expectedId;
+      if(!intent.replayOnly)localStorage.setItem('fe-local-follow-v1:'+String(auth.UserId).toLowerCase(),JSON.stringify({rowId:intent.rowId,created:Date.now(),subtitleEnabled:intent.subtitleEnabled}));
+    }catch(e){console.warn('Franchise Explorer: could not verify local timeline playback:',e);}
+    finally{pendingCheck=false;}
   }
   function isVisible(el){return !!(el&&el.getClientRects().length&&getComputedStyle(el).visibility!=='hidden');}
   function startIfReady(){
@@ -366,8 +484,10 @@
     const play=root?.querySelector('.btnPlay,button[data-action="play"],button[data-action="resume"]');
     if(play&&isVisible(play)){
       const subs=p.get('feSubs')==='1';
+      const isTimeline=p.get('feLocalTimeline')==='1';
       clearMarker(p);currentKey='';attempts=0;
       play.click();
+      if(isTimeline)void confirmLocalTimeline(id);
       if(!subs){
         // Best-effort web text-track suppression: Jellyfin settings and
         // separately rendered subtitle formats can override this.
@@ -384,6 +504,47 @@
     }
   }
   function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(startIfReady);}
+  // Follow the saved timeline after Jellyfin server events advance its
+  // cursor. Guard against jumping when unrelated playback is active.
+  let localFollowBusy=false,lastFollowKey='';
+  async function followLocalTimeline(){
+    if(localFollowBusy||params()||document.hidden||localIntent(localCredentials()))return;
+    const auth=localCredentials();if(!auth?.UserId)return;
+    localFollowBusy=true;
+    try{
+      const states=await api('/FranchiseExplorer/TimelineState',auth);
+      const rows=(states||[]).filter(x=>x.playbackMode==='playing'&&x.sessionId&&x.queueKeys?.length);
+      if(rows.length!==1)return; // Do not guess which of several timelines to advance.
+      const state=rows[0];
+      const localKey='fe-local-follow-v1:'+String(auth.UserId).toLowerCase();
+      const owner=JSON.parse(localStorage.getItem(localKey)||'null');
+      if(!owner || owner.rowId!==state.rowId || Date.now()-owner.created>86400000)return;
+      const index=state.index;
+      if(index<1 || index>=state.queueKeys.length)return;
+      const next=state.queueKeys[index].split(':').pop();
+      const prior=state.queueKeys[index-1].split(':').pop();
+      const sessions=await api('/Sessions?ControllableByUserId='+encodeURIComponent(auth.UserId),auth);
+      const session=(sessions||[]).find(s=>s.Id===state.sessionId);
+      if(!session||session.NowPlayingItem?.Id && !itemMatch(session.NowPlayingItem.Id,prior))return;
+      const key=state.rowId+':'+index;
+      if(lastFollowKey===key||itemMatch(next,prior))return;
+      lastFollowKey=key;
+      // The native web player opens the next item using its normal play UI.
+      // We only follow when the previous item is still the reported active item.
+      const intent={version:1,created:Date.now(),rowId:state.rowId,expectedId:next,
+        state:{...state,itemId:next,sessionId:'',playbackMode:'paused'},replayOnly:false,
+        subtitleEnabled:!!owner.subtitleEnabled};
+      localStorage.setItem(handoffPrefix+String(auth.UserId).toLowerCase(),JSON.stringify(intent));
+      location.hash='#/details?id='+encodeURIComponent(next)+'&feAutoPlay=1&feLocalTimeline=1&feSubs='+(owner.subtitleEnabled?'1':'0');
+    }catch(e){console.debug('Franchise Explorer: automatic local transition unavailable:',e);}
+    finally{localFollowBusy=false;}
+  }
+  setInterval(()=>void followLocalTimeline(),4000);
+  // Manual Play fallback: a user may start the media from the details page
+  // if this Jellyfin Web build doesn't expose a compatible Play button.
+  setInterval(()=>{const auth=localCredentials();const intent=localIntent(auth);
+    if(intent && !params())void confirmLocalTimeline(intent.expectedId);
+  },5000);
   const observer=new MutationObserver(()=>{if(params())schedule();});
   const init=()=>{
     observer.observe(document.body,{subtree:true,childList:true});

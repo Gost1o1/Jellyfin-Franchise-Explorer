@@ -1,4 +1,4 @@
-/* Franchise Explorer v0.8.0.1 playback verification hotfix.
+/* Franchise Explorer v0.8.3.0 local Jellyfin Web playback handoff.
  * A Jellyfin PlayNow queue is built from item IDs, never from filenames.
  * Timeline state is separate from Jellyfin watched flags and user-specific.
  */
@@ -181,6 +181,31 @@
       }
       return {started:true,appendedChunks:chunks.length-1};
     }
+    // Playing on the same Jellyfin Web client is not remote-control playback.
+    // Hand off to Jellyfin Web's native Play control; only Jellyfin's observed
+    // NowPlayingItem will activate timeline tracking. A localStorage request
+    // is an expiring *intent*, NOT watch history.
+    handoffKey(){return 'fe-local-timeline-v1:'+String(this.context.userId).toLowerCase();}
+    async playHere(row,queue,index,positionTicks=0,reset=false,replayOnly=false){
+      if(index<0 || index>=queue.length)throw new Error('Select a playable entry.');
+      const target=queue[index];
+      const prev=this.getState(row.id);
+      const state=this.makeState(row,queue,index);
+      state.index=index;state.itemId=target.id;state.positionTicks=Math.max(0,positionTicks);
+      state.sessionId='';state.playbackMode='paused';
+      if(reset)state.completedKeys=state.completedKeys.filter(k=>queue.findIndex(q=>q.key===k)<index);
+      const intent={version:1,created:Date.now(),rowId:row.id,expectedId:target.id,
+        state,replayOnly:!!replayOnly,prior:prev?JSON.parse(JSON.stringify(prev)):null,
+        subtitleEnabled:!!document.getElementById('fe-subtitles')?.checked};
+      // The bridge will confirm actual playback in this logged-in Jellyfin Web
+      // client before creating/updating server-side timeline progress.
+      localStorage.setItem(this.handoffKey(),JSON.stringify(intent));
+      const prefix=this.context.prefix||'';
+      const sid=this.context.serverId?'&serverId='+encodeURIComponent(this.context.serverId):'';
+      const sub=intent.subtitleEnabled?'1':'0';
+      location.assign(prefix+'/web/#/details?id='+encodeURIComponent(target.id)+sid+
+        '&feAutoPlay=1&feLocalTimeline=1&feSubs='+sub);
+    }
     makeState(row,queue,index=0){
       const old=this.getState(row.id);const same=old && Array.isArray(old.queueKeys) &&
         queue.some(q=>q.key===old.queueKeys[old.index]);
@@ -294,6 +319,8 @@
         const select=this.make('select','field timeline-device');select.setAttribute('aria-label','Choose a Jellyfin playback session');
         chooser.append(sessionLabel,select);
         const activeDevices=await this.sessions();if(this.activeDialog!==panel)return;
+        const localChoice=this.make('option','','This browser (local playback — recommended)');
+        localChoice.value='__local__';select.append(localChoice);
         for(const s of activeDevices){
           const supported=this.isRemoteCapable(s);
           const description=(s.DeviceName||s.Client||'Device')+' · '+(s.UserName||'User');
@@ -301,24 +328,30 @@
           option.value=s.Id;option.disabled=!supported;select.append(option);
         }
         const playableDevices=activeDevices.filter(s=>this.isRemoteCapable(s));
-        if(playableDevices.length)select.value=playableDevices[0].Id;
-        if(saved?.sessionId && playableDevices.some(s=>s.Id===saved.sessionId))select.value=saved.sessionId;
+        select.value='__local__';
+        // Keep local browser selected. Remote devices are opt-in.
+
         if(!playableDevices.length)feedback.textContent+=
           ' No connected session reports remote playback support. The selected Chrome client may not accept remote Play Now commands. '+
-          'Try Jellyfin’s cast controls or a different remotely controllable player. Your episode-number formatting is not the cause.';
+          'Choose This browser (local playback) to open the native Jellyfin Web player. Your episode-number formatting is not the cause.';
         const startIndex=queue.findIndex(q=>q.key===saved?.queueKeys?.[saved?.index]);
         const resumeIndex=startIndex>=0?startIndex:0;
         const start=this.button('▶ Play from beginning',async()=>{
-          await this.start(row,queue,select.value,0,0,'playing',true);feedback.textContent='Jellyfin confirmed the first movie/episode is playing. Remaining queue commands were sent; long-queue support depends on the client.';
+          if(select.value==='__local__')return this.playHere(row,queue,0,0,true);
+          await this.start(row,queue,select.value,0,0,'playing',true);feedback.textContent='Jellyfin confirmed playback on the remote device; subsequent queue support varies.';
         },'btn btn-primary');
         const resume=this.button('↻ Resume timeline',async()=>{
-          await this.start(row,queue,select.value,resumeIndex,n(saved?.positionTicks));feedback.textContent='Jellyfin confirmed the requested movie/episode is playing. Remaining queue commands were sent.';
+          if(select.value==='__local__')return this.playHere(row,queue,resumeIndex,n(saved?.positionTicks));
+          await this.start(row,queue,select.value,resumeIndex,n(saved?.positionTicks));feedback.textContent='Jellyfin confirmed playback on the remote device.';
         });
-        start.disabled=!playableDevices.length;resume.disabled=!playableDevices.length;
+        // The local browser option is available even when remote control is disabled.
+
         chooser.append(start,resume);
-        if(autoResume && playableDevices.length===1){
+        if(autoResume){
           // Dashboard's explicitly clicked Resume Timeline link.
-          void this.start(row,queue,select.value,resumeIndex,n(saved?.positionTicks)).then(()=>{
+          void (select.value==='__local__'
+            ? this.playHere(row,queue,resumeIndex,n(saved?.positionTicks))
+            : this.start(row,queue,select.value,resumeIndex,n(saved?.positionTicks))).then(()=>{
             if(this.activeDialog===panel) feedback.textContent='Jellyfin confirmed the resumed movie/episode is playing.';
           }).catch(error=>this.showError(error));
         }
@@ -329,16 +362,18 @@
             this.make('small','',done?'✓ Completed in this timeline':isCurrent?'▶ Timeline position':'Not started'));
           const act=this.make('div','timeline-entry-actions');
           const replay=this.button('Replay only',async()=>{
+            if(select.value==='__local__')return this.playHere(row,queue,i,0,false,true);
             await this.replay(row,queue,i,select.value,false);
             feedback.textContent='Jellyfin confirmed independent replay started. The chronological cursor and completed items were preserved.';
           });
           const reset=this.button('Restart timeline here',async()=>{
             const okay=confirm('Move this timeline back to '+q.label+'? Later entries will be marked unfinished in THIS timeline only.');
             if(!okay)return;
+            if(select.value==='__local__')return this.playHere(row,queue,i,0,true,false);
             await this.replay(row,queue,i,select.value,true);
             feedback.textContent='Jellyfin confirmed playback restarted here; remaining queue commands were sent.';
           });
-          replay.disabled=reset.disabled=!playableDevices.length;act.append(replay,reset);line.append(details,act);
+          act.append(replay,reset);line.append(details,act);
           if(isCurrent && !done && q.runTimeTicks){
             const partial=Math.min(100,100*n(saved?.positionTicks)/q.runTimeTicks);
             if(partial>0){details.append(this.progressBar(partial));details.append(this.make('small','',Math.round(partial)+'% through this movie/episode'));}

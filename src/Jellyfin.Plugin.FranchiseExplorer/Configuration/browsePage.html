@@ -132,6 +132,19 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
 .subtitle-option input{height:21px;width:21px;accent-color:#09b1c5}
 .subtitle-note{font-size:.78rem;color:#b3c2cd;line-height:1.45}
 @media(max-width:650px){.tile-info{width:43px;height:43px}}
+
+/* v0.8.3 mobile polish: fewer oversized controls, no horizontal cropping. */
+@media(max-width:650px){
+  .notice{font-size:.82rem;padding:10px 12px;margin-bottom:12px}
+  .hero{min-height:160px;margin-bottom:14px}
+  .hero-inner{padding:14px;gap:12px}
+  .hero-poster{flex-basis:66px;height:96px}
+  .hero h1{font-size:clamp(1.35rem,6vw,1.8rem);line-height:1.15}
+  .hero p{font-size:.82rem;line-height:1.35;-webkit-line-clamp:2}
+  .playback-settings{padding:10px 12px}
+  .subtitle-note{font-size:.75rem}
+  .timeline-dialog{width:calc(100vw - 18px);max-height:92dvh;}
+}
 </style>
 </head>
 <body>
@@ -140,7 +153,7 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
   <nav class="actions" aria-label="Navigation"><a id="return-jellyfin" class="btn btn-lite" href="#">← <span class="desktop-word">Jellyfin</span></a><button class="btn btn-lite" id="browse-back" title="Back to parent" type="button">↑ <span class="desktop-word">Back</span></button></nav>
 </header>
 <main>
-  <div class="notice" id="preview-notice">Experimental timeline playback preview · Play Now queues are sent to Jellyfin clients that accept remote control. Playback progress is tracked while supported web monitoring is active. Keep a backup and test with a short timeline before relying on it.</div>
+  <div class="notice" id="preview-notice">Experimental chronological playback. Test with a short timeline first; your original Jellyfin media and collections remain unchanged.</div>
   <nav id="breadcrumbs" class="crumbs" aria-label="Breadcrumbs"></nav>
   <div class="hero"><img id="hero-backdrop" class="hero-art hidden" alt=""><div class="hero-inner"><div id="hero-poster-wrap" class="hero-poster hidden"><img id="hero-poster" alt=""></div><div class="hero-info"><div id="hero-type" class="eyebrow">Virtual library</div><h1 id="hero-title">Franchises</h1><p id="hero-description">Browse the franchises and story universes in your Jellyfin collection.</p><div id="hero-count" class="counter"></div></div></div></div>
   <div class="playback-settings"><label class="subtitle-option"><input id="fe-subtitles" type="checkbox"> Enable subtitles during Franchise Explorer playback</label><span class="subtitle-note">Default off. Jellyfin's own player or client settings may override this preference.</span></div>
@@ -150,7 +163,7 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
   <section id="media-section" class="section hidden"><div class="section-header"><h2>Movies and TV shows</h2><span class="counter" id="media-count"></span></div><div class="gallery" id="media-grid"></div></section>
   <div id="rows-container" class="rows-container"></div>
   <div id="empty" class="empty hidden">No items to display in this group.</div>
-  <div class="footer">Franchise Explorer v0.8.1.0 · Experimental chronological playback. Per-user timeline progress is separate from Jellyfin watched history; native client support varies.</div>
+  <div class="footer">Franchise Explorer v0.8.3.0 · Experimental chronological playback. Per-user timeline progress is separate from Jellyfin watched history; native client support varies.</div>
 </main>
 <script src="TimelineClient.js"></script>
 <script>

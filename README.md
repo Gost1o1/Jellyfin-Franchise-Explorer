@@ -1,3 +1,7 @@
+> **v0.8.3.0 EXPERIMENTAL:** Device-specific playback verification, mobile editor improvements, and matching My Media tile width. Actual continuous playback remains unverified until tested on your Jellyfin 12.2 installation.
+
+> **v0.8.2.0 EXPERIMENTAL** — Adds "This browser (local playback)" to avoid sending remote PlayNow to the very Jellyfin Web/Chrome session you are using. It opens Jellyfin Web's normal playback flow and activates timeline history only after observing the selected item playing. Automatic transitions and client compatibility require real-world testing; do not trust a long unattended timeline until a short sequence works. The original media and collections remain unchanged.
+
 # Jellyfin Franchise Explorer
 
 > [!CAUTION]
@@ -8,7 +12,7 @@
 
 Jellyfin Franchise Explorer manages **virtual** franchises, eras, phases, and media references without relocating or duplicating movies and shows. This code targets Jellyfin **12.2** / **.NET 10** and uses the same plugin GUID and backward-compatible configuration format as v0.2–v0.5.
 
-**v0.8.1.0** adds deterministic card order, click-to-play with separate ⓘ details, a subtitles-off-by-default preference, and verified remote timeline playback. The item-card autoplay handoff requires the optional JavaScript Injector integration on Jellyfin Web. It may briefly show Jellyfin details while the native player loads. Subtitle control cannot be guaranteed on every client; the preference does not silently change global Jellyfin user settings.
+**v0.8.2.0** adds deterministic card order, click-to-play with separate ⓘ details, a subtitles-off-by-default preference, and verified remote timeline playback. The item-card autoplay handoff requires the optional JavaScript Injector integration on Jellyfin Web. It may briefly show Jellyfin details while the native player loads. Subtitle control cannot be guaranteed on every client; the preference does not silently change global Jellyfin user settings.
 
 ## Version 0.8.0.0 — experimental chronological playback and history
 

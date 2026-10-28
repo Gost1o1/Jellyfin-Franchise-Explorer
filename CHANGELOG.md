@@ -1,3 +1,23 @@
+## 0.8.3.0 — Mobile and playback verification hotfix (experimental)
+
+- Remove the `45vw` My Media tile width cap. Match the measured native Jellyfin library card without inventing a fallback width.
+- Verify that local playback belongs to the current browser/device and actually advances. Ignore matching sessions on other devices, and display a visible warning when no local playback can be verified. Do not mark timeline history as started on an unverified session.
+- On mobile, keep long chronological entry names readable on a full line, with action controls beneath rather than squeezing words into a narrow column.
+- Shorten the mobile browser's experimental caution banner and update the stale administrator description.
+- Keep the original custom license, all virtual groups, artwork, and media references unchanged.
+
+**Caution:** This cannot guarantee every embedded Android/native video player exposes enough progress information to verify playback. Native and long-queue autoplay must still be tested in Jellyfin 12.2; `PlayNow` acknowledgement alone is not proof of visible playback.
+
+## 0.8.2.0 — Experimental same-browser playback handoff
+
+- Add **This browser (local playback)** as the default chronological playback destination. This avoids Jellyfin's unreliable remote `PlayNow` commands directed at the same Web browser.
+- Use the optional installed JavaScript Injector bridge to open Jellyfin Web's own player and validate the actual first movie/episode before activating per-user timeline history.
+- Preserve the existing remote device mode for clients that do support remote queueing.
+- Add a guarded local follow-up mechanism for advancing to the next title after a completed episode or movie. It is not yet verified against every Jellyfin Web player/version.
+- **Replay only** does not intentionally affect the chronological cursor; a failed local start does not create false timeline progress.
+- Added offline browser regression tests for positive/negative playback verification.
+- **Caution:** The integrated browser bridge uses Jellyfin Web DOM controls and requires the optional JavaScript Injector. Browser history, native player behavior, and cross-device queue management require live verification. Test with three short items first.
+
 ## 0.8.1.0 — Playback handoff, subtitle preference, stable media order
 
 - Clicking a movie or TV-show card requests playback through Jellyfin Web's native player via the optional JavaScript Injector, rather than simply showing its details. TV-show cards resolve the first episode within the saved episode/season selection.

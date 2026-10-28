@@ -48,7 +48,7 @@ with sync_playwright() as p:
         assert page.locator('section').nth(1).locator('.card').count()==1
         assert page.evaluate('document.documentElement.scrollWidth <= innerWidth'), 'horizontal overflow at '+str(width)
         tile_width=page.locator('#franchise-explorer-my-media-tile').bounding_box()['width']
-        assert tile_width > 100 and tile_width <= width * .46, (width,tile_width)
+        assert abs(tile_width-page.locator('#home-my-media .card').first.bounding_box()['width']) <= 2, (width,tile_width)
         # Jellyfin replaces the My Media row after a client-side refresh:
         page.evaluate("document.querySelector('#home-my-media .itemsContainer').innerHTML='<div class=\"card\"><div class=\"poster\"></div><span>Music</span></div>'")
         page.wait_for_timeout(130)
