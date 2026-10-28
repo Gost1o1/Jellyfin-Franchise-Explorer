@@ -1,3 +1,10 @@
+## 0.8.5.0 (experimental)
+- Native Jellyfin library-card markup and CSS shape for the Franchises tile, including mobile.
+- Timeline-specific progress bars underneath titles, partial in-progress fill, and Watched overlays after all selected timeline episodes complete.
+- Completion-event capture fallback for local Jellyfin Web playback, retaining session and item checks.
+- Browser-observed session progress fallback; no automatic completion from position alone.
+- Preserve all existing groups, artwork, and row definitions.
+
 ## 0.8.4.0 — Completed-item handoff and My Media sizing (experimental)
 
 - Add an explicit completion marker to the *per-user timeline* state on Jellyfin PlaybackStopped/played-to-completion. Auto-next no longer requires an ended item to remain in Jellyfin Now Playing.

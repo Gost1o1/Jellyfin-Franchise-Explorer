@@ -16,7 +16,7 @@ checks={
  'Plugin registration via interface': 'IPluginServiceRegistrator' in startup and 'RegisterScript' in startup,
  'Optional registration': 'TryRegister()' in startup and 'catch (Exception ex)' in startup,
  'No plugin-shipped Injector binary': 'Jellyfin.Plugin.JavaScriptInjector' not in csproj,
- 'Target version': '<Version>0.8.4.0</Version>' in csproj,
+ 'Target version': '<Version>0.8.5.0</Version>' in csproj,
 }
 for title,passed in checks.items():
  assert passed, title

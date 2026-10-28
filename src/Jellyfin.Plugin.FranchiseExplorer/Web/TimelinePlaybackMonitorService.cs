@@ -45,7 +45,14 @@ public sealed class TimelinePlaybackMonitorService : IHostedService
         => Dispatch(args, false);
 
     private void OnStopped(object? sender, PlaybackStopEventArgs args)
-        => Dispatch(args, args.PlayedToCompletion);
+    {
+        // Diagnostic: a natural finish reported as an ordinary stop explains
+        // why the timeline intentionally does not auto-advance. Avoid logging
+        // filenames, paths, or any private configuration data.
+        _logger.LogInformation("Franchise Explorer: Jellyfin playback stopped, completion={Completion}, session={SessionId}",
+            args.PlayedToCompletion, args.Session?.Id ?? "unknown");
+        Dispatch(args, args.PlayedToCompletion);
+    }
 
     private void Dispatch(PlaybackProgressEventArgs args, bool completed)
     {

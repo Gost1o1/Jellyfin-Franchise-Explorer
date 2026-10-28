@@ -1,5 +1,5 @@
 /*
- * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.4.0).
+ * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.5.0).
  * Adds ONE visual link in the existing "My Media" row. It does not create a
  * Jellyfin library, alter user preferences, or modify the server's media.
  * Requires a compatible JavaScript injector to run in jellyfin-web.
@@ -31,57 +31,19 @@
     const style = document.createElement('style');
     style.id = STYLE_ID;
     style.textContent = `
-      #${TILE_ID} {
-        display: block; position: relative; box-sizing: border-box;
-        flex: 0 0 auto; min-width: 0; max-width: none;
-        color: inherit; cursor: pointer; text-decoration: none;
-        -webkit-tap-highlight-color: transparent;
-      }
-      /* Never cap this library tile to a viewport fraction. Jellyfin's own
-         home-library cards can be wider than 45vw on narrow phones. */
-      #${TILE_ID}.card { max-width: none !important; }
+      #${TILE_ID} { cursor:pointer; text-decoration:none; color:inherit; }
       #${TILE_ID} .fe-tile-art {
-        position: relative; width: 100%; aspect-ratio: 16 / 9;
-        overflow: hidden; border-radius: 4px;
-        background: linear-gradient(138deg, #142e3c 0%, #164a59 49%, #063644 100%);
-        display: flex; align-items: center; justify-content: center;
-        box-shadow: inset 0 0 0 1px rgba(255,255,255,.07);
+        position:absolute; inset:0; width:100%; height:100%; overflow:hidden;
+        border-radius:inherit; background:linear-gradient(145deg,#122c3b,#165164,#12313d);
+        display:flex;align-items:center;justify-content:center;
       }
-      #${TILE_ID} .fe-tile-art::before,
-      #${TILE_ID} .fe-tile-art::after {
-        content: ''; position: absolute; width: 66%; aspect-ratio: 1;
-        border: 1px solid rgba(115,225,240,.20);
-        border-radius: 24%; transform: rotate(30deg);
-      }
-      #${TILE_ID} .fe-tile-art::after {
-        width: 44%; border-color: rgba(115,225,240,.30); transform: rotate(-22deg);
-      }
-      #${TILE_ID} .fe-tile-icon {
-        position: relative; z-index: 1; color: #c4f5fa;
-        font-family: Arial, sans-serif; font-size: clamp(26px, 3vw, 50px);
-        font-weight: 750; letter-spacing: -.08em;
-      }
+      #${TILE_ID} .fe-tile-icon { color:#c4f5fa; font:750 clamp(30px,4vw,54px)/1 Arial,sans-serif; }
       #${TILE_ID} .fe-tile-art-title {
-        position: absolute; z-index: 1; left: 0; right: 0; bottom: 9%;
-        text-align: center; color: #fff; font-weight: 700;
-        font-size: clamp(14px, 1.4vw, 23px); line-height: 1.3;
-        text-shadow: 0 2px 5px rgba(0,0,0,.65);
+        position:absolute;inset:auto 6px 9px;text-align:center;color:white;
+        font:700 clamp(13px,1.1vw,19px)/1.25 Arial,sans-serif;text-shadow:0 2px 5px #000b;
       }
-      #${TILE_ID} .fe-tile-label {
-        display: block; text-align: center; padding-top: 7px;
-        font-size: clamp(11px, .9vw, 14px); line-height: 1.4;
-        color: inherit; overflow: hidden; text-overflow: ellipsis;
-      }
-      #${TILE_ID}:hover .fe-tile-art,
-      #${TILE_ID}:focus-visible .fe-tile-art {
-        outline: 2px solid var(--theme-primary-color, #00a6bb);
-        outline-offset: 2px; filter: brightness(1.13);
-      }
-      #${TILE_ID}:focus-visible { outline: none; }
-      @media (max-width: 540px) {
-        #${TILE_ID} .fe-tile-icon { font-size: 26px; }
-        #${TILE_ID} .fe-tile-art-title { font-size: 13px; }
-      }
+      #${TILE_ID}:focus-visible { outline:3px solid var(--theme-primary-color,#08bdd0); outline-offset:2px; }
+      @media(max-width:540px){#${TILE_ID} .fe-tile-art-title{font-size:13px}}
     `;
     document.head.appendChild(style);
   }
@@ -116,29 +78,30 @@
 
   function fitTile(tile, reference) {
     if (!reference) return;
-    // Use a measured, *real* Jellyfin library card. Don't fall back to a
-    // fabricated 240px width before Jellyfin lays out the home carousel.
-    const box = reference.getBoundingClientRect();
-    const width = box.width;
-    if (Number.isFinite(width) && width >= 90 && width <= 1000) {
-      const measured = `${Math.round(width)}px`;
-      if (tile.style.width !== measured) {
-        tile.style.setProperty('width', measured, 'important');
-        tile.style.setProperty('min-width', measured, 'important');
-        tile.style.setProperty('flex-basis', measured, 'important');
-      }
+    // Native card markup AND classes are copied, including Jellyfin's cardBox,
+    // cardScalable, cardPadder, and spacing. Only use measurements as a
+    // fallback for themes with inline per-card dimensions.
+    const style = getComputedStyle(reference);
+    for (const property of ['flex-grow','flex-shrink','flex-basis','margin-left','margin-right',
+                            'margin-top','margin-bottom','padding-left','padding-right']) {
+      const current = style.getPropertyValue(property);
+      if (current) tile.style.setProperty(property,current);
     }
-    // Native Jellyfin skins can override the card image aspect ratio. Use its
-    // measured visual image height so Franchises is not a strangely sized tile.
-    const artwork = reference.querySelector('.cardScalable, .cardImageContainer, .poster') || reference;
-    const dimensions = artwork.getBoundingClientRect();
-    const tileArt = tile.querySelector('.fe-tile-art');
-    if (tileArt && dimensions.height > 55 && dimensions.height < 700) {
-      const height = Math.round(dimensions.height) + 'px';
-      if (tileArt.style.height !== height) {
-        tileArt.style.height = height;
-        tileArt.style.setProperty('aspect-ratio','auto');
-      }
+    const sourceArt = (reference.querySelector('.cardImageContainer')||reference.querySelector('.poster')||reference.querySelector('.cardImage')||reference.querySelector('.cardScalable'));
+    const destArt = (tile.querySelector('.cardImageContainer')||tile.querySelector('.poster')||tile.querySelector('.cardImage')||tile.querySelector('.cardScalable'));
+    if (sourceArt && destArt) {
+      const naturalHeight = sourceArt.getBoundingClientRect().height;
+      if(naturalHeight>35 && naturalHeight<1000 &&
+         Math.abs(naturalHeight-destArt.getBoundingClientRect().height)>2)
+        destArt.style.setProperty('height',`${naturalHeight}px`,'important');
+    }
+    const measured = reference.getBoundingClientRect().width;
+    const actual = tile.getBoundingClientRect().width;
+    if (measured > 80 && Math.abs(measured - actual) > 3) {
+      tile.style.setProperty('width',`${measured}px`,'important');
+      tile.style.setProperty('min-width',`${measured}px`,'important');
+      tile.style.setProperty('max-width',`${measured}px`,'important');
+      tile.style.setProperty('flex-basis',`${measured}px`,'important');
     }
   }
 
@@ -171,27 +134,60 @@
   }
 
   function makeTile(reference) {
-    const tile = document.createElement('a');
+    // Clone the genuine Jellyfin library card (prefer Collections, otherwise
+    // Movies/Shows) so native theme card sizing, spacing, and aspect ratio apply
+    // equally on desktop and the mobile Android WebView.
+    const tile = reference.cloneNode(true);
     tile.id = TILE_ID;
-    // Reuse Jellyfin's card class only for integration with the scroller.
-    tile.className = 'card fe-franchise-home-tile';
-    tile.href = browseUrl();
-    tile.setAttribute('aria-label', 'Open Franchises');
+    tile.classList.add('fe-franchise-home-tile');
+    tile.removeAttribute('href');
+    tile.setAttribute('role','link');
+    tile.setAttribute('tabindex','0');
+    tile.setAttribute('aria-label','Open Franchises');
     tile.title = 'Franchises';
-    tile.innerHTML = '<span class="fe-tile-art"><span class="fe-tile-icon" aria-hidden="true">F</span><span class="fe-tile-art-title">Franchises</span></span><span class="fe-tile-label">Franchises</span>';
-    fitTile(tile, reference);
-    // Jellyfin handles native cards with delegated listeners. Keep this card's
-    // activation independent so a fake media ID is never sent to Jellyfin.
-    tile.addEventListener('click', (event) => {
-      event.stopPropagation();
-    });
-    tile.addEventListener('keydown', (event) => {
-      if (event.key === ' ' || event.key === 'Spacebar') {
-        event.preventDefault();
-        event.stopPropagation();
-        window.location.assign(tile.href);
+    for (const el of [tile,...tile.querySelectorAll('*')]) {
+      // Do not copy native library item identifiers, links, or DOM ids.
+      for(const attr of [...el.attributes]){
+        if(attr.name === 'id' || attr.name === 'href' || attr.name === 'onclick' ||
+           attr.name.startsWith('data-') || attr.name === 'aria-label') el.removeAttribute(attr.name);
       }
-    });
+    }
+    tile.id = TILE_ID;
+    tile.setAttribute('aria-label','Open Franchises');
+    tile.setAttribute('href',browseUrl());
+    const imageHost=(tile.querySelector('.cardImageContainer')||tile.querySelector('.poster')||tile.querySelector('.cardImage')||tile.querySelector('.cardScalable'));
+    const art=document.createElement('span');art.className='fe-tile-art';
+    art.innerHTML='<span class="fe-tile-icon" aria-hidden="true">F</span><span class="fe-tile-art-title">Franchises</span>';
+    if(imageHost){
+      imageHost.replaceChildren(art);
+      // Existing card scaffolding supplies its own aspect ratio.
+      if(imageHost.matches('.cardScalable,.poster'))imageHost.style.position='relative';
+    }else{
+      tile.replaceChildren(art);
+      art.style.position='relative';art.style.aspectRatio='16 / 9';
+    }
+    // Remove any stale native title labels (including theme-specific plain spans).
+    for(const child of tile.querySelectorAll('span')){
+      if(child!==imageHost && !imageHost?.contains(child) && child.childElementCount===0 &&
+        (child.textContent||'').trim() === (reference.getAttribute('title')||'Collections'))child.remove();
+    }
+    const label=tile.querySelector('.cardText-first,.cardText-primary,.cardText,.libraryName');
+    if(label && !imageHost?.contains(label)){
+      label.textContent='Franchises';
+      // Suppress any stale secondary native-library labels from the clone.
+      tile.querySelectorAll('.cardText-secondary').forEach(el=>el.remove());
+    }else{
+      const text=document.createElement('span');text.className='cardText fe-tile-label';
+      text.textContent='Franchises';text.style.cssText='display:block;text-align:center;';
+      tile.append(text);
+    }
+    // Native Jellyfin delegates card activation on the container, so intercept
+    // BEFORE the library's handler receives the cloned card click.
+    const navigate=()=>window.location.assign(browseUrl());
+    tile.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();navigate();},true);
+    tile.addEventListener('keydown',e=>{
+      if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopImmediatePropagation();navigate();}
+    },true);
     return tile;
   }
 
@@ -199,7 +195,7 @@
     queued = false;
     const container = findMyMediaContainer();
     if (!container) return;
-    const ref = referenceCard(container);
+    const ref = findCollectionsCard(container) || referenceCard(container);
     if (!ref) return;
     ensureStyle();
     let tile = document.getElementById(TILE_ID);
@@ -224,8 +220,10 @@
         if (liveTile && observedCard?.isConnected) fitTile(liveTile, observedCard);
       });
       observedResize.observe(ref);
+      const sourceArt=(ref.querySelector('.cardImageContainer')||ref.querySelector('.poster')||ref.querySelector('.cardImage')||ref.querySelector('.cardScalable'));
+      if(sourceArt)observedResize.observe(sourceArt);
     }
-    tile.href = browseUrl();
+    tile.setAttribute('href',browseUrl());
   }
 
   function schedule() {
@@ -342,8 +340,10 @@
       if(!Array.isArray(states))return;
       const active=states.filter(s=>s.total>0&&s.playbackMode!=='complete');
       if(findHomeAnchor()&&active.length)makeHomeSection(active);
-      // Jellyfin server playback events update persistent progress, even when
-      // this optional home widget is closed. The browser only displays it.
+      // Server events are authoritative for completion; use observed session
+      // position as a fallback for partial progress if event delivery stalls.
+      // Never mark anything watched from elapsed time alone.
+      await updateProgress(auth,active).catch(e=>console.debug('Franchise timeline heartbeat:',e));
     }catch(e){/* The optional home integration must never break Jellyfin itself. */}
     finally{busy=false;}
   }
@@ -419,7 +419,8 @@
   }
   function itemMatch(a,b){return String(a||'').replace(/-/g,'').toLowerCase()===String(b||'').replace(/-/g,'').toLowerCase();}
   function deviceId(){return localStorage.getItem('_deviceId2')||localStorage.getItem('_deviceId')||'';}
-  function showLocalNotice(message){
+  let localNoticeTimer=null;
+  function showLocalNotice(message,ttl=0){
     let notice=document.getElementById('fe-local-playback-notice');
     if(!notice){
       notice=document.createElement('div');notice.id='fe-local-playback-notice';
@@ -428,6 +429,8 @@
       document.body.appendChild(notice);
     }
     notice.textContent=message;
+    if(localNoticeTimer)clearTimeout(localNoticeTimer);
+    if(ttl>0)localNoticeTimer=setTimeout(()=>{notice.remove();localNoticeTimer=null;},ttl);
   }
   function localVideoAdvancing(snapshot){
     // Verify a real rendering player. Session NowPlayingItem alone may refer
@@ -492,6 +495,10 @@
       localStorage.removeItem(intent.key);
       lastAutoplayItem=expectedId;
       if(!intent.replayOnly){
+        console.info('Franchise Explorer: timeline tracking activated after verified playback',intent.rowId,started.Id);
+        showLocalNotice('Chronological timeline tracking is active on this player.',4500);
+      }
+      if(!intent.replayOnly){
         const owner={rowId:intent.rowId,created:Date.now(),subtitleEnabled:intent.subtitleEnabled,
           sessionId:started.Id,lastItemId:expectedId};
         localStorage.setItem('fe-local-follow-v1:'+String(auth.UserId).toLowerCase(),JSON.stringify(owner));
@@ -527,6 +534,37 @@
     };
     video.addEventListener('ended',completedVideoListener,{once:true});
   }
+  // The player may replace its <video> element after verification. Register
+  // a capture-phase ended handler in addition to the exact-node listener;
+  // only a genuine video-ended event belonging to the verified local session
+  // can complete the timeline. The server endpoint is idempotent.
+  let completionBusy=false;
+  document.addEventListener('ended',async event=>{
+    const video=event.target;
+    if(!(video instanceof HTMLVideoElement) || completionBusy || !video.ended ||
+       !Number.isFinite(video.duration) || video.duration<1 ||
+       video.currentTime<video.duration-1.5)return;
+    const auth=localCredentials();if(!auth?.UserId)return;
+    const ownerKey='fe-local-follow-v1:'+String(auth.UserId).toLowerCase();
+    let owner;try{owner=JSON.parse(localStorage.getItem(ownerKey)||'null');}catch(_){return;}
+    if(!owner?.rowId || !owner.sessionId || Date.now()-owner.created>86400000)return;
+    // The verified video is the strongest association with this play session.
+    // The fallback handles player DOM replacement only if the server still
+    // identifies the exact expected item in the expected session.
+    completionBusy=true;
+    try{
+      const sessions=await api('/Sessions?ControllableByUserId='+encodeURIComponent(auth.UserId),auth);
+      const session=(sessions||[]).find(s=>s.Id===owner.sessionId);
+      if(video!==verifiedVideo && !itemMatch(session?.NowPlayingItem?.Id,owner.lastItemId))return;
+      if(session?.NowPlayingItem?.Id && !itemMatch(session.NowPlayingItem.Id,owner.lastItemId))return;
+      const state=await api('/FranchiseExplorer/TimelineState/'+encodeURIComponent(owner.rowId)+'/Complete',auth,{
+        method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({sessionId:owner.sessionId,itemId:owner.lastItemId})});
+      if(state?.pendingAutoAdvanceUtc)void followLocalTimeline();
+    }catch(e){console.debug('Franchise Explorer completed-video event:',e);}
+    finally{completionBusy=false;}
+  },true);
+
   function isVisible(el){return !!(el&&el.getClientRects().length&&getComputedStyle(el).visibility!=='hidden');}
   function startIfReady(){
     scheduled=false;
@@ -600,7 +638,7 @@
         replayOnly:false,subtitleEnabled:!!owner.subtitleEnabled};
       localStorage.setItem(handoffPrefix+String(auth.UserId).toLowerCase(),JSON.stringify(intent));
       location.hash='#/details?id='+encodeURIComponent(next)+'&feAutoPlay=1&feLocalTimeline=1&feSubs='+(owner.subtitleEnabled?'1':'0');
-    }catch(e){console.debug('Franchise Explorer: automatic local transition unavailable:',e);}
+    }catch(e){console.warn('Franchise Explorer: automatic local transition unavailable:',e);showLocalNotice('Franchise Explorer could not start the next timeline item automatically. Resume the timeline from Franchises. Details: '+(e.message||e),13000);}
     finally{localFollowBusy=false;}
   }
   setInterval(()=>void followLocalTimeline(),4000);

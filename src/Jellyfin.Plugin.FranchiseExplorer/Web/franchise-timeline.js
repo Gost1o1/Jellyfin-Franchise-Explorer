@@ -1,4 +1,4 @@
-/* Franchise Explorer v0.8.4.0 local Jellyfin Web playback handoff.
+/* Franchise Explorer v0.8.5.0 local Jellyfin Web playback handoff.
  * A Jellyfin PlayNow queue is built from item IDs, never from filenames.
  * Timeline state is separate from Jellyfin watched flags and user-specific.
  */
@@ -255,37 +255,79 @@
       const el=this.make('button',cls,label);el.type='button';el.addEventListener('click',()=>Promise.resolve(callback()).catch(e=>this.showError(e)));return el;
     }
     showError(error){console.error(error);if(this.activeDialog){this.activeDialog.querySelector('.timeline-feedback').textContent=error.message||String(error);}}
+    progressLabel(percent){
+      return percent>0 && percent<0.1 ? percent.toFixed(2)+'%' :
+        percent>0 && percent<1 ? percent.toFixed(1)+'%' : Math.round(percent)+'%';
+    }
     progressBar(percent){const outer=this.make('div','timeline-progress-track');outer.setAttribute('role','progressbar');outer.setAttribute('aria-valuenow',String(Math.round(percent)));
       outer.setAttribute('aria-valuemin','0');outer.setAttribute('aria-valuemax','100');const inner=this.make('div','timeline-progress-fill');inner.style.width=Math.max(0,Math.min(100,percent))+'%';outer.append(inner);return outer;}
-    progress(rowId){const s=this.getState(rowId);if(!s||!s.total)return 0;
-      const finished=new Set(s.completedKeys||[]);return 100*finished.size/s.total;}
-    decorateMedia(tile, ref, row) {
+    progress(rowId){
+      const state=this.getState(rowId);if(!state||!state.total)return 0;
+      const completed=new Set(state.completedKeys||[]);
+      const index=Math.max(0,Math.min(state.queueKeys?.length||0,state.index||0));
+      const currentKey=state.queueKeys?.[index];
+      const partial=state.playbackMode==='playing' && currentKey && !completed.has(currentKey)
+        ? Math.min(0.999,Math.max(0,(Number(state.positionTicks)||0)/
+          Math.max(1,Number(state.queueLengths?.[index])||1))) : 0;
+      return 100*Math.min(state.total,completed.size+partial)/state.total;
+    }
+    decorateFallback(tile,item,ref){
+      const data=item?.UserData||{};
+      const wholeSeries=item?.Type==='Series';
+      let percent=0,source='Jellyfin';
+      if(data.Played===true)percent=100;
+      else if(wholeSeries && Number(item.RecursiveItemCount)>0 && Number(data.UnplayedItemCount)>=0){
+        percent=100*(Number(item.RecursiveItemCount)-Number(data.UnplayedItemCount))/Number(item.RecursiveItemCount);
+      }else if(!wholeSeries && Number(item?.RunTimeTicks)>0){
+        percent=100*(Number(data.PlaybackPositionTicks)||0)/Number(item.RunTimeTicks);
+      }else if(ref.rangeMode==='Episodes'||ref.rangeMode==='Seasons')source='Timeline not started';
+      percent=Math.max(0,Math.min(100,percent));
+      const caption=this.make('span','timeline-card-caption',source+' · '+Math.round(percent)+'%');
+      tile.button.append(caption,this.progressBar(percent));
+      if(percent>=100){const badge=this.make('span','timeline-watched-badge','✓ Watched');tile.cover.append(badge);}
+    }
+    decorateMedia(tile,ref,row,item){
       const possible=[...this.states.values()].filter(s=>s.queueKeys?.length && s.queueSourceItemIds?.length);
-      if(!possible.length)return;
-      // Prefer the timeline from this actual shelf, otherwise the latest saved
-      // timeline in this franchise; never infer from Jellyfin's global Played flag.
+      if(!possible.length){this.decorateFallback(tile,item,ref);return;}
       const family=new Set();let parentId=row?.parentNodeId||'';
-      for(let i=0;i<30 && parentId;i++){
+      for(let i=0;i<30&&parentId;i++){
         family.add(parentId);
         parentId=this.context.catalog.nodes.find(n=>n.id===parentId)?.parentId||'';
       }
-      const related=possible.filter(s=>family.has(s.parentNodeId) || s.rowId===row?.id)
+      const related=possible.filter(s=>family.has(s.parentNodeId)||s.rowId===row?.id)
         .sort((a,b)=>new Date(b.updatedUtc||0)-new Date(a.updatedUtc||0));
-      const closest=related.find(s=>s.rowId===row?.id)||related[0];
-      if(!closest)return;
-      const all=[];
-      closest.queueSourceItemIds.forEach((source,i)=>{
-        if(String(source).toLowerCase()!==String(ref.itemId).toLowerCase())return;
-        if((ref.rangeMode==='Episodes'||ref.rangeMode==='Seasons') &&
-            !inRange({Id:closest.queueKeys[i],ParentIndexNumber:closest.queueSeasons?.[i],IndexNumber:closest.queueEpisodes?.[i]},ref))return;
-        all.push(closest.queueKeys[i]);
-      });
-      if(!all.length)return;
-      const completed=new Set(closest.completedKeys||[]);
-      const finished=all.filter(k=>completed.has(k)).length;
-      const value=Math.round(100*finished/all.length);
-      const caption=this.make('span','timeline-card-caption',finished+' of '+all.length+' completed · '+closest.name);
-      tile.button.append(caption,this.progressBar(value));
+      const sameItem=s=>(s.queueSourceItemIds||[]).some(x=>String(x).replace(/-/g,'').toLowerCase()===String(ref.itemId).replace(/-/g,'').toLowerCase());
+      const closest=related.find(s=>s.rowId===row?.id&&sameItem(s))||related.find(sameItem);
+      if(!closest){this.decorateFallback(tile,item,ref);return;}
+      const update=()=>{
+        const state=this.getState(closest.rowId)||closest;
+        const keys=[];
+        state.queueSourceItemIds?.forEach((source,i)=>{
+          if(String(source).replace(/-/g,'').toLowerCase()!==String(ref.itemId).replace(/-/g,'').toLowerCase())return;
+          if((ref.rangeMode==='Episodes'||ref.rangeMode==='Seasons')&&
+             !inRange({Id:state.queueKeys[i],ParentIndexNumber:state.queueSeasons?.[i],IndexNumber:state.queueEpisodes?.[i]},ref))return;
+          keys.push({key:state.queueKeys[i],index:i});
+        });
+        if(!keys.length)return;
+        const completed=new Set(state.completedKeys||[]);
+        const finished=keys.filter(k=>completed.has(k.key)).length;
+        const active=keys.find(k=>k.index===state.index && state.playbackMode==='playing' && !completed.has(k.key));
+        const partial=active ? Math.min(0.999,Math.max(0,(Number(state.positionTicks)||0)/
+          Math.max(1,Number(state.queueLengths?.[active.index])||1))) : 0;
+        const value=100*(finished+partial)/keys.length;
+        const caption=tile.button.querySelector('.timeline-card-caption');
+        if(caption)caption.textContent=finished+' of '+keys.length+' watched · '+Math.floor(value)+'% · '+state.name;
+        const bar=tile.button.querySelector('.timeline-progress-track');
+        if(bar){bar.setAttribute('aria-valuenow',String(Math.round(value)));
+          const fill=bar.querySelector('.timeline-progress-fill');if(fill)fill.style.width=value+'%';}
+        const badge=tile.cover.querySelector('.timeline-watched-badge');
+        if(badge)badge.hidden=finished!==keys.length;
+      };
+      const caption=this.make('span','timeline-card-caption','');
+      const bar=this.progressBar(0);
+      const badge=this.make('span','timeline-watched-badge','✓ Watched');badge.hidden=true;
+      tile.cover.append(badge);tile.button.append(caption,bar);
+      update();this.decorations??=[];this.decorations.push(update);
     }
     addControls(row,frame){
       if(row.rowType!=='Timeline')return;
@@ -293,7 +335,7 @@
       const btn=this.button('▶ Play chronological order',()=>this.openDialog(row),'btn btn-primary');
       const details=this.button('☷ Episodes & progress',()=>this.openDialog(row));
       const progress=this.make('div','timeline-mini-progress');
-      progress.dataset.rowId=row.id;const pct=Math.round(this.progress(row.id));progress.textContent=pct+'% completed';
+      progress.dataset.rowId=row.id;const pct=Math.round(this.progress(row.id));progress.textContent=this.progressLabel(pct)+' completed';
       progress.append(this.progressBar(this.progress(row.id)));
       controls.append(btn,details,progress);frame.shelf.insertBefore(controls,frame.track);
     }
@@ -395,9 +437,10 @@
         // they must not race the native event listener with stale PUT requests.
         const states=await this.request('/FranchiseExplorer/TimelineState');
         this.states=new Map((Array.isArray(states)?states:[]).map(x=>[x.rowId,x]));
+        for(const update of this.decorations||[])update();
         document.querySelectorAll('.timeline-mini-progress[data-row-id]').forEach(el=>{
           const p=this.progress(el.dataset.rowId);
-          el.firstChild.textContent=Math.round(p)+'% completed';
+          el.firstChild.textContent=this.progressLabel(p)+' completed';
           const fill=el.querySelector('.timeline-progress-fill');if(fill)fill.style.width=p+'%';
         });
       }catch(e){console.debug('Timeline status refresh:',e.message);}

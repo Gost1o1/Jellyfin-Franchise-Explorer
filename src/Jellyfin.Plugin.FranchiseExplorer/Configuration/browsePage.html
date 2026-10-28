@@ -96,6 +96,15 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
 @media(max-width:650px){.rows-container{gap:20px}.shelf-track .tile{flex-basis:clamp(112px,36vw,160px)}.shelf-track{gap:12px}.shelf-arrow{min-height:44px;min-width:44px}}
 @media(max-width:430px){.shelf-count{display:none}.shelf-track .tile{flex-basis:clamp(114px,41vw,145px)}.shelf-arrow{min-width:40px}.shelf-header h2{font-size:1.12rem}}
 
+/* Timeline-specific completion badge and progress, never derived from a global played flag. */
+.cover .timeline-watched-badge {
+  position:absolute;left:0;right:0;top:45%;z-index:3;display:block;
+  padding:9px 2px;text-align:center;background:rgba(0,0,0,.82);
+  color:#a8f9de;font-size:clamp(12px,1.4vw,19px);font-weight:800;
+  text-shadow:0 1px 2px #000;
+}
+.cover .timeline-watched-badge[hidden]{display:none}
+
 /* v0.8 chronological controls: responsive, touch and remote accessible. */
 .timeline-shelf-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:-4px 0 16px}
 .timeline-card-caption{font-size:.73rem;color:#a8d9df;margin-top:1px}
@@ -163,7 +172,7 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
   <section id="media-section" class="section hidden"><div class="section-header"><h2>Movies and TV shows</h2><span class="counter" id="media-count"></span></div><div class="gallery" id="media-grid"></div></section>
   <div id="rows-container" class="rows-container"></div>
   <div id="empty" class="empty hidden">No items to display in this group.</div>
-  <div class="footer">Franchise Explorer v0.8.4.0 · Experimental chronological playback. Per-user timeline progress is separate from Jellyfin watched history; native client support varies.</div>
+  <div class="footer">Franchise Explorer v0.8.5.0 · Experimental chronological playback. Per-user timeline progress is separate from Jellyfin watched history; native client support varies.</div>
 </main>
 <script src="TimelineClient.js"></script>
 <script>
@@ -333,7 +342,7 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
       openJellyfinItem(item,false);
     });
     tile.cover.append(info);
-    if(timeline)timeline.decorateMedia(tile,l,row);
+    if(timeline)timeline.decorateMedia(tile,l,row,item);
     void secureImage(imagePath(item,'Primary')).then(url=>{if(ticket===renderSerial)addImageToTile(tile,url);});
     return tile;
   }
@@ -417,7 +426,7 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
     return seen;
   }
   async function render(){
-    const ticket=++renderSerial;current=hashGroup();shownCards=[];
+    const ticket=++renderSerial;current=hashGroup();shownCards=[];if(timeline)timeline.decorations=[];
     const selected=nodeById(current),title=selected?selected.name:(catalog.title||'Franchises');
     text($('brand-title'),catalog.title||'Franchises');document.title=title+' · Jellyfin';drawBreadcrumbs(selected);
     $('browse-back').disabled=!selected;$('browse-back').onclick=()=>openGroup(selected?selected.parentId:'');

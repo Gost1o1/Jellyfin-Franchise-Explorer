@@ -261,7 +261,7 @@
   <div class="fx-heading">
     <div>
       <div class="fx-eyebrow">Jellyfin plugin • Early development</div>
-      <h1>Franchise Explorer <small>v0.8.3 preview</small></h1>
+      <h1>Franchise Explorer <small>v0.8.5 preview</small></h1>
       <p class="fx-muted">Organize virtual franchises, eras, phases and viewing references without moving media files.</p>
     </div>
   </div>
@@ -318,7 +318,7 @@
             <button id="fx-suggest-rows" type="button" class="fx-btn">Create suggested rows</button>
           </div>
           <div id="fx-rows-list" class="fx-rows-list" role="list" aria-label="Rows for selected franchise"></div>
-          <p class="fx-muted">Tip: reorder rows with the drag handle or ↑ / ↓ buttons. For a chronological row, choose the linked titles in the desired order; this is not yet a continuous-playback playlist. All edits are saved only when you click Save plugin configuration.</p>
+          <p class="fx-muted">Tip: reorder rows with the drag handle or ↑ / ↓ buttons. For a chronological row, choose the linked titles in the desired order; chronological playback is experimental and must be verified on your chosen Jellyfin client. All edits are saved only when you click Save plugin configuration.</p>
         </section>
         <hr class="fx-divider">
         <h3>Existing Jellyfin collection</h3>
@@ -417,7 +417,7 @@
               <label class="fx-field fx-episode-field fx-hidden"><span>Starting episode</span><input type="number" min="1" max="999" step="1" id="fx-start-episode" value="1"></label>
               <label class="fx-field fx-episode-field fx-hidden"><span>Ending episode</span><input type="number" min="1" max="999" step="1" id="fx-end-episode" value="1"></label>
             </div>
-            <p class="fx-muted">Specials use Season 0. Enter season and episode numbers as listed in Jellyfin. Range playback is not available yet.</p>
+            <p class="fx-muted">Specials use Season 0. Enter season and episode numbers as listed in Jellyfin. Saved ranges are supported by the experimental chronological playback system.</p>
             <div class="fx-row">
               <button type="button" class="fx-btn fx-btn-primary" id="fx-save-range">Add to franchise</button>
               <button type="button" class="fx-btn" id="fx-cancel-range">Cancel</button>
@@ -439,7 +439,7 @@
   </div>
   <section class="fx-panel fx-footer">
     <div class="fx-two"><label class="fx-field"><span>Future navigation label</span><input type="text" id="fx-nav-label" maxlength="64" value="Franchises"></label></div>
-    <p class="fx-muted">For future development only: this setting does not yet add a new Jellyfin navigation category.</p>
+    <p class="fx-muted">The optional JavaScript Injector adds a Franchises tile to Jellyfin Web. This label does not create a native library category on Android TV, Roku or other clients.</p>
     <div class="fx-footer-actions"><button type="button" id="fx-save" class="fx-btn fx-btn-primary">Save plugin configuration</button><strong id="fx-dirty-label">No unsaved edits</strong></div>
     <div id="fx-status" class="fx-status" role="status" aria-live="polite"></div>
   </section>
@@ -1410,7 +1410,7 @@
         ItemType:'Series',ViewingOrder:'Custom',Position:existing.reduce((m,l)=>Math.max(m,num(l.Position)),0)+1,...range});
     }
     closeRangeEditor();setDirty(true);renderLinks(selected);renderTree();renderArtwork();
-    setStatus('Saved '+item.Name+' ('+linkRangeLabel(candidate)+') as a virtual reference. Click Save plugin configuration to persist. Range playback is not yet implemented.');
+    setStatus('Saved '+item.Name+' ('+linkRangeLabel(candidate)+') as a virtual reference. Click Save plugin configuration to persist. Ranges are supported by experimental chronological playback.');
   });
   function renderResults(items){
     currentResults=items.filter(item=>validGuid(String(item.Id||'')));
