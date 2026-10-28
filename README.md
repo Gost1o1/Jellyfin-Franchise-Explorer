@@ -1,191 +1,46 @@
-> **v0.8.3.0 EXPERIMENTAL:** Device-specific playback verification, mobile editor improvements, and matching My Media tile width. Actual continuous playback remains unverified until tested on your Jellyfin 12.2 installation.
-
-> **v0.8.5.0 EXPERIMENTAL** — Adds a completion-driven local-browser auto-next handoff and corrects the My Media tile proportions using the measured native card. Jellyfin Web/JavaScript Injector are required for the local handoff; playback across separate native devices remains experimental. — Adds "This browser (local playback)" to avoid sending remote PlayNow to the very Jellyfin Web/Chrome session you are using. It opens Jellyfin Web's normal playback flow and activates timeline history only after observing the selected item playing. Automatic transitions and client compatibility require real-world testing; do not trust a long unattended timeline until a short sequence works. The original media and collections remain unchanged.
-
 # Jellyfin Franchise Explorer
 
-> [!CAUTION]
-> **UNFINISHED EXPERIMENTAL PROJECT — USE WITH EXTREME CAUTION.**
->
-> **I have not finalized this project. It is in its very early stages of development and should be used with extreme caution.**
-> This is a source-available project under a custom noncommercial license (not OSI-approved open source). Back up the Jellyfin server, plugin configuration, and plugin data before installing or upgrading.
+**Experimental Jellyfin 12.2 plugin** for creating virtual franchises, eras, phases and custom watch orders. Organize existing movies, shows, season ranges and episodes without moving, renaming or duplicating your media. This project is **unfinished**. Back up your server and plugin data before trying it.
 
-Jellyfin Franchise Explorer manages **virtual** franchises, eras, phases, and media references without relocating or duplicating movies and shows. This code targets Jellyfin **12.2** / **.NET 10** and uses the same plugin GUID and backward-compatible configuration format as v0.2–v0.5.
+## What it does
 
-**v0.8.5.0** retains deterministic card order, click-to-play with separate ⓘ details, a subtitles-off-by-default preference, and verified remote timeline playback. The item-card autoplay handoff requires the optional JavaScript Injector integration on Jellyfin Web. It may briefly show Jellyfin details while the native player loads. Subtitle control cannot be guaranteed on every client; the preference does not silently change global Jellyfin user settings.
+- Creates virtual franchise hierarchies (for example, Marvel phases or Star Wars eras).
+- Displays custom horizontal rows of groups, Jellyfin collections, movies, shows and episode ranges.
+- Uses existing Jellyfin artwork where available, with optional independent poster, backdrop, logo and banner overrides.
+- Includes an experimental chronological player with independent per-user progress tracking, resume controls and poster watch indicators.
+- Offers a **Franchises** tile in Jellyfin Web's **My Media** section using the optional JavaScript Injector integration. Client support varies; playback handoffs remain experimental.
 
-## Version 0.8.0.0 — experimental chronological playback and history
+**No library files or native Jellyfin collections are moved or modified by normal franchise browsing.** Artwork overrides belong to this plugin.
 
-**New in v0.8.0.1:** The playback dialog checks session remote-control capability and confirms the requested title is actually reported as playing before updating chronological history. HTTP success alone no longer counts as playback. Search-result checkboxes are left-aligned and the bulk button reads Add Selected (X). Some Jellyfin Web clients do not support remote Play Now; this is now shown as a diagnostic instead of a success message.
+## Install or update
 
-**Previous v0.8:** Chronological viewing-order rows can now resolve existing movies, whole TV shows, season-to-season selections, and specific episode ranges into a Jellyfin Play Now queue. The selected Jellyfin playback session performs the playback; the plugin stores an independent, per-user timeline cursor, per-episode completion and resume position in its own private data directory.
+1. **Back up** Jellyfin and your Franchise Explorer configuration/artwork. Export your franchise metadata in the plugin's configuration page; exported JSON does not include the actual image bytes.
+2. In Jellyfin, open **Dashboard → Plugins → Repositories → Add** and add the catalog URL below. If it is already present, don't add a duplicate.
+3. Open **Catalog** and select **Franchise Explorer**. Install the available experimental version, then restart the Jellyfin server (Windows: restart the Jellyfin service).
+4. Open the plugin settings to create and edit virtual franchises. The plugin can open its own **Franchises browser**.
+5. For a My Media tile and local-browser timeline features, install/configure the compatible [JavaScript Injector](https://github.com/n00bcodr/Jellyfin-JavaScript-Injector) integration. This integration is optional, and its availability/compatibility may vary.
 
-The user-facing franchise browser includes a **Play chronological order** button and an episode-by-episode dialog with **Play from beginning**, **Resume timeline**, **Replay only**, and **Restart timeline here**. Replay does not rewind the franchise timeline. A server-side playback event listener maintains per-user progress while matching playback is reported, even after closing the Franchises browser. An optional JavaScript Injector widget adds **Continue Your Franchises** to Jellyfin Web Home.
+**Plugin catalog URL** (paste into Jellyfin's plugin repository field):
 
-**Important limitations:** Jellyfin's chosen client must support remote PlayNow queues (and PlayLast for long sequences). The code has not yet been tested on your live Jellyfin server or native TV devices. External replays can update Jellyfin's regular played flags even though the separate franchise watch history remains untouched. Progress is only as complete as native playback events reported by the client. **Back up all plugin data before upgrading.**
+```text
+https://raw.githubusercontent.com/Gost1o1/Jellyfin-Franchise-Explorer/main/manifest.json
+```
 
-Read the [full v0.8 setup, device compatibility, warning and safe-test guide](docs/UPGRADE_V08.md).
+GitHub releases contain the compiled plugin. **Do not install this repository source ZIP as a Jellyfin plugin.** Jellyfin's catalog installs the compiled release package.
 
-## Version 0.7.4.1 — stable row searches
+## Source and contributions
 
-Search fields in custom rows now keep keyboard focus while the matching Jellyfin titles load. This fixes having to click the input after each typed character. All existing rows, group links, and uploaded images use the same configuration as v0.7.4.0.
+Source code, tests, documentation, and example data are in [`Jellyfin-Franchise-Explorer/`](Jellyfin-Franchise-Explorer/). GitHub Actions is configured in the hidden `.github/workflows/` directory (GitHub needs those files at the repository root).
 
-## Version 0.7.4.0 — browse-row full-library picker
-**New:** All non-Subgroup row types can choose collections, movies, and whole TV shows or TV ranges directly from the Jellyfin library, without pre-linking them to the franchise. Existing custom shelves stay intact.
+For updating this source repository, use **git/GitHub Desktop** rather than GitHub's browser upload limit. The root `manifest.json` is managed by the release workflow and should not be reset when replacing source files.
 
+## Credits and testing
 
-**Create, rename, reorder, and delete your own rows** within each franchise or subgroup. This release separates *Phases*, *Collections*, and custom viewing orders into independent, horizontally scrollable sections rather than one combined grid. Choose which existing subgroups and linked movie/TV titles appear in each row, including saved season/episode-range references. Newly selected row entries and previously linked media can be interleaved in one viewing order. Drag-and-drop or use accessible move buttons to reorder shelves and their contents. Reusing the same media reference in multiple rows does not copy media.
-
-In the administration editor, select a franchise → **Browse rows** → **Create suggested rows** (optional) or **+ Add custom row**. Edit **Row name** to rename, use **Delete row** to remove it without deleting linked media, and select its content type and assignments. Click **Save plugin configuration** to persist. The plugin preserves the same Jellyfin plugin identity, existing artwork overrides, media reference IDs and virtual groups. Old configurations with no rows continue to display automatic sections until you choose to customize them.
-
-**Chronological viewing-order rows are manually curated display sequences only**, not an automatic lore timeline or playback queue. The browser remains Web-oriented; native Jellyfin TV/mobile apps do not automatically get the new interface. See [v0.7.4 upgrade and usage guide](docs/UPGRADE_V074.md).
-
-## Version 0.7.2.0 — placement and artwork preference hotfix
-
-- Put Franchises **directly after Collections** in Jellyfin Web's My Media row, without moving other libraries.
-- When connecting a collection, preserve the current artwork unless the user explicitly chooses to use collection artwork first. Existing linked collections retain their earlier behavior; uploaded artwork is never overwritten.
-- Add **+ Same-level group** to create a sibling of a phase or era, with live name updates in the hierarchy.
-- Same plugin ID and configuration schema as v0.7.1. Read [v0.7.2 upgrade guide](docs/UPGRADE_V072.md).
-
-## Version 0.7.1.0 — optional Franchises tile in My Media (Jellyfin Web only)
-
-**UNFINISHED EXPERIMENTAL PROJECT — USE WITH EXTREME CAUTION.** This release adds an opt-in Jellyfin Web **Franchises** card at the END of the native **My Media** row. Clicking it opens the already-working `/FranchiseExplorer/Browse` page. The card is a **client-side link**, not a real Jellyfin media library, and is not automatically available in native Roku/Android TV/iOS clients.
-
-### Optional companion requirement — JavaScript Injector
-
-Jellyfin 12.2 does **not** offer a documented server-plugin API for registering a real My Media library tile. This project therefore supports the third-party **[JavaScript Injector](https://github.com/n00bcodr/Jellyfin-JavaScript-Injector)** plugin as an **optional** companion. It can inject the tile into Jellyfin Web without modifying Jellyfin's installed web files. Source and `Jellyfin.Plugin.JavaScriptInjector` are separate projects; we do not distribute its code.
-
-Install JavaScript Injector from its repository catalog (`https://raw.githubusercontent.com/n00bcodr/jellyfin-plugins/main/manifest.json`), restart Jellyfin, and install/update Franchise Explorer 0.7.1.0. The Franchise Explorer hosted service attempts to register the embedded browser script automatically using the companion's documented, versioned plugin interface. If the registration does not occur due to load order or API changes, restart once and inspect Jellyfin logs. Alternatively, paste the complete file `src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-my-media.js` into a manually enabled script in JavaScript Injector. **Do not enable both automatic and manual copies unless necessary** (the script is idempotent, but avoid redundant entries).
-
-The tile is discovered by the English "My Media" heading and the existing library card container; if Jellyfin changes its DOM or uses a translated heading, the tile may not appear. It is designed to reinsert itself when Jellyfin reloads the Home screen. Mock Chromium tests passed at 390, 620, 900, 1440 and 1920 pixels, including a simulated Home re-render. These tests do not prove integration with the installed Jellyfin 12.2 web app. The standalone browser remains available in all cases.
-
-**No original collections, actual libraries, posters, movie paths, view configurations or user favorites are modified**. Existing plugin identity, saved groups, artwork uploads and media references are preserved. Disabling/uninstalling the optional injector removes the card from Jellyfin Web; existing franchise data remains untouched.
-
-See [My Media tile setup](docs/MY_MEDIA_TILE.md) and [v0.7.1 upgrade steps](docs/UPGRADE_V071.md) for installation, troubleshooting, and rollback. **The upgrade ZIP intentionally omits `manifest.json` to avoid overwriting your live catalog.**
-
-## Version 0.7.0.0 — experimental Franchises browsing page
-
-**UNFINISHED PROJECT — USE WITH EXTREME CAUTION.** Version 0.7 adds an authenticated, read-only franchise browser that displays your existing nested groups as poster tiles, inherited art and linked media in your browser. A new **Open Franchises browser** button in the plugin editor launches it. The browser lives at `/FranchiseExplorer/Browse` on your Jellyfin server. It does not alter your previous Jellyfin collections or move files.
-
-The layout adapts from desktop widescreen to TV browsers, laptops, tablets and phones, with large clickable tiles, keyboard arrows/Enter, breadcrumbs, grid/list view and a search field. Media cards open Jellyfin details. Episode ranges remain labels and **do not yet provide continuous chronological playback**. All editing still happens in the plugin configuration page.
-
-**Important navigation limitation:** A standard server plugin cannot register a native Jellyfin library tile in "My Media". To put Franchises in the Jellyfin Web navigation, configure a supported `menuLinks` entry in your `jellyfin-web/config.json` (optional, one-time action). This is documented in [Franchises navigation](docs/FRANCHISES_NAVIGATION.md). Native Roku/Android TV clients are not extended by the plugin, though a TV **web browser** can open the responsive page.
-
-**Access:** The static page has no private content. Catalog access requires login, and linked items are resolved by each user's existing Jellyfin permissions. Franchise group titles, descriptions and uploaded group artwork are shared with authenticated users, and therefore should not contain access-restricted information. Uploaded images remain separate from your movie folders. Back up your plugin configuration and artwork first.
-
-**Status:** Local checks can verify script syntax and mock browser layout; only a successful GitHub build and subsequent server tests can establish compatibility. Do not treat the release as production-ready.
-
-### Upgrading via GitHub
-
-1. Export a JSON backup of the v0.6.x configuration, and back up uploaded group artwork and Jellyfin configuration.
-2. Extract the complete v0.7 repository package into your existing GitHub clone, **preserving the live `manifest.json`** if it has newer published releases. Ensure `.github/workflows/` appears only once.
-3. Commit/push, wait for **Build and validate** to succeed.
-4. Manually run **Publish experimental release** with version `0.7.0.0` and confirmation `RELEASE_EXPERIMENTAL`.
-5. Verify the tag and manifest before upgrading through Jellyfin's plugin catalog. Restart the Jellyfin Windows service; hard-refresh the browser. The configuration page must display `v0.7 preview`.
-6. Click **Open Franchises browser** to preview the UI before optionally adding a Jellyfin Web `menuLinks` entry.
-
-## Version 0.6.2.0: fit to visible dashboard and TV Show range dialog
-
-**Experimental / not tested on a live Jellyfin server.** This update addresses two issues reported in the Jellyfin Web admin page:
-
-- **Visible-space layout:** the editor measures the available width to the right of the Jellyfin content area's on-screen left edge and constrains itself accordingly. It stacks the franchise tree above the details editor when needed. It no longer relies exclusively on browser or CSS container breakpoints, which could still center the editor inside an offscreen-sized dashboard container.
-- **TV Show pop-up:** click **+ Choose TV Show range** next to a TV Show in search results. A centered dialog opens with **Entire TV Show**, **Season to season**, or **Season/episode to season/episode**. Enter the starting and ending season/episode numbers and click **Add to franchise**. Existing TV Show references also have an **Edit TV Show range** button; editing retains that link's position, ID, and saved artwork association.
-- **Bulk selection:** checkbox bulk-adding explicitly creates complete-title links. To add only part of a TV Show, use the individual **+ Choose TV Show range** button. Multiple different ranges for the same TV Show are supported in one group; exact duplicates are blocked.
-
-Season/episode ranges are virtual metadata only; they cannot yet launch sequential playback. Nothing is moved or rewritten in the media library. The internal Jellyfin API media type remains `Series`, displayed as **TV Show** in the editor.
-
-**Version check:** The configuration page must say **v0.6.2 preview**. A page saying **v0.5 preview** is still running an older installed plugin. After updating through the catalog and restarting the Jellyfin Windows service, hard-refresh Jellyfin Web (Ctrl+Shift+R). If it still says v0.5, check Dashboard → Plugins → My Plugins for the installed version before diagnosing v0.6.2 functionality.
-
-Offline Chromium tests cover 390, 620, 800, 1150, and 1600-pixel viewports with deliberately overwide parent layouts, including adding, editing, and dismissing a TV Show range through a mocked Jellyfin API. **These do not establish live Jellyfin compatibility.**
-
-## Previous version 0.6.1.0: group organization and TV Show ranges
-
-**Experimental / runtime unverified.** This build adds drag-and-drop groups, Move up/Move down buttons, a clearly scoped artwork editor, and TV Show season and episode ranges. It preserves the existing configuration model and artwork uploads. It is **not** a complete chronological playback feature: ranges are currently saved as virtual metadata for future expansion.
-
-To create a TV Show range, search for a show and select **+ Season/episode range**. Choose entire seasons or specific episode endpoints, then save the plugin configuration. Jellyfin internally refers to TV shows as `Series`; Franchise Explorer displays them as TV Shows.
-
-To reorganize groups, drag them above or below another group to reorder siblings, or onto a group's center to nest them. You can also use Move up / Move down. Always check the resulting hierarchy before pressing Save.
-
-**Custom artwork:** Each image belongs to the selected franchise, phase, era, or subgroup. Adding a media item never intentionally replaces an uploaded group image. The resolver and asynchronous preview handling prioritize the selected group's explicit override. If an uploaded image appears to change unexpectedly, stop and export a backup before saving.
-
-## Previous v0.5: automatic inheritance, collection import, bulk linking
-
-### Default: inherit existing Jellyfin artwork
-
-Every group automatically displays the first available image for each **image type** in this order:
-
-1. **Explicit custom override** on that group (previously uploaded image or saved URL).
-2. An explicitly **connected Jellyfin collection (BoxSet)**.
-3. **Parent group's image**, including its effective inherited or custom image.
-4. An **existing linked movie/show image** indexed by Jellyfin.
-5. Placeholder if no suitable image exists.
-
-Each poster, backdrop, logo, thumb, and banner is computed independently. A poster is **never** stretched into a logo or treated as an available backdrop. Existing files downloaded by Artwork/Fanart into movie folders are reused through Jellyfin's image metadata and API; **no filesystem scan or image copying is required**. If an upload is used, it overrides only its specific image type. Click **Restore inherited** to remove the override; the original images are never modified. This is dynamic: if Jellyfin changes the source image, the inherited image is resolved again on the next view. Some Jellyfin image types may not be present on every title.
-
-**Important:** Artwork inheritance works in the plugin **administration page**. A public-facing Franchises section/home tile, native client integration, and playback are *not* available yet.
-
-### Import from your existing Jellyfin collections
-
-- Select a virtual franchise/era/phase; under **Existing Jellyfin collection**, search for a collection.
-- Click the collection to **connect it**. Its images become the default artwork for this group.
-- Click **Import collection members** to add its current movies/shows as **virtual references**, without changing the original collection or any file.
-- Existing links are deduplicated by item ID. The import is a **one-time snapshot**, **not** live syncing. Nested collection entries and other unsupported item types are skipped. Preview limits remain 250 groups, 3,000 virtual references, and 1,200 collection entries per import.
-- Confirm the preview prompt and click **Save plugin configuration** to persist.
-
-### Bulk linking
-
-Search for Jellyfin media within a selected group, use checkboxes and **Select all results**, then **Add selected media**. Results are intentionally limited to 25 per search; refine search to find additional items. The added media are virtual references, not new physical copies.
-
-### Existing functionality retained
-
-- Editable nested groups, sortable virtual references, JSON metadata backup/restore.
-- Admin-only JPEG/PNG/WebP uploads up to 8 MB per image (five types).
-- Custom per-group poster/backdrop/logo/thumb/banner overrides.
-- Stable plugin configuration GUID and backwards-compatible `Nodes`, `MediaLinks` and artwork URL fields. New optional `CollectionId` is backward compatible.
-
-### Unavailable features
-
-- New Franchises library in Jellyfin's standard navigation or right-click context menu.
-- In-universe chronological playlist playback and automatic per-user franchise watch progression.
-- Ongoing collection membership synchronization, recognition of every possible ungrouped franchise item, or nested BoxSet expansion.
-- Broad Jellyfin client compatibility outside the installed Jellyfin Web administrator editor.
-
-## Safe update / GitHub publishing
-
-1. In your current installed version, export the **backup JSON** and back up the Jellyfin server's plugin configuration and `franchise-artwork` files. JSON backup contains metadata and references, **not the uploaded image bytes**.
-2. Extract the v0.6.2 repository ZIP and replace the project source and workflows in your existing GitHub clone. **Preserve your current root `manifest.json` if it contains newer published versions**; don't overwrite a live catalog with an older copy from the source ZIP. Both workflows must be in `.github/workflows/` exactly once.
-3. Commit and push to `main`. Confirm **Build and validate (no release)** completes successfully.
-4. Only after a successful build, manually run **Publish experimental release (manual approval only)** using version `0.6.2.0` and confirmation `RELEASE_EXPERIMENTAL`.
-5. Verify the GitHub Release ZIP and manifest before updating from Jellyfin's plugin Catalog. Restart the Windows Jellyfin service after updating.
-6. Select an existing group and verify its image override is unchanged when linking media. Try ordering groups and saving a TV Show range, then refresh and confirm persistence.
-
-Catalog URL, only after a published successful release:
-`https://raw.githubusercontent.com/Gost1o1/Jellyfin-Franchise-Explorer/main/manifest.json`
-
-**Status:** Source code static tests can pass while a build or runtime API still fails. No Jellyfin 12.2 host integration test is claimed. Do not treat a green GitHub Actions checkmark as proof of runtime safety.
+Developed with assistance from **ChatGPT (OpenAI GPT-6)**. Project direction, configuration and hands-on testing are by **Gost1o1**, using their personal Jellyfin server. Testing on that server does not establish compatibility with other clients or guarantee experimental chronological playback is reliable.
 
 ## License
 
-See [LICENSE](LICENSE): **PERSONAL AND NONCOMMERCIAL USE LICENSE (DRAFT)**, preserved exactly as supplied by the project owner. Third-party dependencies remain subject to their own licenses. Seek legal review before broader distribution.
+[**Personal and Noncommercial Use License (Draft) v0.1**](LICENSE). This is a custom source-available license, **not an OSI-approved open-source license**. Personal, noncommercial use is permitted under its terms; commercial use requires separate written permission. Third-party projects and artwork remain subject to their own licenses.
 
-## References
-
-- [Jellyfin Plugins documentation](https://jellyfin.org/docs/general/server/plugins/)
-- [Official Jellyfin plugin template](https://github.com/jellyfin/jellyfin-plugin-template)
-- [Smart Collections](https://github.com/johnpc/jellyfin-plugin-smart-collections) (technical inspiration only)
-
-## Earlier responsive layout work (v0.6.1)
-
-The administration interface now responds to its available **Jellyfin content width**, not only the full browser window width. Its two columns stack as necessary, artwork tiles and form controls wrap, and the overall page stays within its containing region. This is a CSS-only layout change; franchise data, custom artwork, and media references are unchanged.
-
-## Development-only browser regression test
-
-Run `python3 scripts/test_live_ui_browser.py` only in an environment with Playwright and Chromium installed at `/usr/bin/chromium`. This test uses simulated Jellyfin responses and is **not** part of GitHub Actions (the hosted runner lacks that local Chromium test environment). The GitHub build executes the static layout and range-dialog contract checks.
-
-
-### v0.7.4 — full-library row selection
-
-Only **Subgroups** rows are restricted to children already defined beneath the selected franchise.
-All other row types can search the complete Jellyfin library to add existing collections (BoxSets), movies, or TV shows. For TV shows, choose the full series, season-to-season, or episode-to-episode range. Each row stores its new references independently: you **do not** have to link these items to the parent franchise first. Old row references and artwork are preserved. Deleting a presentation row never deletes Jellyfin items.
-
-**Limitations:** A collection is a reference to the existing Jellyfin collection, not an automatic import of all its members. Season/episode ranges are virtual labels, not playback queues. The public browser checks viewers' access when resolving individual items. The first upgrade should be backed up and tested with an experimental row.
+> [!CAUTION]
+> **UNFINISHED PROJECT — USE WITH EXTREME CAUTION.** Features, APIs and playback support may change. Make backups and test with a short timeline before relying on the player.
