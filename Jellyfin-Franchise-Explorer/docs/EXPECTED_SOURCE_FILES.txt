@@ -63,6 +63,7 @@ Jellyfin-Franchise-Explorer/scripts/test_tv_dialog_contract.js
 Jellyfin-Franchise-Explorer/scripts/test_v072_regressions.py
 Jellyfin-Franchise-Explorer/scripts/test_v085_card_progress.py
 Jellyfin-Franchise-Explorer/scripts/test_v085_native_card.py
+Jellyfin-Franchise-Explorer/scripts/test_v087_completion_handoff.py
 Jellyfin-Franchise-Explorer/scripts/ui_contract_tests.js
 Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Api/FranchiseArtworkController.cs
 Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Api/FranchiseBrowseController.cs
