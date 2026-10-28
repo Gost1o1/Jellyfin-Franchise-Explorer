@@ -2,8 +2,8 @@
   {
     "guid": "6bc7820b-7c6d-4e64-a139-dfb90b8d6f42",
     "name": "Franchise Explorer",
-    "overview": "Experimental virtual franchise groups for Jellyfin 12.x (use caution).",
-    "description": "Unfinished experimental plugin. Virtual franchise hierarchies and item-ID references; no native category or media manipulation.",
+    "overview": "Experimental virtual franchise browsing for Jellyfin 12.2 (use caution).",
+    "description": "Unfinished experimental plugin: virtual hierarchies and read-only responsive Franchises browser; no native My Media tile or media manipulation.",
     "owner": "Gost1o1",
     "category": "General",
     "versions": [

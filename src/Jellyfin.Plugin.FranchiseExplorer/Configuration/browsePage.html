@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Franchises · Jellyfin</title>
+<style>
+:root{color-scheme:dark;--bg:#101114;--surface:#1b1e24;--line:#343c48;--text:#f4f7fb;--muted:#bac2cc;--accent:#09b1c5;--radius:14px;font-family:Inter,system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
+*,*::before,*::after{box-sizing:border-box}
+html{min-width:0;overflow-x:hidden;background:var(--bg)}
+body{margin:0;min-width:0;overflow-x:hidden;color:var(--text);background:var(--bg);font-size:16px}
+a{color:inherit;text-decoration:none}button,input,select{font:inherit}
+button{cursor:pointer}button:disabled{opacity:.4;cursor:default}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #5deafa;outline-offset:3px}
+.top{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#111317ee;backdrop-filter:blur(15px);border-bottom:1px solid #333946;padding:10px clamp(14px,3.4vw,46px);min-height:72px;max-width:100vw}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand-mark{width:37px;height:37px;border-radius:12px;display:grid;place-items:center;background:#0aafc1;color:#041416;font-size:21px;font-weight:800;flex-shrink:0}
+.brand-title{font-size:clamp(1rem,1.8vw,1.26rem);font-weight:750;letter-spacing:-.025em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brand-sub{font-size:.71rem;letter-spacing:.07em;color:#8abdc2;text-transform:uppercase}
+.actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.btn{border:1px solid #566170;border-radius:9px;background:#272e38;color:#f3f8fc;padding:10px 13px;min-height:45px;font-weight:650;line-height:1.15}
+.btn:hover{background:#3d4653}
+.btn-primary{background:#079eb3;border-color:#079eb3;color:#03171a}
+.btn-primary:hover{background:#23d0df}
+.btn-lite{background:transparent;border-color:#505968}
+main{width:min(100%,1540px);margin:0 auto;padding:clamp(12px,2.6vw,38px);min-width:0}
+.notice{border-left:4px solid #e3b54b;background:#30291b;padding:12px 16px;border-radius:9px;color:#f2dcac;font-size:.86rem;line-height:1.5;margin-bottom:18px}
+.crumbs{display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-height:44px;margin:4px 0 15px;font-size:.94rem}
+.crumbs button{background:none;border:0;padding:9px 4px;color:#bec9d5;border-radius:5px;min-height:42px}
+.crumbs button:hover{color:#fff}
+.crumbs .current{color:#fff;font-weight:720}
+.hero{position:relative;border:1px solid var(--line);background:linear-gradient(115deg,#24323f 4%,#17202a 68%,#15171d);border-radius:18px;overflow:hidden;min-height:220px;display:flex;align-items:flex-end;margin-bottom:22px}
+.hero::before{content:"";position:absolute;inset:0;background:linear-gradient(0deg,#11151df5,#11151d60 76%);z-index:1}
+.hero-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.78}
+.hero-inner{position:relative;z-index:2;padding:clamp(20px,3vw,35px);width:100%;display:flex;align-items:center;gap:22px;min-width:0}
+.hero-poster{flex:0 0 clamp(72px,11vw,128px);height:clamp(106px,16vw,190px);border:1px solid #75808970;border-radius:9px;overflow:hidden;background:#1b2734;display:grid;place-items:center}
+.hero-poster img{width:100%;height:100%;object-fit:contain}
+.hero-info{min-width:0;max-width:920px}
+.eyebrow{font-size:.75rem;text-transform:uppercase;letter-spacing:.12em;color:#6eecf3;font-weight:760}
+h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;letter-spacing:-.03em;overflow-wrap:anywhere}
+.hero p{color:#e2e6ed;line-height:1.5;margin:8px 0;max-width:900px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+.counter{color:#d3dce7;font-size:.86rem}
+.tools{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:15px 0 20px}
+.tools-left{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
+.tools h2{font-size:1.35rem;margin:0 12px 0 0}
+.field{background:#1a1f27;color:#fff;border:1px solid #66717d;border-radius:9px;padding:12px 14px;min-height:47px;min-width:0}
+.search{width:min(390px,100%)}
+.field::placeholder{color:#a7b2bf}
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,172px),1fr));gap:clamp(14px,2vw,24px);align-items:start}
+.tile{display:flex;flex-direction:column;align-items:stretch;gap:9px;min-width:0;border:0;background:transparent;color:var(--text);text-align:left;padding:0;border-radius:11px}
+.tile:hover .cover,.tile:focus-visible .cover{border-color:#20d1e4;transform:translateY(-2px);box-shadow:0 8px 25px #0006}
+.cover{position:relative;aspect-ratio:2/3;border:1px solid #414c58;border-radius:11px;background:linear-gradient(142deg,#21404c,#171d25 60%,#31364e);overflow:hidden;display:grid;place-items:center;transition:transform .18s,box-shadow .18s,border-color .18s}
+.cover img{width:100%;height:100%;object-fit:cover}
+.cover .fallback{display:grid;place-items:center;gap:8px;text-align:center;color:#bedde3;padding:15px;word-break:break-word}
+.cover .fallback-icon{font-size:2.6rem;line-height:1}
+.cover .tag{position:absolute;top:9px;right:9px;border-radius:30px;padding:5px 8px;background:#090d11c9;color:#f7fbff;font-size:.74rem;font-weight:700;max-width:85%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile strong{display:block;font-size:.94rem;line-height:1.3;overflow-wrap:anywhere}
+.tile small{display:block;font-size:.77rem;line-height:1.3;color:var(--muted)}
+.section{margin-bottom:30px}
+.section h2{font-size:1.35rem;margin:0 0 18px}
+.section-header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;margin-bottom:16px}
+.section-header h2{margin:0}
+.listview{grid-template-columns:1fr!important;gap:9px}
+.listview .tile{flex-direction:row;align-items:center;padding:9px;border:1px solid var(--line);background:var(--surface);border-radius:10px;gap:16px}
+.listview .cover{width:74px;min-width:74px;aspect-ratio:2/3}
+.listview .cover .fallback-icon{font-size:1.2rem}
+.listview .tile strong{font-size:1rem}
+.empty{padding:35px 15px;border:1px dashed #516070;border-radius:14px;text-align:center;color:var(--muted);line-height:1.5}
+.status{margin:10px 0 22px;color:#bbc6d1;font-size:.91rem}
+.footer{text-align:center;color:#8e9ba9;font-size:.79rem;margin:40px 0 15px;line-height:1.55}
+.hidden{display:none!important}
+@media(max-width:760px){.top{min-height:64px;padding:9px 13px}.brand-sub{display:none}.actions .desktop-word{display:none}.btn{min-height:46px}.hero{min-height:190px}.hero-inner{gap:13px}.hero-poster{flex-basis:76px;height:112px}.hero p{-webkit-line-clamp:2;font-size:.84rem}.gallery{grid-template-columns:repeat(auto-fill,minmax(min(100%,125px),1fr));gap:16px}.cover .tag{font-size:.65rem;padding:4px 6px}}
+@media(max-width:420px){.brand-title{max-width:140px}.actions{gap:5px}.actions .btn{padding:9px 10px}.hero-inner{padding:14px}.hero-poster{flex-basis:65px;height:99px}.hero h1{font-size:1.6rem}.hero .counter{font-size:.78rem}.gallery{grid-template-columns:repeat(2,minmax(0,1fr))}.tools-left,.search{width:100%}.section-header{align-items:flex-start}}
+@media(min-width:1600px){.gallery{grid-template-columns:repeat(auto-fill,minmax(195px,1fr))}.tile strong{font-size:1.03rem}}
+@media(pointer:coarse){.btn,.crumbs button,.tile{touch-action:manipulation}.tile{min-height:46px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="brand-mark" aria-hidden="true">F</span><div><div id="brand-title" class="brand-title">Franchises</div><div class="brand-sub">Jellyfin · Franchise Explorer</div></div></div>
+  <nav class="actions" aria-label="Navigation"><a id="return-jellyfin" class="btn btn-lite" href="#">← <span class="desktop-word">Jellyfin</span></a><button class="btn btn-lite" id="browse-back" title="Back to parent" type="button">↑ <span class="desktop-word">Back</span></button></nav>
+</header>
+<main>
+  <div class="notice" id="preview-notice">Experimental preview · Browsing is read-only. Playback and season-range sequencing are not implemented. Your existing Jellyfin files and collections are unchanged.</div>
+  <nav id="breadcrumbs" class="crumbs" aria-label="Breadcrumbs"></nav>
+  <div class="hero"><img id="hero-backdrop" class="hero-art hidden" alt=""><div class="hero-inner"><div id="hero-poster-wrap" class="hero-poster hidden"><img id="hero-poster" alt=""></div><div class="hero-info"><div id="hero-type" class="eyebrow">Virtual library</div><h1 id="hero-title">Franchises</h1><p id="hero-description">Browse the franchises and story universes in your Jellyfin collection.</p><div id="hero-count" class="counter"></div></div></div></div>
+  <div class="tools"><div class="tools-left"><h2 id="items-heading">Your franchises</h2><input id="search" class="field search" type="search" placeholder="Search this level..." aria-label="Filter franchises and titles"></div><div class="tools-left"><label for="sort" class="hidden">Sort order</label><select id="sort" class="field" aria-label="Sort items"><option value="custom">Your order</option><option value="alpha">A to Z</option></select><button id="toggle-view" class="btn" type="button" aria-pressed="false">☷ List</button></div></div>
+  <p class="status" id="status" role="status" aria-live="polite">Loading franchises...</p>
+  <section id="groups-section" class="section hidden"><div class="section-header"><h2>Groups and subgroups</h2><span class="counter" id="groups-count"></span></div><div class="gallery" id="group-grid"></div></section>
+  <section id="media-section" class="section hidden"><div class="section-header"><h2>Movies and TV shows</h2><span class="counter" id="media-count"></span></div><div class="gallery" id="media-grid"></div></section>
+  <div id="empty" class="empty hidden">No items to display in this group.</div>
+  <div class="footer">Franchise Explorer v0.7.0 · An experimental virtual browsing page. Season/episode ranges describe references; they do not yet launch a continuous playlist.</div>
+</main>
+<script>
+'use strict';
+(() => {
+  const $ = id => document.getElementById(id);
+  const prefix = location.pathname.split('/FranchiseExplorer/')[0].replace(/\/$/,'');
+  const serverPath = path => prefix + (path.startsWith('/') ? path : '/' + path);
+  $('return-jellyfin').href = serverPath('/web/index.html');
+  let token = '', userId = '', serverId = '', catalog = {nodes:[],links:[]}, current = '', view = 'grid', shownCards = [], renderSerial = 0;
+  const itemCache = new Map(), blobCache = new Map();
+  const imageKeys = {Primary:'primaryUrl',Backdrop:'backdropUrl',Logo:'logoUrl',Thumb:'thumbUrl',Banner:'bannerUrl'};
+  const text = (el, value) => {el.textContent = value == null ? '' : String(value);return el;};
+  const safeGuid = v => /^[a-f\d]{32}$|^[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12}$/i.test(String(v || ''));
+  const status = message => text($('status'),message);
+  const authHeaders = () => ({Authorization:'MediaBrowser Token="'+token+'"'});
+  function serverMatch(s){return ['ManualAddress','LocalAddress','RemoteAddress','LastConnectionAddress'].some(k=>{
+    try{return s[k] && new URL(s[k]).origin === location.origin;}catch(_){return false;}
+  });}
+  async function session(){
+    // Jellyfin Web stores its own login information on this same origin.
+    // No token is sent through a URL, query string, or third-party service.
+    let servers=[];
+    try{servers=JSON.parse(localStorage.getItem('jellyfin_credentials')||'{}').Servers||[];}catch(_){/* No session */}
+    let id='';try{const r=await fetch(serverPath('/System/Info/Public'));if(r.ok)id=(await r.json()).Id||'';}catch(_){/* optional */}
+    const matches=servers.filter(s=>s.AccessToken&&s.UserId);
+    const chosen=matches.find(s=>id&&s.Id===id)||matches.find(serverMatch)||(matches.length===1?matches[0]:null);
+    if(!chosen)return false;
+    token=chosen.AccessToken;userId=chosen.UserId;serverId=chosen.Id||id;
+    return true;
+  }
+  async function api(path){
+    const r=await fetch(serverPath(path),{headers:authHeaders(),cache:'no-store'});
+    if(!r.ok){const error=new Error('Jellyfin request failed ('+r.status+')');error.status=r.status;throw error;}
+    return await r.json();
+  }
+  async function getItem(id){
+    if(!safeGuid(id))return null;
+    id=String(id).toLowerCase();
+    if(!itemCache.has(id)){
+      const promise=api('/Items/'+encodeURIComponent(id)+'?userId='+encodeURIComponent(userId))
+        .then(x=>(x&&safeGuid(x.Id))?x:null).catch(()=>null);
+      itemCache.set(id,promise);
+    }
+    return await itemCache.get(id);
+  }
+  async function secureImage(path){
+    if(!path)return '';
+    // Uploaded artwork and Jellyfin-generated artwork use authenticated fetch,
+    // so an authentication token never appears in an image URL.
+    if(/^https:\/\//i.test(path) || /^http:\/\//i.test(path)){
+      try{const u=new URL(path);if(u.origin !== location.origin)return u.protocol==='https:'?u.href:'';path=u.pathname+u.search;}catch(_){return '';}
+    }
+    let route=path.startsWith(prefix+'/')?path.slice(prefix.length):path;
+    route=route.startsWith('/')?route:'/'+route;
+    if(!/^\/(FranchiseExplorer\/Artwork\/|Items\/)/i.test(route))return '';
+    const key=serverPath(route);
+    if(!blobCache.has(key)){
+      const load=fetch(key,{headers:authHeaders()}).then(r=>{if(!r.ok)throw new Error('no image');return r.blob();})
+        .then(blob=>blob.type.startsWith('image/')?URL.createObjectURL(blob):'').catch(()=>'');
+      blobCache.set(key,load);
+    }
+    return await blobCache.get(key);
+  }
+  function imagePath(item,type){
+    if(!item||!safeGuid(item.Id))return '';
+    if(type==='Backdrop' && item.BackdropImageTags && item.BackdropImageTags.length)return '/Items/'+item.Id+'/Images/Backdrop/0?maxWidth=1100';
+    const tags=item.ImageTags||{};
+    if(!tags[type])return '';
+    return '/Items/'+item.Id+'/Images/'+type+'?maxWidth='+(type==='Primary'?'420':'1100');
+  }
+  function nodeById(id){return catalog.nodes.find(n=>n.id===id)||null;}
+  function parents(node){const seen=new Set(), result=[];while(node&&!seen.has(node.id)){seen.add(node.id);result.unshift(node);node=nodeById(node.parentId);}return result;}
+  function children(id){return catalog.nodes.filter(n=>(n.parentId||'')===(id||''));}
+  function links(id){return catalog.links.filter(l=>l.nodeId===id);}
+  function countDescendants(id,visited=new Set()){if(visited.has(id))return 0;visited.add(id);return links(id).length+children(id).reduce((t,n)=>t+countDescendants(n.id,visited),0);}
+  function compare(a,b){if($('sort').value==='alpha')return String(a.name||a.title||'').localeCompare(String(b.name||b.title||''));return (+a.sortOrder||+a.position||0)-(+b.sortOrder||+b.position||0)||String(a.name||a.title||'').localeCompare(String(b.name||b.title||''));}
+  function hashGroup(){const params=new URLSearchParams(location.hash.replace(/^#/,''));const id=params.get('group')||'';return safeGuid(id)&&nodeById(id)?id:'';}
+  function openGroup(id){location.hash=id?'group='+encodeURIComponent(id):'';if(!id && !location.hash){current='';void render();}}
+  function fallbackCover(kind){const box=document.createElement('span');box.className='fallback';const icon=text(document.createElement('span'),kind==='TV Show'?'▣':kind==='Movie'?'▶':'✦');icon.className='fallback-icon';box.append(icon,text(document.createElement('span'),kind));return box;}
+  function mediaRange(l){const mode=l.rangeMode||'Full';if(mode==='Seasons')return 'Seasons '+l.startSeason+'–'+l.endSeason;
+    if(mode==='Episodes')return 'S'+l.startSeason+'E'+l.startEpisode+' – S'+l.endSeason+'E'+l.endEpisode;return '';
+  }
+  function makeTile(title, subtitle, tag, onClick, kind){
+    const button=document.createElement('button');button.className='tile';button.type='button';button.addEventListener('click',onClick);
+    button.setAttribute('aria-label',title+(subtitle?' — '+subtitle:''));
+    const cover=document.createElement('span');cover.className='cover';const placeholder=fallbackCover(kind);cover.append(placeholder);
+    if(tag){const badge=document.createElement('span');badge.className='tag';text(badge,tag);cover.append(badge);}
+    const labels=document.createElement('span');labels.append(text(document.createElement('strong'),title),text(document.createElement('small'),subtitle||''));
+    button.append(cover,labels);
+    return {button,cover,placeholder};
+  }
+  function addImageToTile(tile, source){
+    if(!source)return;
+    const img=document.createElement('img');img.loading='lazy';img.alt='';img.addEventListener('error',()=>img.remove());img.addEventListener('load',()=>tile.placeholder.remove());img.src=source;
+    tile.cover.prepend(img);
+  }
+  async function nodeArtwork(n, kind, seen=new Set()){
+    if(!n||seen.has(n.id))return '';seen.add(n.id);
+    const own=(n.artwork||{})[imageKeys[kind]]||'';
+    const custom=await secureImage(own);if(custom)return custom;
+    if(safeGuid(n.collectionId)){
+      const collection=await getItem(n.collectionId);
+      const inherited=await secureImage(imagePath(collection,kind));if(inherited)return inherited;
+    }
+    if(n.parentId){const parentArt=await nodeArtwork(nodeById(n.parentId),kind,seen);if(parentArt)return parentArt;}
+    for(const link of links(n.id).slice(0,5)){
+      const item=await getItem(link.itemId);
+      const art=await secureImage(imagePath(item,kind));if(art)return art;
+    }
+    return '';
+  }
+  function openJellyfinItem(item){
+    // Link to Jellyfin's own details UI. The user remains authenticated there.
+    const sid=serverId?'&serverId='+encodeURIComponent(serverId):'';
+    location.href=serverPath('/web/#/details?id='+encodeURIComponent(item.Id)+sid);
+  }
+  async function showMedia(l, grid, ticket){
+    const item=await getItem(l.itemId);
+    if(ticket!==renderSerial||!item)return false;
+    const range=mediaRange(l);
+    const type=item.Type==='Series'?'TV Show':(item.Type==='Movie'?'Movie':item.Type||'Video');
+    const tile=makeTile(item.Name||'Untitled', [type,item.ProductionYear||'',range].filter(Boolean).join(' · '),range||type,()=>openJellyfinItem(item),type);
+    grid.append(tile.button);shownCards.push(tile.button);
+    void secureImage(imagePath(item,'Primary')).then(url=>{if(ticket===renderSerial)addImageToTile(tile,url);});
+    return true;
+  }
+  async function showNode(n,grid,ticket){
+    const total=countDescendants(n.id);
+    const tile=makeTile(n.name||'Unnamed group',n.nodeType+' · '+total+' linked '+(total===1?'item':'items'),n.nodeType,()=>openGroup(n.id),'Group');
+    grid.append(tile.button);shownCards.push(tile.button);
+    void nodeArtwork(n,'Primary').then(url=>{if(ticket===renderSerial)addImageToTile(tile,url);});
+  }
+  function drawBreadcrumbs(node){
+    $('breadcrumbs').replaceChildren();const path=parents(node);
+    const home=document.createElement('button');text(home,catalog.title||'Franchises');home.addEventListener('click',()=>openGroup(''));$('breadcrumbs').append(home);
+    for(const n of path){const sep=text(document.createElement('span'),'›');sep.setAttribute('aria-hidden','true');$('breadcrumbs').append(sep);
+      const crumb=document.createElement('button');crumb.textContent=n.name;crumb.className=n.id===current?'current':'';crumb.addEventListener('click',()=>openGroup(n.id));$('breadcrumbs').append(crumb);}
+  }
+  async function render(){
+    const ticket=++renderSerial;current=hashGroup();shownCards=[];
+    const selected=nodeById(current), title=selected?selected.name:(catalog.title||'Franchises');
+    text($('brand-title'),catalog.title||'Franchises');document.title=title+' · Jellyfin';drawBreadcrumbs(selected);
+    $('browse-back').disabled=!selected;$('browse-back').onclick=()=>openGroup(selected?selected.parentId:'');
+    text($('hero-type'),selected?selected.nodeType:'Virtual library');text($('hero-title'),title);
+    text($('hero-description'),selected?(selected.overview||'Browse the subgroups, movies, and TV shows linked to this virtual franchise.'):'Browse your franchise groups, eras, phases, and viewing references.');
+    text($('hero-count'),selected?(countDescendants(selected.id)+' linked items including nested groups'):(catalog.nodes.filter(x=>!x.parentId).length+' top-level franchises'));
+    $('hero-poster-wrap').classList.add('hidden');$('hero-backdrop').classList.add('hidden');
+    if(selected){
+      void nodeArtwork(selected,'Primary').then(url=>{if(ticket===renderSerial&&url){$('hero-poster').src=url;$('hero-poster-wrap').classList.remove('hidden');}});
+      void nodeArtwork(selected,'Backdrop').then(url=>{if(ticket===renderSerial&&url){$('hero-backdrop').src=url;$('hero-backdrop').classList.remove('hidden');}});
+    }
+    const groupList=children(current).sort(compare);const mediaList=current?links(current).sort(compare):[];
+    const filter=$('search').value.trim().toLocaleLowerCase();
+    const visibleGroups=groupList.filter(n=>!filter||n.name.toLocaleLowerCase().includes(filter));
+    $('group-grid').replaceChildren();$('media-grid').replaceChildren();
+    $('group-grid').classList.toggle('listview',view==='list');$('media-grid').classList.toggle('listview',view==='list');
+    $('groups-section').classList.toggle('hidden',!visibleGroups.length);
+    $('media-section').classList.toggle('hidden',!mediaList.length);
+    text($('groups-count'),visibleGroups.length+' groups');text($('media-count'),mediaList.length+' references');
+    text($('items-heading'),selected?'Browse '+selected.name:'Your franchises');
+    status(mediaList.length?'Resolving media visible to your account...':'');
+    for(const n of visibleGroups)void showNode(n,$('group-grid'),ticket);
+    // Resolve linked items with limited concurrency; Jellyfin checks each user's access.
+    let visibleMedia=0;
+    for(let i=0;i<mediaList.length;i+=6){
+      const chunk=mediaList.slice(i,i+6);
+      const results=await Promise.all(chunk.map(l=>showMedia(l,$('media-grid'),ticket)));
+      if(ticket!==renderSerial)return;
+      visibleMedia+=results.filter(Boolean).length;
+    }
+    if(filter){
+      for(const card of shownCards){card.classList.toggle('hidden',!(card.innerText||card.textContent).toLocaleLowerCase().includes(filter));}
+    }
+    if(ticket!==renderSerial)return;
+    const shown=shownCards.filter(c=>!c.classList.contains('hidden')).length;
+    $('groups-section').classList.toggle('hidden',!Array.from($('group-grid').children).some(c=>!c.classList.contains('hidden')));
+    $('media-section').classList.toggle('hidden',!Array.from($('media-grid').children).some(c=>!c.classList.contains('hidden')));
+    $('empty').classList.toggle('hidden',shown>0);
+    status(visibleMedia<mediaList.length?`${mediaList.length-visibleMedia} linked item(s) unavailable or not accessible to your account.`:'');
+  }
+  $('browse-back').onclick=()=>{const n=nodeById(current);openGroup(n?n.parentId:'');};
+  $('toggle-view').addEventListener('click',()=>{view=view==='grid'?'list':'grid';$('toggle-view').setAttribute('aria-pressed',String(view==='list'));text($('toggle-view'),view==='list'?'▦ Grid':'☷ List');void render();});
+  $('sort').addEventListener('change',()=>void render());
+  $('search').addEventListener('input',()=>void render());
+  window.addEventListener('hashchange',()=>{window.scrollTo({top:0,behavior:'instant'});$('search').value='';void render();});
+  document.addEventListener('keydown',event=>{
+    if(event.key==='Escape'&&current){event.preventDefault();const n=nodeById(current);openGroup(n?n.parentId:'');return;}
+    if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)||/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))return;
+    const cards=shownCards.filter(el=>el.offsetParent!==null);const focusIndex=cards.indexOf(document.activeElement);
+    if(focusIndex<0)return;
+    const width=cards[focusIndex].getBoundingClientRect().width;
+    const columns=view==='list'?1:Math.max(1,Math.round(($('group-grid').clientWidth||$('media-grid').clientWidth||width)/Math.max(width,1)));
+    const delta=event.key==='ArrowLeft'?-1:event.key==='ArrowRight'?1:event.key==='ArrowUp'?-columns:columns;
+    const target=cards[focusIndex+delta];if(target){event.preventDefault();target.focus();}
+  });
+  async function init(){
+    if(!(await session())){status('Sign in to Jellyfin Web on this device first, then return to Franchises.');$('empty').classList.remove('hidden');text($('empty'),'No Jellyfin Web login session was found for this server.');return;}
+    try{
+      catalog=await api('/FranchiseExplorer/Catalog');
+      if(!Array.isArray(catalog.nodes)||!Array.isArray(catalog.links))throw new Error('Unexpected catalog format.');
+      // Ensure identifiers are structurally safe before constructing any URL.
+      catalog.nodes=catalog.nodes.filter(n=>safeGuid(n.id));
+      catalog.links=catalog.links.filter(l=>safeGuid(l.nodeId)&&safeGuid(l.itemId));
+      void render();
+    }catch(error){status('Cannot load Franchises: '+error.message+'. Confirm the plugin is running and your Jellyfin session is active.');}
+  }
+  void init();
+})();
+</script>
+</body>
+</html>

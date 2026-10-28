@@ -171,19 +171,20 @@
   <div class="fx-heading">
     <div>
       <div class="fx-eyebrow">Jellyfin plugin • Early development</div>
-      <h1>Franchise Explorer <small>v0.6.2 preview</small></h1>
+      <h1>Franchise Explorer <small>v0.7 preview</small></h1>
       <p class="fx-muted">Organize virtual franchises, eras, phases and viewing references without moving media files.</p>
     </div>
   </div>
   <div class="fx-warning" role="alert">
     <strong>UNFINISHED PROJECT — USE WITH EXTREME CAUTION.</strong>
-    <p>Experimental administration editor. Franchise artwork inherits existing Jellyfin images unless a custom override is uploaded. Connecting/importing existing collections creates virtual links only; original media and native collections stay untouched. There is no native Franchises navigation or timeline player; TV Show ranges are saved as virtual metadata only. Back up Jellyfin before installing.</p>
+    <p>Experimental administration editor. Franchise artwork inherits existing Jellyfin images unless a custom override is uploaded. Connecting/importing existing collections creates virtual links only; original media and native collections stay untouched. A separate read-only Franchises browser is now available; a Jellyfin Web navigation link requires one-time configuration. There is no native library tile or timeline player; TV Show ranges are saved as virtual metadata only. Back up Jellyfin before installing.</p>
   </div>
   <div class="fx-toolbar">
     <div class="fx-toolbar-left">
       <button type="button" id="fx-add-root" class="fx-btn fx-btn-primary">+ New franchise</button>
       <button type="button" id="fx-add-child" class="fx-btn">+ Subgroup</button>
       <button type="button" id="fx-demo" class="fx-btn">Insert example groups</button>
+      <a id="fx-open-browser" class="fx-btn fx-btn-primary" href="/FranchiseExplorer/Browse" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">Open Franchises browser ↗</a>
     </div>
     <div class="fx-toolbar-right">
       <button type="button" id="fx-export" class="fx-btn">Export backup</button>
@@ -1060,6 +1061,7 @@
     searchTimer=setTimeout(()=>searchMedia(query,seq),380);
   });
 
+  try { byId('fx-open-browser').href=ApiClient.getUrl('FranchiseExplorer/Browse'); } catch(_) {}
   page.addEventListener('pageshow',load);
   if(!page.classList.contains('hide')) load();
 })();

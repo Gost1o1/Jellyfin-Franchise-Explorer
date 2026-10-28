@@ -11,12 +11,13 @@ using Microsoft.AspNetCore.Mvc;
 namespace Jellyfin.Plugin.FranchiseExplorer.Api;
 
 /// <summary>
-/// Uploads and serves group-only artwork. All endpoints require a Jellyfin administrator.
+/// Uploads and serves group-only artwork to signed-in Jellyfin viewers.
 /// Files are kept in the plugin data folder, never in the media library.
+/// Upload remains administrator-only; authenticated viewers may read previews.
 /// </summary>
 [ApiController]
 [Route("FranchiseExplorer/Artwork")]
-[Authorize(Policy = Policies.RequiresElevation)]
+[Authorize]
 public sealed class FranchiseArtworkController : ControllerBase
 {
     private const long MaxImageBytes = 8 * 1024 * 1024;
@@ -77,6 +78,7 @@ public sealed class FranchiseArtworkController : ControllerBase
 
     /// <summary>Upload a PNG, JPEG, or WebP file to the plugin-owned artwork directory.</summary>
     [HttpPost("{nodeId:guid}/{slot}")]
+    [Authorize(Policy = Policies.RequiresElevation)]
     [RequestSizeLimit(MaxImageBytes + 1024 * 1024)]
     public async Task<IActionResult> Upload(Guid nodeId, string slot, IFormFile file, CancellationToken cancellationToken)
     {

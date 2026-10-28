@@ -5,7 +5,7 @@ from pathlib import Path
 import subprocess,json,re,shutil,sys,tempfile
 root=Path(__file__).resolve().parents[1]
 project=root/'src/Jellyfin.Plugin.FranchiseExplorer'
-required=[root/'LICENSE', root/'README.md',root/'manifest.json',project/'Plugin.cs',project/'Configuration/PluginConfiguration.cs',project/'Configuration/configPage.html']
+required=[root/'LICENSE', root/'README.md',root/'manifest.json',project/'Plugin.cs',project/'Configuration/PluginConfiguration.cs',project/'Configuration/configPage.html',project/'Configuration/browsePage.html',project/'Api/FranchiseBrowseController.cs']
 for p in required:
     if not p.is_file():sys.exit('Missing required file: '+str(p))
 license_text=(root/'LICENSE').read_text(encoding='utf-8')
@@ -37,4 +37,25 @@ if shutil.which('node'):
 else:print('Node.js unavailable; JS syntax validation skipped.')
 for marker in ('getPluginConfiguration','updatePluginConfiguration','normalize(raw)','replaceChildren'):
     if marker not in js:sys.exit('Expected admin-page behavior missing: '+marker)
-print('Static repository checks passed. A Jellyfin host test is still required.')
+# Verify user-facing browser script is valid and the shared catalog never exposes admin display labels.
+frontend=(project/'Configuration/browsePage.html').read_text(encoding='utf-8')
+class BrowserScripts(HTMLParser):
+    def __init__(self): super().__init__();self.inscript=False;self.scripts=[]
+    def handle_starttag(self,tag,attrs):
+        if tag=='script' and not dict(attrs).get('src'):self.inscript=True
+    def handle_endtag(self,tag):
+        if tag=='script':self.inscript=False
+    def handle_data(self,data):
+        if self.inscript:self.scripts.append(data)
+b=BrowserScripts();b.feed(frontend)
+if not b.scripts:sys.exit('No browser script embedded.')
+if shutil.which('node'):
+    with tempfile.NamedTemporaryFile(mode='w',suffix='.js',encoding='utf-8',delete=False) as f:
+        f.write(''.join(b.scripts)); tmp=Path(f.name)
+    try:subprocess.run(['node','--check',str(tmp)],check=True)
+    finally:tmp.unlink(missing_ok=True)
+controller=(project/'Api/FranchiseBrowseController.cs').read_text(encoding='utf-8')
+for needle in ('[AllowAnonymous]','[Authorize]','HttpGet("Catalog")','HttpGet("Browse")'):
+    if needle not in controller:sys.exit('Browse controller missing '+needle)
+if 'l.DisplayName' in controller:sys.exit('Browser catalog must not leak admin item labels.')
+print('Static repository + browsing script checks passed. Jellyfin host testing remains required.')

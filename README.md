@@ -8,6 +8,27 @@
 
 Jellyfin Franchise Explorer manages **virtual** franchises, eras, phases, and media references without relocating or duplicating movies and shows. This code targets Jellyfin **12.2** / **.NET 10** and uses the same plugin GUID and backward-compatible configuration format as v0.2–v0.5.
 
+## Version 0.7.0.0 — experimental Franchises browsing page
+
+**UNFINISHED PROJECT — USE WITH EXTREME CAUTION.** Version 0.7 adds an authenticated, read-only franchise browser that displays your existing nested groups as poster tiles, inherited art and linked media in your browser. A new **Open Franchises browser** button in the plugin editor launches it. The browser lives at `/FranchiseExplorer/Browse` on your Jellyfin server. It does not alter your previous Jellyfin collections or move files.
+
+The layout adapts from desktop widescreen to TV browsers, laptops, tablets and phones, with large clickable tiles, keyboard arrows/Enter, breadcrumbs, grid/list view and a search field. Media cards open Jellyfin details. Episode ranges remain labels and **do not yet provide continuous chronological playback**. All editing still happens in the plugin configuration page.
+
+**Important navigation limitation:** A plugin cannot automatically create a native Jellyfin library tile in "My Media". To put Franchises in the Jellyfin Web navigation, configure a supported `menuLinks` entry in your `jellyfin-web/config.json` (optional, one-time action). This is documented in [Franchises navigation](docs/FRANCHISES_NAVIGATION.md). Native Roku/Android TV clients are not extended by the plugin, though a TV **web browser** can open the responsive page.
+
+**Access:** The static page has no private content. Catalog access requires login, and linked items are resolved by each user's existing Jellyfin permissions. Franchise group titles, descriptions and uploaded group artwork are shared with authenticated users, and therefore should not contain access-restricted information. Uploaded images remain separate from your movie folders. Back up your plugin configuration and artwork first.
+
+**Status:** Local checks can verify script syntax and mock browser layout; only a successful GitHub build and subsequent server tests can establish compatibility. Do not treat the release as production-ready.
+
+### Upgrading via GitHub
+
+1. Export a JSON backup of the v0.6.x configuration, and back up uploaded group artwork and Jellyfin configuration.
+2. Extract the complete v0.7 repository package into your existing GitHub clone, **preserving the live `manifest.json`** if it has newer published releases. Ensure `.github/workflows/` appears only once.
+3. Commit/push, wait for **Build and validate** to succeed.
+4. Manually run **Publish experimental release** with version `0.7.0.0` and confirmation `RELEASE_EXPERIMENTAL`.
+5. Verify the tag and manifest before upgrading through Jellyfin's plugin catalog. Restart the Jellyfin Windows service; hard-refresh the browser. The configuration page must display `v0.7 preview`.
+6. Click **Open Franchises browser** to preview the UI before optionally adding a Jellyfin Web `menuLinks` entry.
+
 ## Version 0.6.2.0: fit to visible dashboard and TV Show range dialog
 
 **Experimental / not tested on a live Jellyfin server.** This update addresses two issues reported in the Jellyfin Web admin page:
