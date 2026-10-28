@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.1.0 — Experimental optional My Media tile
+
+- Add an **opt-in web-only Franchises card** to the existing My Media row using the independent JavaScript Injector companion (when installed). This card links to `/FranchiseExplorer/Browse` and does not create a physical/virtual Jellyfin media library.
+- New bounded startup registration through the companion's published `PluginInterface.RegisterScript(JObject)` reflection contract. No runtime dependency is shipped and the server continues loading if Injector is absent or its API changes.
+- The JavaScript is isolated and idempotent, supports a Jellyfin base URL, watches for Home rerenders, and follows native My Media sizing when possible.
+- Maintain existing Franchise Explorer data model, artwork, media references and browsing interface; no changes to native Collections.
+- Include optional manual fallback script and setup/rollback guide. Test via simulated DOM only; the actual Jellyfin 12.2 Home UI remains unverified.
+
+
 ## 0.7.0.0 — Experimental read-only Franchises browser
 
 - New `/FranchiseExplorer/Browse` standalone responsive page for Jellyfin Web desktop, laptop, tablet, phone and TV web browsers.

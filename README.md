@@ -8,13 +8,29 @@
 
 Jellyfin Franchise Explorer manages **virtual** franchises, eras, phases, and media references without relocating or duplicating movies and shows. This code targets Jellyfin **12.2** / **.NET 10** and uses the same plugin GUID and backward-compatible configuration format as v0.2–v0.5.
 
+## Version 0.7.1.0 — optional Franchises tile in My Media (Jellyfin Web only)
+
+**UNFINISHED EXPERIMENTAL PROJECT — USE WITH EXTREME CAUTION.** This release adds an opt-in Jellyfin Web **Franchises** card at the END of the native **My Media** row. Clicking it opens the already-working `/FranchiseExplorer/Browse` page. The card is a **client-side link**, not a real Jellyfin media library, and is not automatically available in native Roku/Android TV/iOS clients.
+
+### Optional companion requirement — JavaScript Injector
+
+Jellyfin 12.2 does **not** offer a documented server-plugin API for registering a real My Media library tile. This project therefore supports the third-party **[JavaScript Injector](https://github.com/n00bcodr/Jellyfin-JavaScript-Injector)** plugin as an **optional** companion. It can inject the tile into Jellyfin Web without modifying Jellyfin's installed web files. Source and `Jellyfin.Plugin.JavaScriptInjector` are separate projects; we do not distribute its code.
+
+Install JavaScript Injector from its repository catalog (`https://raw.githubusercontent.com/n00bcodr/jellyfin-plugins/main/manifest.json`), restart Jellyfin, and install/update Franchise Explorer 0.7.1.0. The Franchise Explorer hosted service attempts to register the embedded browser script automatically using the companion's documented, versioned plugin interface. If the registration does not occur due to load order or API changes, restart once and inspect Jellyfin logs. Alternatively, paste the complete file `src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-my-media.js` into a manually enabled script in JavaScript Injector. **Do not enable both automatic and manual copies unless necessary** (the script is idempotent, but avoid redundant entries).
+
+The tile is discovered by the English "My Media" heading and the existing library card container; if Jellyfin changes its DOM or uses a translated heading, the tile may not appear. It is designed to reinsert itself when Jellyfin reloads the Home screen. Mock Chromium tests passed at 390, 620, 900, 1440 and 1920 pixels, including a simulated Home re-render. These tests do not prove integration with the installed Jellyfin 12.2 web app. The standalone browser remains available in all cases.
+
+**No original collections, actual libraries, posters, movie paths, view configurations or user favorites are modified**. Existing plugin identity, saved groups, artwork uploads and media references are preserved. Disabling/uninstalling the optional injector removes the card from Jellyfin Web; existing franchise data remains untouched.
+
+See [My Media tile setup](docs/MY_MEDIA_TILE.md) and [v0.7.1 upgrade steps](docs/UPGRADE_V071.md) for installation, troubleshooting, and rollback. **The upgrade ZIP intentionally omits `manifest.json` to avoid overwriting your live catalog.**
+
 ## Version 0.7.0.0 — experimental Franchises browsing page
 
 **UNFINISHED PROJECT — USE WITH EXTREME CAUTION.** Version 0.7 adds an authenticated, read-only franchise browser that displays your existing nested groups as poster tiles, inherited art and linked media in your browser. A new **Open Franchises browser** button in the plugin editor launches it. The browser lives at `/FranchiseExplorer/Browse` on your Jellyfin server. It does not alter your previous Jellyfin collections or move files.
 
 The layout adapts from desktop widescreen to TV browsers, laptops, tablets and phones, with large clickable tiles, keyboard arrows/Enter, breadcrumbs, grid/list view and a search field. Media cards open Jellyfin details. Episode ranges remain labels and **do not yet provide continuous chronological playback**. All editing still happens in the plugin configuration page.
 
-**Important navigation limitation:** A plugin cannot automatically create a native Jellyfin library tile in "My Media". To put Franchises in the Jellyfin Web navigation, configure a supported `menuLinks` entry in your `jellyfin-web/config.json` (optional, one-time action). This is documented in [Franchises navigation](docs/FRANCHISES_NAVIGATION.md). Native Roku/Android TV clients are not extended by the plugin, though a TV **web browser** can open the responsive page.
+**Important navigation limitation:** A standard server plugin cannot register a native Jellyfin library tile in "My Media". To put Franchises in the Jellyfin Web navigation, configure a supported `menuLinks` entry in your `jellyfin-web/config.json` (optional, one-time action). This is documented in [Franchises navigation](docs/FRANCHISES_NAVIGATION.md). Native Roku/Android TV clients are not extended by the plugin, though a TV **web browser** can open the responsive page.
 
 **Access:** The static page has no private content. Catalog access requires login, and linked items are resolved by each user's existing Jellyfin permissions. Franchise group titles, descriptions and uploaded group artwork are shared with authenticated users, and therefore should not contain access-restricted information. Uploaded images remain separate from your movie folders. Back up your plugin configuration and artwork first.
 

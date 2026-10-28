@@ -16,7 +16,7 @@ The standalone browsing page uses the Jellyfin Web login already stored by your 
 
 ## Add a Franchises navigation link in Jellyfin Web
 
-The server plugin **cannot automatically create a native Movies-style library tile** on Jellyfin Home. Jellyfin Web does offer [supported custom menu links](https://jellyfin.org/docs/general/clients/web-config/). To show `Franchises` as a navigation entry, add a link to the `menuLinks` array in the **Jellyfin Web `config.json` file**, not the Jellyfin server's XML plugin settings. For example:
+The server plugin **cannot register a native Movies-style library tile through the standard API**. Version 0.7.1 optionally adds a **web-only Franchises card** via the external JavaScript Injector companion; see `MY_MEDIA_TILE.md`. Jellyfin Web does offer [supported custom menu links](https://jellyfin.org/docs/general/clients/web-config/). To show `Franchises` as a navigation entry, add a link to the `menuLinks` array in the **Jellyfin Web `config.json` file**, not the Jellyfin server's XML plugin settings. For example:
 
 ```json
 "menuLinks": [
