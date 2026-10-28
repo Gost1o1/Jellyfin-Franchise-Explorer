@@ -1,3 +1,14 @@
+## v0.8.8.0 — Local timeline completion persistence and quieter playback chooser
+
+- Hide the remote-control capability warning when local playback is selected.
+- Preserve verified movie/episode completion across Jellyfin returning to its details page, then retry the authenticated completion update when needed.
+- Restore an interrupted next-item route if Jellyfin navigates back to the previous title; do not interrupt an actively playing video.
+- Accept a single same-title Jellyfin session when the current local video demonstrably advances, even when the browser's cached device ID does not match the reported session ID.
+- Wait for next-title details to settle before clicking Jellyfin's Play button, avoiding a stale button from the preceding movie.
+- Preserve the exact My Media tile implementation from v0.8.7.0.
+
+**Still experimental:** These changes are based on offline browser simulations. Automatic continuation across Jellyfin Web clients is not verified on a live server.
+
 ## v0.8.7.0 — Experimental playback completion handoff and banner cleanup
 
 - Remove the two large on-screen caution banners from browsing and configuration pages; the README and license caution remains.

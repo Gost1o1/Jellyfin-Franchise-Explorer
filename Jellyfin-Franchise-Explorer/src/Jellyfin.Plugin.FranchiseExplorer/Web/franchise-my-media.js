@@ -1,5 +1,5 @@
 /*
- * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.7.0).
+ * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.8.0).
  * Adds ONE visual link in the existing "My Media" row. It does not create a
  * Jellyfin library, alter user preferences, or modify the server's media.
  * Requires a compatible JavaScript injector to run in jellyfin-web.
@@ -371,7 +371,7 @@
   'use strict';
   if(window.__franchiseAutoplayBridgeLoaded)return;
   window.__franchiseAutoplayBridgeLoaded=true;
-  let currentKey='',attempts=0,scheduled=false;
+  let currentKey='',attempts=0,scheduled=false,routeSettlingSince=0;
   const MAX_ATTEMPTS=36;
   function params(){
     const hash=location.hash||'';
@@ -466,11 +466,17 @@
         await new Promise(resolve=>setTimeout(resolve,750));
         const videoAdvancing=localVideoAdvancing(videoStart);
         const sessions=await api('/Sessions?ControllableByUserId='+encodeURIComponent(auth.UserId),auth);
-        const matches=(sessions||[]).filter(s=>String(s.UserId||'').toLowerCase()===String(auth.UserId).toLowerCase()
-          &&itemMatch(s.NowPlayingItem?.Id,expectedId)
-          // Don't accidentally take another machine's Chrome session when
-          // this page is opened on the Android WebView or another browser.
-          &&(!idOfThisDevice||String(s.DeviceId||'')===idOfThisDevice));
+        const matchingItems=(sessions||[]).filter(s=>
+          String(s.UserId||'').toLowerCase()===String(auth.UserId).toLowerCase()
+          &&itemMatch(s.NowPlayingItem?.Id,expectedId));
+        const directMatch=matchingItems.filter(s=>idOfThisDevice && String(s.DeviceId||'')===idOfThisDevice);
+        // Some WebView/JS Injector versions use a different localStorage
+        // device-id key than the server's Session.DeviceId. If exactly ONE
+        // user session plays this item and a *visible local video* advances,
+        // the local video is stronger evidence than an out-of-date device id.
+        // Never guess if multiple same-title sessions are connected.
+        const matches=directMatch.length?directMatch:
+          (videoAdvancing && matchingItems.length===1?matchingItems:[]);
         for(const session of matches){
           const position=Number(session.PlayState?.PositionTicks)||0;
           const previous=firstTicks.get(session.Id);
@@ -508,12 +514,70 @@
       }
       if(!intent.replayOnly){
         const owner={rowId:intent.rowId,created:Date.now(),subtitleEnabled:intent.subtitleEnabled,
-          sessionId:started.Id,lastItemId:expectedId};
+          sessionId:started.Id,lastItemId:expectedId,
+          verifiedState:{...intent.state,sessionId:started.Id,playbackMode:'playing'}};
         localStorage.setItem('fe-local-follow-v1:'+String(auth.UserId).toLowerCase(),JSON.stringify(owner));
         attachVerifiedEndHandler(auth,owner);
       }
     }catch(e){console.warn('Franchise Explorer: could not verify local timeline playback:',e);}
     finally{pendingCheck=false;}
+  }
+  // Record a short-lived completion signal BEFORE invoking the server.
+  // Jellyfin Web sometimes destroys the video element and navigates back to
+  // details while the completion POST is still in flight. This signal is not
+  // itself watched history; only the authenticated server update can advance it.
+  const completionKey=auth=>'fe-local-completion-v1:'+String(auth.UserId).toLowerCase();
+  let completionPersistBusy=false;
+  async function persistVerifiedCompletion(auth,owner){
+    if(!auth?.UserId || !owner?.rowId || !owner?.sessionId || !owner?.lastItemId)return null;
+    const key=completionKey(auth);
+    localStorage.setItem(key,JSON.stringify({rowId:owner.rowId,sessionId:owner.sessionId,
+      lastItemId:owner.lastItemId,created:Date.now()}));
+    return retryVerifiedCompletion(auth);
+  }
+  async function retryVerifiedCompletion(auth){
+    if(completionPersistBusy || !auth?.UserId)return null;
+    const key=completionKey(auth);let proof;
+    try{proof=JSON.parse(localStorage.getItem(key)||'null');}catch(_){localStorage.removeItem(key);return null;}
+    if(!proof)return null;
+    if(Date.now()-proof.created>120000){localStorage.removeItem(key);return null;}
+    completionPersistBusy=true;
+    try{
+      const owner=JSON.parse(localStorage.getItem('fe-local-follow-v1:'+String(auth.UserId).toLowerCase())||'null');
+      if(!owner || owner.rowId!==proof.rowId || owner.sessionId!==proof.sessionId ||
+        !itemMatch(owner.lastItemId,proof.lastItemId)){
+        localStorage.removeItem(key);return null;
+      }
+      let state;
+      try{
+        state=await api('/FranchiseExplorer/TimelineState/'+encodeURIComponent(proof.rowId)+'/Complete',auth,{
+          method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({sessionId:proof.sessionId,itemId:proof.lastItemId})});
+      }catch(error){
+        // A verified start was saved earlier. If a duplicate/older web
+        // script clobbered that row before we finished, restore only its
+        // *same-item* active session, never overwrite any advanced progress.
+        const serverState=await api('/FranchiseExplorer/TimelineState/'+encodeURIComponent(proof.rowId),auth).catch(()=>null);
+        if(error.message==='HTTP 409' && owner.verifiedState && serverState &&
+          serverState.playbackMode==='paused' &&
+          itemMatch(serverState.itemId,proof.lastItemId) &&
+          !serverState.pendingAutoAdvanceUtc){
+          const recovery={...owner.verifiedState,completedKeys:serverState.completedKeys||owner.verifiedState.completedKeys||[]};
+          await api('/FranchiseExplorer/TimelineState/'+encodeURIComponent(proof.rowId),auth,{
+            method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(recovery)});
+          state=await api('/FranchiseExplorer/TimelineState/'+encodeURIComponent(proof.rowId)+'/Complete',auth,{
+            method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({sessionId:proof.sessionId,itemId:proof.lastItemId})});
+        }else throw error;
+      }
+      localStorage.removeItem(key);
+      if(state?.pendingAutoAdvanceUtc)void followLocalTimeline();
+      return state;
+    }catch(error){
+      console.warn('Franchise Explorer: confirmed end, but timeline completion needs retry:',error);
+      // Retry on the details page; do not silently discard a real end event.
+      return null;
+    }finally{completionPersistBusy=false;}
   }
   // A real HTML5 ended event is stronger evidence than a Jellyfin session
   // disappearing. It is attached only to a locally verified video element.
@@ -534,10 +598,7 @@
         const sessions=await api('/Sessions?ControllableByUserId='+encodeURIComponent(auth.UserId),auth);
         const session=(sessions||[]).find(s=>s.Id===owner.sessionId);
         if(session?.NowPlayingItem?.Id && !itemMatch(session.NowPlayingItem.Id,owner.lastItemId))return;
-        const state=await api('/FranchiseExplorer/TimelineState/'+encodeURIComponent(owner.rowId)+'/Complete',auth,{
-          method:'POST',headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({sessionId:owner.sessionId,itemId:owner.lastItemId})});
-        if(state?.pendingAutoAdvanceUtc)await followLocalTimeline();
+        await persistVerifiedCompletion(auth,owner);
       }catch(e){console.debug('Franchise Explorer: ended-video handoff unavailable',e);}
     };
     video.addEventListener('ended',completedVideoListener,{once:true});
@@ -565,10 +626,7 @@
       const session=(sessions||[]).find(s=>s.Id===owner.sessionId);
       if(video!==verifiedVideo && !itemMatch(session?.NowPlayingItem?.Id,owner.lastItemId))return;
       if(session?.NowPlayingItem?.Id && !itemMatch(session.NowPlayingItem.Id,owner.lastItemId))return;
-      const state=await api('/FranchiseExplorer/TimelineState/'+encodeURIComponent(owner.rowId)+'/Complete',auth,{
-        method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({sessionId:owner.sessionId,itemId:owner.lastItemId})});
-      if(state?.pendingAutoAdvanceUtc)void followLocalTimeline();
+      await persistVerifiedCompletion(auth,owner);
     }catch(e){console.debug('Franchise Explorer completed-video event:',e);}
     finally{completionBusy=false;}
   },true);
@@ -608,11 +666,8 @@
         // Do not complete an unrelated video, even if it happens to finish.
         if(!session || !itemMatch(session.NowPlayingItem?.Id,owner.lastItemId))return;
         if(video!==verifiedVideo && verifiedVideo?.isConnected && !verifiedVideo.ended)return;
-        const state=await api('/FranchiseExplorer/TimelineState/'+encodeURIComponent(owner.rowId)+'/Complete',auth,{
-          method:'POST',headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({sessionId:owner.sessionId,itemId:owner.lastItemId})});
-        console.info('Franchise Explorer: verified final playback frames; requested next timeline item',owner.rowId);
-        if(state?.pendingAutoAdvanceUtc)void followLocalTimeline();
+        await persistVerifiedCompletion(auth,owner);
+        console.info('Franchise Explorer: verified final playback frames; recorded completion signal',owner.rowId);
       }catch(error){console.debug('Franchise Explorer: final-frame completion fallback unavailable',error);}
       finally{completionBusy=false;nearEndSamples.delete(video);}
     })();
@@ -624,7 +679,11 @@
     const p=params();if(!p){currentKey='';attempts=0;return;}
     const id=p.get('id');
     const key=id+'|'+(p.get('feSubs')||'0');
-    if(currentKey!==key){currentKey=key;attempts=0;}
+    if(currentKey!==key){currentKey=key;attempts=0;routeSettlingSince=Date.now();}
+    // On a programmatic transition the previous movie's Play button may still
+    // be visible for a moment. Do not click it before Jellyfin has had time
+    // to replace the details view for the *new* requested media ID.
+    if(Date.now()-routeSettlingSince<600){setTimeout(schedule,250);return;}
     // Jellyfin Web renders the details page asynchronously. Wait for a visible
     // Play control; never click an element in a hidden/previous item page.
     const root=[...document.querySelectorAll('.page, .mainAnimatedPage, main')]
@@ -634,6 +693,15 @@
       const subs=p.get('feSubs')==='1';
       const isTimeline=p.get('feLocalTimeline')==='1';
       clearMarker(p);currentKey='';attempts=0;
+      // The correct details page is visible; disarm route recovery before
+      // Jellyfin starts its native player and changes the URL.
+      if(isTimeline){
+        const auth=localCredentials();const intent=localIntent(auth);
+        if(intent && itemMatch(intent.expectedId,id)){
+          intent.routePending=false;
+          localStorage.setItem(intent.key,JSON.stringify(intent));
+        }
+      }
       play.click();
       if(isTimeline)void confirmLocalTimeline(id);
       if(!subs){
@@ -688,6 +756,7 @@
       if(lastFollowKey===key)return;
       lastFollowKey=key;
       const intent={version:1,created:Date.now(),rowId:state.rowId,expectedId:next,
+        routePending:true,navigationAttempts:0,
         state:{...state,itemId:next,sessionId:'',playbackMode:'paused',
           pendingAutoAdvanceUtc:null,pendingAutoAdvanceFromKey:'',pendingAutoAdvanceToKey:''},
         replayOnly:false,subtitleEnabled:!!owner.subtitleEnabled};
@@ -707,10 +776,33 @@
     }catch(e){console.warn('Franchise Explorer: automatic local transition unavailable:',e);showLocalNotice('Franchise Explorer could not start the next timeline item automatically. Resume the timeline from Franchises. Details: '+(e.message||e),13000);}
     finally{localFollowBusy=false;}
   }
-  setInterval(()=>void followLocalTimeline(),2000);
-  addEventListener('pageshow',()=>void followLocalTimeline());
-  addEventListener('focus',()=>void followLocalTimeline());
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden)void followLocalTimeline();});
+  const pollFollow=()=>{const auth=localCredentials();if(auth)void retryVerifiedCompletion(auth);
+    void followLocalTimeline();};
+  // If Jellyfin closes the previous player and overwrites our next-title
+  // route, recover the pending navigation rather than leaving the user on the
+  // previous movie's details page. Never redirect after the intended Play
+  // button has been clicked, or when a video is visibly playing.
+  function repairPendingRoute(){
+    const auth=localCredentials();const intent=localIntent(auth);
+    if(!intent?.routePending || params() || Date.now()-intent.created>15000)return;
+    if((intent.navigationAttempts||0)>=2)return;
+    if([...document.querySelectorAll('video')].some(v=>!v.paused && !v.ended && v.getClientRects().length))return;
+    const p=new URLSearchParams((location.hash||'').split('?')[1]||'');
+    const onCorrectDetails=itemMatch(p.get('id'),intent.expectedId);
+    // Wait briefly for Jellyfin's own hash routing to settle before fixing it.
+    if(intent.navigationAttempts===0 && Date.now()-intent.created<1800)return;
+    intent.navigationAttempts=(intent.navigationAttempts||0)+1;
+    localStorage.setItem(intent.key,JSON.stringify(intent));
+    const route='#/details?id='+encodeURIComponent(intent.expectedId)+
+      '&feAutoPlay=1&feLocalTimeline=1&feSubs='+(intent.subtitleEnabled?'1':'0');
+    console.info('Franchise Explorer: restoring interrupted next-title route',
+      {rowId:intent.rowId,attempt:intent.navigationAttempts,onCorrectDetails});
+    location.hash=route;
+  }
+  setInterval(()=>{pollFollow();repairPendingRoute();},2000);
+  addEventListener('pageshow',pollFollow);
+  addEventListener('focus',pollFollow);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollFollow();});
   // Manual Play fallback: a user may start the media from the details page
   // if this Jellyfin Web build doesn't expose a compatible Play button.
   setInterval(()=>{const auth=localCredentials();const intent=localIntent(auth);

@@ -8,7 +8,7 @@ row='22222222-2222-4222-8222-222222222222'
 item='33333333-3333-4333-8333-333333333333'
 uid='44444444-4444-4444-8444-444444444444'
 with sync_playwright() as p:
-  b=p.chromium.launch(headless=True,executable_path='/usr/bin/chromium' if Path('/usr/bin/chromium').exists() else None,args=['--no-sandbox'])
+  b=p.chromium.launch(headless=True,executable_path='/usr/bin/chromium',args=['--no-sandbox'])
   page=b.new_page()
   page.set_content('<div id="card"><span class="cover"></span></div>')
   page.add_script_tag(content=script)

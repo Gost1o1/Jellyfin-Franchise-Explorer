@@ -1,4 +1,4 @@
-/* Franchise Explorer v0.8.7.0 local Jellyfin Web playback handoff.
+/* Franchise Explorer v0.8.8.0 local Jellyfin Web playback handoff.
  * A Jellyfin PlayNow queue is built from item IDs, never from filenames.
  * Timeline state is separate from Jellyfin watched flags and user-specific.
  */
@@ -195,7 +195,7 @@
       state.sessionId='';state.playbackMode='paused';
       if(reset)state.completedKeys=state.completedKeys.filter(k=>queue.findIndex(q=>q.key===k)<index);
       const intent={version:1,created:Date.now(),rowId:row.id,expectedId:target.id,
-        state,replayOnly:!!replayOnly,prior:prev?JSON.parse(JSON.stringify(prev)):null,
+        state,replayOnly:!!replayOnly,routePending:true,navigationAttempts:0,prior:prev?JSON.parse(JSON.stringify(prev)):null,
         subtitleEnabled:!!document.getElementById('fe-subtitles')?.checked};
       // The bridge will confirm actual playback in this logged-in Jellyfin Web
       // client before creating/updating server-side timeline progress.
@@ -369,13 +369,9 @@
           const option=this.make('option','',description+(supported?'':' · Remote playback unavailable'));
           option.value=s.Id;option.disabled=!supported;select.append(option);
         }
-        const playableDevices=activeDevices.filter(s=>this.isRemoteCapable(s));
         select.value='__local__';
-        // Keep local browser selected. Remote devices are opt-in.
-
-        if(!playableDevices.length)feedback.textContent+=
-          ' No connected session reports remote playback support. The selected Chrome client may not accept remote Play Now commands. '+
-          'Choose This browser (local playback) to open the native Jellyfin Web player. Your episode-number formatting is not the cause.';
+        // The local web player needs no remote-control capability. Do not
+        // display alarming session warnings when the user selects local mode.
         const startIndex=queue.findIndex(q=>q.key===saved?.queueKeys?.[saved?.index]);
         const resumeIndex=startIndex>=0?startIndex:0;
         const start=this.button('▶ Play from beginning',async()=>{
