@@ -8,7 +8,7 @@ js=(root/'Web/franchise-timeline.js').read_text()
 bridge=(root/'Web/franchise-my-media.js').read_text()
 for needle in ("This browser (local playback",'playHere(row,queue,index','feLocalTimeline=1',"'fe-local-timeline-v1:'",'localStorage.setItem(this.handoffKey()',"select.value='__local__'"):
     assert needle in js,needle
-for needle in ('confirmLocalTimeline(expectedId)','feLocalTimeline',"state.sessionId",'window.__franchiseAutoplayBridgeLoaded',"lastFollowKey",'localStorage.removeItem(intent.key)'):
+for needle in ('confirmLocalTimeline(expectedId)','feLocalTimeline',"sessionId:started.Id",'/Activate','window.__franchiseAutoplayBridgeLoaded',"lastFollowKey",'localStorage.removeItem(intent.key)'):
     assert needle in bridge,needle
 assert 'if(!intent.replayOnly)' in bridge
 assert 'localVideoAdvancing(videoStart)' in bridge and 'DeviceId' in bridge

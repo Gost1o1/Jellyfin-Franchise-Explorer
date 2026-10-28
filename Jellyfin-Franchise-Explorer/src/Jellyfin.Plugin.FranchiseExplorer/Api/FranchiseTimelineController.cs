@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.FranchiseExplorer.Api;
 
@@ -31,6 +32,9 @@ public sealed class FranchiseTimelineController : ControllerBase
         public string ItemId { get; set; } = string.Empty;
         public string SessionId { get; set; } = string.Empty;
         public string PlaybackMode { get; set; } = "paused";
+        // Explicit local Play intent, accepted only briefly and bound to the
+        // actual Jellyfin session by the server's PlaybackStart/Progress event.
+        public DateTimeOffset? ArmedUtc { get; set; }
         public int Index { get; set; }
         public int Total { get; set; }
         public long PositionTicks { get; set; }
@@ -62,6 +66,20 @@ public sealed class FranchiseTimelineController : ControllerBase
         if (string.IsNullOrWhiteSpace(root)) return null;
         return Path.Combine(root, "timeline-progress", user.ToString("N"), row.ToString("N") + ".json");
     }
+
+    private static bool MatchesItem(string? key, Guid itemId)
+    {
+        var suffix = key?.LastIndexOf(':') ?? -1;
+        return key is not null && suffix >= 0 && Guid.TryParse(key[(suffix + 1)..], out var parsed) && parsed == itemId;
+    }
+
+    private static bool CurrentItemMatches(TimelineProgress state, Guid itemId)
+        => state.QueueKeys is not null && state.Index >= 0 && state.Index < state.QueueKeys.Count
+            && MatchesItem(state.QueueKeys[state.Index], itemId);
+
+    private static bool RecentlyArmed(TimelineProgress state)
+        => state.ArmedUtc.HasValue && state.ArmedUtc.Value <= DateTimeOffset.UtcNow.AddSeconds(5)
+            && state.ArmedUtc.Value >= DateTimeOffset.UtcNow.AddMinutes(-2);
 
     [HttpGet]
     public IActionResult List()
@@ -128,11 +146,23 @@ public sealed class FranchiseTimelineController : ControllerBase
             || (record.QueueSeasons.Count > 0 && record.QueueSeasons.Count != record.QueueKeys.Count)
             || (record.QueueEpisodes.Count > 0 && record.QueueEpisodes.Count != record.QueueKeys.Count)
             || string.IsNullOrEmpty(record.Name) || record.Name.Length > 200
-            || record.PlaybackMode is not ("playing" or "paused" or "replay" or "complete"))
+            || record.PlaybackMode is not ("armed" or "playing" or "paused" or "replay" or "complete")
+            || (record.PlaybackMode == "armed" && (!Guid.TryParse(record.ItemId, out var armedItem)
+                || !CurrentItemMatches(record, armedItem))))
             return BadRequest("Invalid timeline progress payload.");
         var path = PathFor(user, rowId);
         if (path is null) return StatusCode(503);
         record.UpdatedUtc = DateTimeOffset.UtcNow;
+        if (record.PlaybackMode == "armed")
+        {
+            // A client cannot self-certify its session or an arbitrary arm time.
+            record.SessionId = string.Empty;
+            record.ArmedUtc = record.UpdatedUtc;
+            record.PendingAutoAdvanceUtc = null;
+            record.PendingAutoAdvanceFromKey = string.Empty;
+            record.PendingAutoAdvanceToKey = string.Empty;
+        }
+        else record.ArmedUtc = null;
         var json = JsonSerializer.Serialize(record, JsonOptions);
         if (json.Length > 120000) return BadRequest("Timeline state is too large.");
         await WriteLock.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -158,6 +188,47 @@ public sealed class FranchiseTimelineController : ControllerBase
     }
 
     /// <summary>
+    /// The web bridge may confirm the same observed local session, but it may
+    /// never replace a row already advanced by Jellyfin's server events.
+    /// </summary>
+    [HttpPost("{rowId:guid}/Activate")]
+    [RequestSizeLimit(4096)]
+    public async Task<IActionResult> ConfirmLocalActivation(Guid rowId, [FromBody] TimelineCompletionRequest request, CancellationToken cancellationToken)
+    {
+        if (!TryIdentity(out var user)) return Unauthorized();
+        if (!ValidRow(rowId)) return NotFound();
+        if (request is null || !Guid.TryParse(request.ItemId, out var itemId)
+            || string.IsNullOrWhiteSpace(request.SessionId) || request.SessionId.Length > 256) return BadRequest();
+        var path = PathFor(user, rowId);
+        if (path is null || !System.IO.File.Exists(path)) return NotFound();
+        await WriteLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            TimelineProgress? state;
+            try { state = JsonSerializer.Deserialize<TimelineProgress>(await System.IO.File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false), JsonOptions); }
+            catch (IOException) { return StatusCode(503); }
+            catch (JsonException) { return StatusCode(503); }
+            if (state is null) return Conflict("Timeline state unavailable.");
+            // A short movie can finish while the browser is still verifying
+            // the local video. Return the already-persisted transition without
+            // rolling it back to the browser's earlier intent snapshot.
+            if (state.PlaybackMode == "playing" && state.SessionId == request.SessionId
+                && state.PendingAutoAdvanceUtc.HasValue && MatchesItem(state.PendingAutoAdvanceFromKey, itemId))
+                return Ok(state);
+            if (!CurrentItemMatches(state, itemId)) return Conflict("The timeline has moved to a different item.");
+            if (state.PlaybackMode == "playing" && state.SessionId == request.SessionId) return Ok(state);
+            if (state.PlaybackMode != "armed" || !RecentlyArmed(state)) return Conflict("The timeline is not awaiting this playback.");
+            state.PlaybackMode = "playing";
+            state.SessionId = request.SessionId;
+            state.ArmedUtc = null;
+            state.UpdatedUtc = DateTimeOffset.UtcNow;
+            await WriteProgressAsync(path, state, cancellationToken).ConfigureAwait(false);
+            return Ok(state);
+        }
+        finally { WriteLock.Release(); }
+    }
+
+    /// <summary>
     /// Confirm the HTML5 video 'ended' event from a verified local web player.
     /// This is idempotent with Jellyfin's own PlaybackStopped event and cannot
     /// advance another user's timeline or an unrelated playback session.
@@ -180,8 +251,7 @@ public sealed class FranchiseTimelineController : ControllerBase
             catch (IOException) { return StatusCode(503); }
             catch (JsonException) { return StatusCode(503); }
             if (state is null || state.PlaybackMode != "playing" || state.SessionId != request.SessionId) return Conflict("Timeline session not active.");
-            bool SameItem(string key) => key.EndsWith(":" + itemId.ToString("D"), StringComparison.OrdinalIgnoreCase)
-                || key.EndsWith(":" + itemId.ToString("N"), StringComparison.OrdinalIgnoreCase);
+            bool SameItem(string key) => MatchesItem(key, itemId);
             if (state.Index > 0 && state.QueueKeys.Count > state.Index - 1
                 && SameItem(state.QueueKeys[state.Index - 1]) && state.PendingAutoAdvanceUtc.HasValue)
                 return Ok(state); // Server PlaybackStopped already advanced it.
@@ -232,15 +302,31 @@ public sealed class FranchiseTimelineController : ControllerBase
     /// </summary>
     internal static async Task RecordPlaybackAsync(
         Guid userId, string sessionId, Guid itemId, long? positionTicks,
-        bool playedToCompletion, CancellationToken cancellationToken = default)
+        bool playedToCompletion, bool activePlaybackEvent, ILogger? logger = null,
+        CancellationToken cancellationToken = default)
     {
-        if (userId == Guid.Empty || itemId == Guid.Empty || string.IsNullOrEmpty(sessionId)) return;
+        if (userId == Guid.Empty || itemId == Guid.Empty || string.IsNullOrEmpty(sessionId))
+        {
+            if (playedToCompletion) logger?.LogWarning("Franchise Explorer: completion ignored: event lacks user, session or item identity.");
+            return;
+        }
         var root = Plugin.Instance?.DataFolderPath;
-        if (string.IsNullOrWhiteSpace(root)) return;
+        if (string.IsNullOrWhiteSpace(root))
+        {
+            if (playedToCompletion) logger?.LogWarning("Franchise Explorer: completion ignored: plugin data folder unavailable.");
+            return;
+        }
         var folder = Path.Combine(root, "timeline-progress", userId.ToString("N"));
-        if (!Directory.Exists(folder)) return;
-        var suffix = ":" + itemId.ToString("D");
-        var compactSuffix = ":" + itemId.ToString("N");
+        if (!Directory.Exists(folder))
+        {
+            if (playedToCompletion) logger?.LogWarning("Franchise Explorer: completion ignored: no timeline records for this user.");
+            return;
+        }
+        var rows = 0;
+        var activeRows = 0;
+        var sessionMatches = 0;
+        var itemMatches = 0;
+        var savedCompletions = 0;
         await WriteLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -249,21 +335,43 @@ public sealed class FranchiseTimelineController : ControllerBase
                 if (!Guid.TryParse(Path.GetFileNameWithoutExtension(path), out var rowId) || !ValidRow(rowId)) continue;
                 TimelineProgress? progress;
                 try { progress = JsonSerializer.Deserialize<TimelineProgress>(await System.IO.File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false), JsonOptions); }
-                catch (JsonException) { continue; }
-                if (progress is null || progress.PlaybackMode != "playing" || progress.SessionId != sessionId
-                    || progress.QueueKeys is null || progress.CompletedKeys is null || progress.Index >= progress.QueueKeys.Count) continue;
+                catch (JsonException)
+                {
+                    if (playedToCompletion) logger?.LogWarning("Franchise Explorer: a timeline record could not be parsed; inspect backup before repair.");
+                    continue;
+                }
+                rows++;
+                if (progress is null || progress.QueueKeys is null || progress.CompletedKeys is null
+                    || progress.Index < 0 || progress.Index >= progress.QueueKeys.Count) continue;
 
-                bool Matches(string key) => key.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)
-                    || key.EndsWith(compactSuffix, StringComparison.OrdinalIgnoreCase);
+                var activated = false;
+                if (progress.PlaybackMode == "armed" && activePlaybackEvent && RecentlyArmed(progress)
+                    && CurrentItemMatches(progress, itemId))
+                {
+                    // The plugin observed actual playback on Jellyfin. No
+                    // browser session guessing or remote 204 is involved.
+                    progress.PlaybackMode = "playing";
+                    progress.ArmedUtc = null;
+                    progress.SessionId = sessionId;
+                    progress.ItemId = itemId.ToString("D");
+                    activated = true;
+                    logger?.LogInformation("Franchise Explorer: armed timeline activated by server playback for row {RowId}.", rowId.ToString("N"));
+                }
+                if (progress.PlaybackMode != "playing") continue;
+                activeRows++;
+                if (progress.SessionId != sessionId) continue;
+                sessionMatches++;
+
                 var index = progress.Index;
-                if (!Matches(progress.QueueKeys[index]))
+                if (!MatchesItem(progress.QueueKeys[index], itemId))
                 {
                     // A user may seek forward in the same Jellyfin queue. Do not
                     // falsely mark skipped episodes watched.
-                    index = progress.QueueKeys.FindIndex(progress.Index + 1, key => Matches(key));
+                    index = progress.QueueKeys.FindIndex(progress.Index + 1, key => MatchesItem(key, itemId));
                     if (index < 0) continue;
                 }
-                var changed = false;
+                itemMatches++;
+                var changed = activated;
                 if (index != progress.Index)
                 {
                     progress.Index = index;
@@ -293,6 +401,7 @@ public sealed class FranchiseTimelineController : ControllerBase
                         progress.PendingAutoAdvanceUtc = DateTimeOffset.UtcNow;
                     }
                     changed = true;
+                    savedCompletions++;
                 }
                 else if (positionTicks is >= 0 && Math.Abs(positionTicks.Value - progress.PositionTicks) >= 100000000)
                 {
@@ -308,16 +417,18 @@ public sealed class FranchiseTimelineController : ControllerBase
                 }
                 if (!changed) continue;
                 progress.UpdatedUtc = DateTimeOffset.UtcNow;
-                var temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
-                try
-                {
-                    await System.IO.File.WriteAllTextAsync(temp, JsonSerializer.Serialize(progress, JsonOptions), cancellationToken).ConfigureAwait(false);
-                    System.IO.File.Move(temp, path, overwrite: true);
-                }
-                finally { if (System.IO.File.Exists(temp)) System.IO.File.Delete(temp); }
+                await WriteProgressAsync(path, progress, cancellationToken).ConfigureAwait(false);
             }
         }
         finally { WriteLock.Release(); }
+        if (playedToCompletion)
+        {
+            if (savedCompletions > 0)
+                logger?.LogInformation("Franchise Explorer: timeline completion saved, advancedRows={AdvancedRows}.", savedCompletions);
+            else
+                logger?.LogWarning("Franchise Explorer: completed playback did not advance a timeline. validRows={Rows}, playingRows={ActiveRows}, matchingSessions={Sessions}, matchingItems={Items}. Check activation/row state; no history was changed.",
+                    rows, activeRows, sessionMatches, itemMatches);
+        }
     }
 
 }

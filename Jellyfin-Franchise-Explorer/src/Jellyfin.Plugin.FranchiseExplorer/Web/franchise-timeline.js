@@ -1,4 +1,4 @@
-/* Franchise Explorer v0.8.8.0 local Jellyfin Web playback handoff.
+/* Franchise Explorer v0.8.9.0 local Jellyfin Web playback handoff.
  * A Jellyfin PlayNow queue is built from item IDs, never from filenames.
  * Timeline state is separate from Jellyfin watched flags and user-specific.
  */
@@ -192,13 +192,22 @@
       const prev=this.getState(row.id);
       const state=this.makeState(row,queue,index);
       state.index=index;state.itemId=target.id;state.positionTicks=Math.max(0,positionTicks);
-      state.sessionId='';state.playbackMode='paused';
+      state.sessionId='';state.playbackMode='armed';
       if(reset)state.completedKeys=state.completedKeys.filter(k=>queue.findIndex(q=>q.key===k)<index);
+      // Commit the selected row and expected item BEFORE launching the Jellyfin
+      // player. The server's PlaybackStart/Progress event can now bind the real
+      // session even when browser session discovery misses the short playback.
+      // Replay only must disarm an already-active timeline before the same
+      // session can replay its current item; preserve cursor and completed keys.
+      // With no prior timeline state there is nothing to disarm or persist.
+      const ready=replayOnly
+        ? (prev?await this.save({...prev,playbackMode:'replay',sessionId:'',armedUtc:null}):state)
+        : await this.save(state);
       const intent={version:1,created:Date.now(),rowId:row.id,expectedId:target.id,
-        state,replayOnly:!!replayOnly,routePending:true,navigationAttempts:0,prior:prev?JSON.parse(JSON.stringify(prev)):null,
+        state:ready,replayOnly:!!replayOnly,routePending:true,navigationAttempts:0,prior:prev?JSON.parse(JSON.stringify(prev)):null,
         subtitleEnabled:!!document.getElementById('fe-subtitles')?.checked};
-      // The bridge will confirm actual playback in this logged-in Jellyfin Web
-      // client before creating/updating server-side timeline progress.
+      // The server records only an expiring intent until actual playback is
+      // observed; the browser bridge separately verifies its local player.
       localStorage.setItem(this.handoffKey(),JSON.stringify(intent));
       const prefix=this.context.prefix||'';
       const sid=this.context.serverId?'&serverId='+encodeURIComponent(this.context.serverId):'';
@@ -335,7 +344,7 @@
       const btn=this.button('▶ Play chronological order',()=>this.openDialog(row),'btn btn-primary');
       const details=this.button('☷ Episodes & progress',()=>this.openDialog(row));
       const progress=this.make('div','timeline-mini-progress');
-      progress.dataset.rowId=row.id;const pct=Math.round(this.progress(row.id));progress.textContent=this.progressLabel(pct)+' completed';
+      progress.dataset.rowId=row.id;const pct=this.progress(row.id);progress.textContent=this.progressLabel(pct)+' completed';
       progress.append(this.progressBar(this.progress(row.id)));
       controls.append(btn,details,progress);frame.shelf.insertBefore(controls,frame.track);
     }

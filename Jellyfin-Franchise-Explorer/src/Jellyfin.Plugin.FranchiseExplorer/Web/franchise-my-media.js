@@ -1,5 +1,5 @@
 /*
- * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.8.0).
+ * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.0).
  * Adds ONE visual link in the existing "My Media" row. It does not create a
  * Jellyfin library, alter user preferences, or modify the server's media.
  * Requires a compatible JavaScript injector to run in jellyfin-web.
@@ -307,37 +307,14 @@
       link.style.cssText='display:block;flex:1 1 210px;max-width:320px;color:#fff;text-decoration:none;min-width:170px;border:1px solid #536270;border-radius:11px;background:#232c37;padding:14px';
       const name=document.createElement('strong');name.textContent=state.name||'Chronological Timeline';
       const sub=document.createElement('div');sub.style.cssText='color:#c9d2de;font-size:.82rem;margin:9px 0';
-      const percent=state.total?Math.round(100*(state.completedKeys||[]).length/state.total):0;
-      sub.textContent=percent+'% complete · '+(state.index+1)+' of '+state.total+' · Resume timeline';
+      const percent=state.total?100*(state.completedKeys||[]).length/state.total:0;
+      const shown=percent>0&&percent<1?percent.toFixed(2):Math.round(percent);
+      sub.textContent=shown+'% complete · '+(state.index+1)+' of '+state.total+' · Resume timeline';
       const bar=document.createElement('div');bar.style.cssText='height:6px;background:#3b4855;border-radius:8px;overflow:hidden';
       const fill=document.createElement('span');fill.style.cssText='display:block;background:#16b2c6;height:100%;width:'+Math.max(0,Math.min(100,percent))+'%';bar.append(fill);
       link.append(name,sub,bar);list.append(link);
     }
     widget.replaceChildren(heading,list);
-  }
-  async function updateProgress(auth,states){
-    const active=states.filter(x=>x.playbackMode==='playing'&&x.sessionId&&Array.isArray(x.queueKeys));
-    if(!active.length)return;
-    const sessions=await request('/Sessions?ControllableByUserId='+encodeURIComponent(auth.UserId),auth);
-    for(const state of active){
-      const session=(sessions||[]).find(s=>s.Id===state.sessionId&&String(s.UserId||'').toLowerCase()===String(auth.UserId).toLowerCase());
-      if(!session?.NowPlayingItem?.Id)continue;
-      const id=String(session.NowPlayingItem.Id).toLowerCase();
-      const current=state.queueKeys.findIndex((key,i)=>i>=state.index&&key.toLowerCase().endsWith(':'+id));
-      if(current<0)continue; // Do not move the timeline when watching unrelated content.
-      let changed=false;
-      if(current>state.index){
-        for(let i=state.index;i<current;i++)state.completedKeys.push(state.queueKeys[i]);
-        state.index=current;changed=true;
-      }
-      const ticks=Number(session.PlayState?.PositionTicks)||0;
-      if(Math.abs(ticks-(state.positionTicks||0))>25000000){state.positionTicks=ticks;changed=true;}
-      if(changed){
-        state.completedKeys=[...new Set(state.completedKeys)];state.itemId=id;
-        await request('/FranchiseExplorer/TimelineState/'+encodeURIComponent(state.rowId),auth,{
-          method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});
-      }
-    }
   }
   async function tick(){
     if(busy||document.hidden||Date.now()-lastFetch<10000)return;
@@ -348,10 +325,8 @@
       if(!Array.isArray(states))return;
       const active=states.filter(s=>s.total>0&&s.playbackMode!=='complete');
       if(findHomeAnchor()&&active.length)makeHomeSection(active);
-      // Server events are authoritative for completion; use observed session
-      // position as a fallback for partial progress if event delivery stalls.
-      // Never mark anything watched from elapsed time alone.
-      await updateProgress(auth,active).catch(e=>console.debug('Franchise timeline heartbeat:',e));
+      // Read-only dashboard: neither a stale browser session nor a queue skip
+      // may overwrite a server-confirmed completion or mark skipped titles.
     }catch(e){/* The optional home integration must never break Jellyfin itself. */}
     finally{busy=false;}
   }
@@ -467,7 +442,7 @@
         const videoAdvancing=localVideoAdvancing(videoStart);
         const sessions=await api('/Sessions?ControllableByUserId='+encodeURIComponent(auth.UserId),auth);
         const matchingItems=(sessions||[]).filter(s=>
-          String(s.UserId||'').toLowerCase()===String(auth.UserId).toLowerCase()
+          itemMatch(s.UserId,auth.UserId)
           &&itemMatch(s.NowPlayingItem?.Id,expectedId));
         const directMatch=matchingItems.filter(s=>idOfThisDevice && String(s.DeviceId||'')===idOfThisDevice);
         // Some WebView/JS Injector versions use a different localStorage
@@ -502,9 +477,11 @@
       // If the intent is an independent replay, no timeline cursor/history is
       // changed. Ordinary Jellyfin watched progress may still be affected.
       if(!intent.replayOnly){
-        const state={...intent.state,sessionId:started.Id,playbackMode:'playing'};
-        await api('/FranchiseExplorer/TimelineState/'+encodeURIComponent(state.rowId),auth,{
-          method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});
+        // Atomic confirmation: never overwrite completion/index/position if
+        // Jellyfin's own PlaybackStart already activated or advanced this row.
+        var activeState=await api('/FranchiseExplorer/TimelineState/'+encodeURIComponent(intent.rowId)+'/Activate',auth,{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({sessionId:started.Id,itemId:expectedId})});
       }
       localStorage.removeItem(intent.key);
       lastAutoplayItem=expectedId;
@@ -515,11 +492,14 @@
       if(!intent.replayOnly){
         const owner={rowId:intent.rowId,created:Date.now(),subtitleEnabled:intent.subtitleEnabled,
           sessionId:started.Id,lastItemId:expectedId,
-          verifiedState:{...intent.state,sessionId:started.Id,playbackMode:'playing'}};
+          verifiedState:activeState};
         localStorage.setItem('fe-local-follow-v1:'+String(auth.UserId).toLowerCase(),JSON.stringify(owner));
         attachVerifiedEndHandler(auth,owner);
       }
-    }catch(e){console.warn('Franchise Explorer: could not verify local timeline playback:',e);}
+    }catch(e){
+      console.warn('Franchise Explorer: could not verify or activate local timeline playback:',e);
+      showLocalNotice('The movie may be playing, but timeline activation could not be confirmed ('+(e.message||e)+'). Check Franchise Explorer timeline status before relying on auto-next.',12000);
+    }
     finally{pendingCheck=false;}
   }
   // Record a short-lived completion signal BEFORE invoking the server.
@@ -554,21 +534,10 @@
           method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},
           body:JSON.stringify({sessionId:proof.sessionId,itemId:proof.lastItemId})});
       }catch(error){
-        // A verified start was saved earlier. If a duplicate/older web
-        // script clobbered that row before we finished, restore only its
-        // *same-item* active session, never overwrite any advanced progress.
-        const serverState=await api('/FranchiseExplorer/TimelineState/'+encodeURIComponent(proof.rowId),auth).catch(()=>null);
-        if(error.message==='HTTP 409' && owner.verifiedState && serverState &&
-          serverState.playbackMode==='paused' &&
-          itemMatch(serverState.itemId,proof.lastItemId) &&
-          !serverState.pendingAutoAdvanceUtc){
-          const recovery={...owner.verifiedState,completedKeys:serverState.completedKeys||owner.verifiedState.completedKeys||[]};
-          await api('/FranchiseExplorer/TimelineState/'+encodeURIComponent(proof.rowId),auth,{
-            method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(recovery)});
-          state=await api('/FranchiseExplorer/TimelineState/'+encodeURIComponent(proof.rowId)+'/Complete',auth,{
-            method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({sessionId:proof.sessionId,itemId:proof.lastItemId})});
-        }else throw error;
+        // Do not replay an older browser snapshot over server state. The
+        // server-side PlaybackStopped listener is authoritative and retries
+        // can only act against the currently matched session and item.
+        throw error;
       }
       localStorage.removeItem(key);
       if(state?.pendingAutoAdvanceUtc)void followLocalTimeline();

@@ -108,13 +108,13 @@ public sealed class TimelinePlaybackMonitorService : IHostedService
         var key = WitnessKey(args);
         if (key is not null) _witnesses.TryRemove(key, out _);
         Observe(args);
-        Dispatch(args, false);
+        Dispatch(args, false, true);
     }
 
     private void OnProgress(object? sender, PlaybackProgressEventArgs args)
     {
         Observe(args);
-        Dispatch(args, false);
+        Dispatch(args, false, true);
     }
 
     private void OnStopped(object? sender, PlaybackStopEventArgs args)
@@ -126,10 +126,10 @@ public sealed class TimelinePlaybackMonitorService : IHostedService
         var completed = args.PlayedToCompletion || nearEnd;
         _logger.LogInformation("Franchise Explorer: Jellyfin playback stopped, reportedCompletion={ReportedCompletion}, nearEndEvidence={NearEnd}, session={SessionId}",
             args.PlayedToCompletion, nearEnd, args.Session?.Id ?? "unknown");
-        Dispatch(args, completed);
+        Dispatch(args, completed, false);
     }
 
-    private void Dispatch(PlaybackProgressEventArgs args, bool completed)
+    private void Dispatch(PlaybackProgressEventArgs args, bool completed, bool activePlaybackEvent)
     {
         var userId = args.Session?.UserId ?? Guid.Empty;
         var sessionId = args.Session?.Id;
@@ -142,7 +142,7 @@ public sealed class TimelinePlaybackMonitorService : IHostedService
             try
             {
                 await FranchiseTimelineController.RecordPlaybackAsync(
-                    userId, sessionId, itemId, args.PlaybackPositionTicks, completed).ConfigureAwait(false);
+                    userId, sessionId, itemId, args.PlaybackPositionTicks, completed, activePlaybackEvent, _logger).ConfigureAwait(false);
             }
             catch (Exception ex)
             {

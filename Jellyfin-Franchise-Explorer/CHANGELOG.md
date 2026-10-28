@@ -1,3 +1,24 @@
+## v0.8.9.0 — Explicit timeline activation and completion diagnostics (experimental)
+
+- Before opening a local Jellyfin Web movie, persist a short-lived **armed**
+  timeline row. Jellyfin server PlaybackStart/Progress binds its actual session
+  to that row when the expected item begins, independent of brittle browser
+  device-ID discovery. A stop alone cannot activate an armed row.
+- Add an authenticated, atomic `/TimelineState/{rowId}/Activate` confirmation
+  endpoint for the browser. It cannot overwrite an already-completed item or
+  replace an advanced server cursor with an older browser snapshot.
+- Log clear server outcomes for completed playback: successful persisted rows
+  or counts of valid, active, session-matching and item-matching rows. Logs do
+  not contain media paths or authentication tokens.
+- Normalize UserId GUID formatting in browser session verification, and stop
+  the optional home widget from marking skipped items completed or writing
+  stale state. Show fractional progress for long timelines (1/422 ~= 0.24%).
+- Preserve the exact My Media tile layout/geometry, existing configurations,
+  virtual hierarchies, user progress, media files and native collections.
+- Add tests for arm/replay/failure safety, activation contracts and mocked Web
+  follow-up. Real .NET compilation and Jellyfin 12.2 playback validation are
+  still required; **automatic next-title playback is not yet confirmed fixed**.
+
 ## v0.8.8.0 — Local timeline completion persistence and quieter playback chooser
 
 - Hide the remote-control capability warning when local playback is selected.
