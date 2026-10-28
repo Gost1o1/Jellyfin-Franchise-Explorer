@@ -8,6 +8,10 @@
 
 Jellyfin Franchise Explorer manages **virtual** franchises, eras, phases, and media references without relocating or duplicating movies and shows. This code targets Jellyfin **12.2** / **.NET 10** and uses the same plugin GUID and backward-compatible configuration format as v0.2–v0.5.
 
+## Version 0.7.4.1 — stable row searches
+
+Search fields in custom rows now keep keyboard focus while the matching Jellyfin titles load. This fixes having to click the input after each typed character. All existing rows, group links, and uploaded images use the same configuration as v0.7.4.0.
+
 ## Version 0.7.4.0 — browse-row full-library picker
 **New:** All non-Subgroup row types can choose collections, movies, and whole TV shows or TV ranges directly from the Jellyfin library, without pre-linking them to the franchise. Existing custom shelves stay intact.
 

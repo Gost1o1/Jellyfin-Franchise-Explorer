@@ -167,7 +167,7 @@
 #FranchiseExplorerConfigPage .fx-wrap.fx-compact .fx-modal-dialog .fx-range-grid {grid-template-columns:minmax(0,1fr)}
 @media(max-width:550px){#FranchiseExplorerConfigPage .fx-modal-dialog{padding:14px}#FranchiseExplorerConfigPage .fx-modal-dialog .fx-range-grid{grid-template-columns:minmax(0,1fr)}}
 
-/* v0.7.4: responsive editable presentation shelves, no physical folders. */
+/* v0.7.4.1: row search stays focused while typing; no physical folders. */
 #FranchiseExplorerConfigPage .fx-row-manager{min-width:0}
 #FranchiseExplorerConfigPage .fx-row-manager .fx-panel-title{margin-bottom:4px}
 #FranchiseExplorerConfigPage .fx-row-create{align-items:end}
@@ -203,7 +203,7 @@
   <div class="fx-heading">
     <div>
       <div class="fx-eyebrow">Jellyfin plugin • Early development</div>
-      <h1>Franchise Explorer <small>v0.7.4 preview</small></h1>
+      <h1>Franchise Explorer <small>v0.7.4.1 preview</small></h1>
       <p class="fx-muted">Organize virtual franchises, eras, phases and viewing references without moving media files.</p>
     </div>
   </div>
@@ -1032,6 +1032,15 @@
     try{const added=addRowItem(row,item);renderRows();setStatus(added?'Added '+item.Name+' to "'+row.Name+'". Save plugin configuration.':'Already present in this row.');}
     catch(e){setStatus(e.message,true);}
   }
+  // Search results are refreshed *in place*. Recreating the entire row editor
+  // on each keystroke destroys its focused input and blocks continuous typing.
+  function refreshRowSearchResults(rowId){
+    const card=Array.from(byId('fx-rows-list').querySelectorAll('.fx-row-card'))
+      .find(element=>element.dataset.rowId===rowId);
+    const host=card?.querySelector('.fx-library-results');
+    const row=model.Rows.find(entry=>entry.Id===rowId);
+    if(host&&row)renderRowLibraryResults(row,host);
+  }
   async function searchRowLibrary(rowId,query,sequence){
     const state=rowState(rowId);
     try{
@@ -1040,7 +1049,32 @@
       state.results=(response.Items||[]).filter(x=>['BoxSet','Movie','Series'].includes(x.Type)&&validGuid(String(x.Id||'')));
       state.chosen=new Set();state.busy=false;state.status=state.results.length?state.results.length+' matching collections, movies and TV shows.':'No matching titles found.';
     }catch(err){if(state.searchId!==sequence)return;state.results=[];state.busy=false;state.status='Search error: '+(err.message||err);}
-    if(selected&&model.Rows.some(r=>r.Id===rowId))renderRows();
+    // Do not rerender the input or other row controls when an async search finishes.
+    refreshRowSearchResults(rowId);
+  }
+  function renderRowLibraryResults(row,host){
+    const state=rowState(row.Id);
+    host.replaceChildren();
+    const message=document.createElement('div');message.className='fx-library-status';message.textContent=state.status;message.setAttribute('role','status');message.setAttribute('aria-live','polite');host.append(message);
+    for(const item of state.results){
+      const result=document.createElement('div');result.className='fx-library-result';
+      const check=document.createElement('input');check.type='checkbox';check.checked=state.chosen.has(item.Id);check.setAttribute('aria-label','Select '+item.Name+' for '+row.Name);
+      check.addEventListener('change',()=>{if(check.checked)state.chosen.add(item.Id);else state.chosen.delete(item.Id);const count=host.querySelector('.fx-library-selection-count');if(count)count.textContent=state.chosen.size+' selected';});
+      const label=document.createElement('span');label.textContent=(item.Name||'Untitled')+' · '+(item.Type==='BoxSet'?'Collection':displayType(item.Type))+(item.ProductionYear?' ('+item.ProductionYear+')':'');
+      const action=makeRowButton(item.Type==='Series'?'Choose TV Show range':'+ Add',()=>item.Type==='Series'?openRangeEditor(item,null,row.Id):addRowWhole(row,item));
+      result.append(check,label,action);host.append(result);
+    }
+    if(state.results.length){
+      const actions=document.createElement('div');actions.className='fx-library-actions';
+      const count=document.createElement('span');count.className='fx-library-status fx-library-selection-count';count.textContent=state.chosen.size+' selected';
+      const selectAll=makeRowButton('Select all',()=>{state.results.forEach(x=>state.chosen.add(x.Id));refreshRowSearchResults(row.Id);});
+      const clear=makeRowButton('Clear selection',()=>{state.chosen.clear();refreshRowSearchResults(row.Id);});
+      const addAll=makeRowButton('Add selected full titles',()=>{
+        let added=0;for(const item of state.results.filter(x=>state.chosen.has(x.Id)))try{if(addRowItem(row,item))added++;}catch(e){setStatus(e.message,true);break;}
+        state.chosen.clear();renderRows();setStatus('Added '+added+' complete title(s) to '+row.Name+'. To choose season/episode ranges, use Choose TV Show range. Save configuration.');
+      },'fx-btn-primary');
+      actions.append(selectAll,clear,addAll,count);host.append(actions);
+    }
   }
   function renderRowLibrary(row,pickers){
     const state=rowState(row.Id),container=document.createElement('div');container.className='fx-library-search';
@@ -1048,34 +1082,17 @@
     const help=document.createElement('p');help.className='fx-muted';help.textContent='Choose an existing collection, movie, or TV Show without first adding it to the main franchise. TV Shows can use a complete title, season range, or episode range.';
     const search=document.createElement('input');search.type='search';search.className='fx-input';search.placeholder='Search collections, movies or TV shows…';search.value=state.query;search.setAttribute('aria-label','Search Jellyfin library for '+row.Name);
     search.addEventListener('input',()=>{
-      state.query=search.value.trim();const searchId=++state.searchId;
+      state.query=search.value;const query=state.query.trim(),searchId=++state.searchId;
       state.results=[];state.chosen.clear();
       if(state.timer)clearTimeout(state.timer);
-      if(state.query.length<2){state.status='Type at least two characters.';renderRows();return;}
+      if(query.length<2){state.busy=false;state.status='Type at least two characters.';refreshRowSearchResults(row.Id);return;}
       state.busy=true;state.status='Searching your Jellyfin library…';
-      state.timer=setTimeout(()=>searchRowLibrary(row.Id,state.query,searchId),300);
+      refreshRowSearchResults(row.Id);
+      state.timer=setTimeout(()=>searchRowLibrary(row.Id,query,searchId),300);
     });
     container.append(header,help,search);
-    const message=document.createElement('div');message.className='fx-library-status';message.textContent=state.status;container.append(message);
-    for(const item of state.results){
-      const result=document.createElement('div');result.className='fx-library-result';
-      const check=document.createElement('input');check.type='checkbox';check.checked=state.chosen.has(item.Id);check.setAttribute('aria-label','Select '+item.Name+' for '+row.Name);
-      check.addEventListener('change',()=>{if(check.checked)state.chosen.add(item.Id);else state.chosen.delete(item.Id);count.textContent=state.chosen.size+' selected';});
-      const label=document.createElement('span');label.textContent=(item.Name||'Untitled')+' · '+(item.Type==='BoxSet'?'Collection':displayType(item.Type))+(item.ProductionYear?' ('+item.ProductionYear+')':'');
-      const action=makeRowButton(item.Type==='Series'?'Choose TV Show range':'+ Add',()=>item.Type==='Series'?openRangeEditor(item,null,row.Id):addRowWhole(row,item));
-      result.append(check,label,action);container.append(result);
-    }
-    if(state.results.length){
-      const actions=document.createElement('div');actions.className='fx-library-actions';
-      const count=document.createElement('span');count.className='fx-library-status';count.textContent=state.chosen.size+' selected';
-      const selectAll=makeRowButton('Select all',()=>{state.results.forEach(x=>state.chosen.add(x.Id));renderRows();});
-      const clear=makeRowButton('Clear selection',()=>{state.chosen.clear();renderRows();});
-      const addAll=makeRowButton('Add selected full titles',()=>{
-        let added=0;for(const item of state.results.filter(x=>state.chosen.has(x.Id)))try{if(addRowItem(row,item))added++;}catch(e){setStatus(e.message,true);break;}
-        state.chosen.clear();renderRows();setStatus('Added '+added+' complete title(s) to '+row.Name+'. To choose season/episode ranges, use Choose TV Show range. Save configuration.');
-      },'fx-btn-primary');
-      actions.append(selectAll,clear,addAll,count);container.append(actions);
-    }
+    const results=document.createElement('div');results.className='fx-library-results';container.append(results);
+    renderRowLibraryResults(row,results);
     pickers.append(container);
   }
   function renderRows(){

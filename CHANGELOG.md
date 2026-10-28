@@ -1,3 +1,11 @@
+## v0.7.4.1 — Full-library row search focus hotfix (experimental)
+
+- Fix loss of keyboard focus while typing in Collections / Movies / TV Shows and Timeline / Mixed row search fields.
+- Search now updates results and status below the existing input instead of rebuilding the row editor after each character or async response.
+- Preserve caret position, selection, input text, and scroll position while searches complete.
+- Keep existing full-library selection, TV show range, saved rows, group artwork and media references unchanged.
+- No change to original Jellyfin media files or native collections.
+
 ## v0.7.4.0 — Full-library row selection (experimental)
 
 - Restrict Subgroups rows to direct child groups, as before.
