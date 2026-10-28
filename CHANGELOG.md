@@ -1,3 +1,13 @@
+## v0.7.4.0 — Full-library row selection (experimental)
+
+- Restrict Subgroups rows to direct child groups, as before.
+- Let media/mixed/timeline rows find any existing Jellyfin collection, movie or TV show without pre-linking to the franchise.
+- Per-row full-title selection, bulk adding and TV show range picker (whole show, season-to-season, season/episode-to-season/episode).
+- Independent direct row references with responsive cards; existing row memberships, artwork and configuration survive.
+- One combined presentation order across legacy franchise media links and newly selected row entries.
+- Browse each row's directly selected media using the viewer's own Jellyfin access.
+- Does not modify native collections or files; no continuous timeline playback yet.
+
 ## 0.7.2.0 — My Media positioning and artwork association preferences
 
 - Place the Franchises card immediately after the Collections card, maintaining original library ordering.

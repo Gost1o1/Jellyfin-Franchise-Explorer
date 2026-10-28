@@ -8,13 +8,15 @@
 
 Jellyfin Franchise Explorer manages **virtual** franchises, eras, phases, and media references without relocating or duplicating movies and shows. This code targets Jellyfin **12.2** / **.NET 10** and uses the same plugin GUID and backward-compatible configuration format as v0.2–v0.5.
 
-## Version 0.7.3.0 — customizable horizontal franchise rows
+## Version 0.7.4.0 — browse-row full-library picker
+**New:** All non-Subgroup row types can choose collections, movies, and whole TV shows or TV ranges directly from the Jellyfin library, without pre-linking them to the franchise. Existing custom shelves stay intact.
 
-**Create, rename, reorder, and delete your own rows** within each franchise or subgroup. This release separates *Phases*, *Collections*, and custom viewing orders into independent, horizontally scrollable sections rather than one combined grid. Choose which existing subgroups and linked movie/TV titles appear in each row, including saved season/episode-range references. Drag-and-drop or use accessible move buttons to reorder shelves and their contents. Reusing the same media reference in multiple rows does not copy media.
+
+**Create, rename, reorder, and delete your own rows** within each franchise or subgroup. This release separates *Phases*, *Collections*, and custom viewing orders into independent, horizontally scrollable sections rather than one combined grid. Choose which existing subgroups and linked movie/TV titles appear in each row, including saved season/episode-range references. Newly selected row entries and previously linked media can be interleaved in one viewing order. Drag-and-drop or use accessible move buttons to reorder shelves and their contents. Reusing the same media reference in multiple rows does not copy media.
 
 In the administration editor, select a franchise → **Browse rows** → **Create suggested rows** (optional) or **+ Add custom row**. Edit **Row name** to rename, use **Delete row** to remove it without deleting linked media, and select its content type and assignments. Click **Save plugin configuration** to persist. The plugin preserves the same Jellyfin plugin identity, existing artwork overrides, media reference IDs and virtual groups. Old configurations with no rows continue to display automatic sections until you choose to customize them.
 
-**Chronological viewing-order rows are manually curated display sequences only**, not an automatic lore timeline or playback queue. The browser remains Web-oriented; native Jellyfin TV/mobile apps do not automatically get the new interface. See [v0.7.3 upgrade and usage guide](docs/UPGRADE_V073.md).
+**Chronological viewing-order rows are manually curated display sequences only**, not an automatic lore timeline or playback queue. The browser remains Web-oriented; native Jellyfin TV/mobile apps do not automatically get the new interface. See [v0.7.4 upgrade and usage guide](docs/UPGRADE_V074.md).
 
 ## Version 0.7.2.0 — placement and artwork preference hotfix
 
@@ -157,3 +159,11 @@ The administration interface now responds to its available **Jellyfin content wi
 ## Development-only browser regression test
 
 Run `python3 scripts/test_live_ui_browser.py` only in an environment with Playwright and Chromium installed at `/usr/bin/chromium`. This test uses simulated Jellyfin responses and is **not** part of GitHub Actions (the hosted runner lacks that local Chromium test environment). The GitHub build executes the static layout and range-dialog contract checks.
+
+
+### v0.7.4 — full-library row selection
+
+Only **Subgroups** rows are restricted to children already defined beneath the selected franchise.
+All other row types can search the complete Jellyfin library to add existing collections (BoxSets), movies, or TV shows. For TV shows, choose the full series, season-to-season, or episode-to-episode range. Each row stores its new references independently: you **do not** have to link these items to the parent franchise first. Old row references and artwork are preserved. Deleting a presentation row never deletes Jellyfin items.
+
+**Limitations:** A collection is a reference to the existing Jellyfin collection, not an automatic import of all its members. Season/episode ranges are virtual labels, not playback queues. The public browser checks viewers' access when resolving individual items. The first upgrade should be backed up and tested with an experimental row.

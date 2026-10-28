@@ -76,7 +76,7 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
 @media(pointer:coarse){.btn,.crumbs button,.tile{touch-action:manipulation}.tile{min-height:46px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;scroll-behavior:auto!important}}
 
-/* v0.7.3 horizontal shelves; scroll-snapping works on TV, laptop, and touch. */
+/* v0.7.4 horizontal shelves; scroll-snapping works on TV, laptop, and touch. */
 .rows-container{display:grid;gap:24px;min-width:0;margin:6px 0 28px}
 .shelf{min-width:0;max-width:100%;overflow:hidden}
 .shelf-header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin:0 0 12px}
@@ -112,7 +112,7 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
   <section id="media-section" class="section hidden"><div class="section-header"><h2>Movies and TV shows</h2><span class="counter" id="media-count"></span></div><div class="gallery" id="media-grid"></div></section>
   <div id="rows-container" class="rows-container"></div>
   <div id="empty" class="empty hidden">No items to display in this group.</div>
-  <div class="footer">Franchise Explorer v0.7.3 · An experimental virtual browsing page. Season/episode ranges describe references; they do not yet launch a continuous playlist.</div>
+  <div class="footer">Franchise Explorer v0.7.4 · An experimental virtual browsing page. Season/episode ranges describe references; they do not yet launch a continuous playlist.</div>
 </main>
 <script>
 'use strict';
@@ -233,7 +233,7 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
     const item=await getItem(l.itemId);
     if(ticket!==renderSerial||!item||filter&&!String(item.Name||'').toLocaleLowerCase().includes(filter))return false;
     const range=mediaRange(l);
-    const type=item.Type==='Series'?'TV Show':(item.Type==='Movie'?'Movie':item.Type||'Video');
+    const type=item.Type==='Series'?'TV Show':(item.Type==='BoxSet'?'Collection':(item.Type==='Movie'?'Movie':item.Type||'Video'));
     const tile=makeTile(item.Name||'Untitled', [type,item.ProductionYear||'',range].filter(Boolean).join(' · '),range||type,()=>openJellyfinItem(item),type);
     grid.append(tile.button);shownCards.push(tile.button);
     void secureImage(imagePath(item,'Primary')).then(url=>{if(ticket===renderSerial)addImageToTile(tile,url);});
@@ -293,7 +293,14 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
     const siblings=children(current);
     const possibleLinks=nestedLinks(current),possibleIds=new Set(possibleLinks.map(l=>l.id));
     const rowGroups=rowIsGroups(r)?(r.nodeIds||[]).map(id=>siblings.find(n=>n.id===id)).filter(Boolean):[];
-    const rowMedia=rowIsMedia(r)?(r.mediaLinkIds||[]).map(findLink).filter(l=>l&&possibleIds.has(l.id)):[];
+    // Existing row membership is retained. Direct entries are independently
+    // selected from the user's whole Jellyfin library, not from franchise links.
+    const inherited=rowIsMedia(r)?(r.mediaLinkIds||[]).map(findLink).filter(l=>l&&possibleIds.has(l.id)):[];
+    const own=rowIsMedia(r)?(r.items||[]).filter(l=>safeGuid(l.itemId)):[];
+    const combined=[...inherited,...own];
+    const order=Array.isArray(r.mediaOrder)?r.mediaOrder:[];
+    const mediaRank=new Map(order.map((id,i)=>[id,i]));
+    const rowMedia=order.length?[...combined].sort((a,b)=>(mediaRank.get(a.id)??99999)-(mediaRank.get(b.id)??99999)):combined;
     const groupMatches=rowGroups.filter(n=>!filter||n.name.toLocaleLowerCase().includes(filter));
     const orderedGroups=$('sort').value==='alpha'?groupMatches.sort(compare):groupMatches;
     for(const n of orderedGroups)void showNode(n,frame.track,ticket);

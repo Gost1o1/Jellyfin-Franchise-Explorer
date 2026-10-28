@@ -17,4 +17,11 @@ public sealed class FranchiseRow
     public int SortOrder { get; set; }
     public List<string> NodeIds { get; set; } = new();
     public List<string> MediaLinkIds { get; set; } = new();
+
+    // Media added directly from Jellyfin's whole library. Independent of
+    // franchise MediaLinks; removing a row doesn't modify a library or group.
+    public List<FranchiseRowEntry> Items { get; set; } = new();
+
+    // Presentation order across older MediaLinkIds AND new independent Items.
+    public List<string> MediaOrder { get; set; } = new();
 }

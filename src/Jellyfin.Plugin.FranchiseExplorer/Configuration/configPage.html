@@ -167,7 +167,7 @@
 #FranchiseExplorerConfigPage .fx-wrap.fx-compact .fx-modal-dialog .fx-range-grid {grid-template-columns:minmax(0,1fr)}
 @media(max-width:550px){#FranchiseExplorerConfigPage .fx-modal-dialog{padding:14px}#FranchiseExplorerConfigPage .fx-modal-dialog .fx-range-grid{grid-template-columns:minmax(0,1fr)}}
 
-/* v0.7.3: rows are scoped to the selected virtual group, no physical folders. */
+/* v0.7.4: responsive editable presentation shelves, no physical folders. */
 #FranchiseExplorerConfigPage .fx-row-manager{min-width:0}
 #FranchiseExplorerConfigPage .fx-row-manager .fx-panel-title{margin-bottom:4px}
 #FranchiseExplorerConfigPage .fx-row-create{align-items:end}
@@ -177,6 +177,13 @@
 #FranchiseExplorerConfigPage .fx-row-card{min-width:0;border:1px solid var(--fx-border);border-radius:12px;background:#192029;padding:13px}
 #FranchiseExplorerConfigPage .fx-row-head{display:flex;gap:9px;align-items:end;flex-wrap:wrap}
 #FranchiseExplorerConfigPage .fx-row-head .fx-field{flex:1 1 165px;margin:0}
+#FranchiseExplorerConfigPage .fx-library-search{margin-top:12px;display:grid;gap:8px;background:#111a22;border:1px solid #3c4d59;padding:12px;border-radius:9px;min-width:0}
+#FranchiseExplorerConfigPage .fx-library-search input{min-width:0;width:100%;box-sizing:border-box}
+#FranchiseExplorerConfigPage .fx-library-result{display:flex;gap:9px;align-items:center;min-width:0;padding:7px 4px;border-top:1px solid #39434c;flex-wrap:wrap}
+#FranchiseExplorerConfigPage .fx-library-result span{min-width:100px;flex:1;overflow-wrap:anywhere;font-size:.87rem}
+#FranchiseExplorerConfigPage .fx-library-result .fx-btn{flex:none}
+#FranchiseExplorerConfigPage .fx-library-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+#FranchiseExplorerConfigPage .fx-library-status{font-size:.8rem;color:#b2c1cb}
 #FranchiseExplorerConfigPage .fx-row-drag{cursor:grab;min-width:40px;font-size:1.15rem;touch-action:manipulation}
 #FranchiseExplorerConfigPage .fx-row-card.fx-row-drag-target{border-color:#2de0ee;background:#1d3440}
 #FranchiseExplorerConfigPage .fx-row-pickers{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
@@ -196,7 +203,7 @@
   <div class="fx-heading">
     <div>
       <div class="fx-eyebrow">Jellyfin plugin • Early development</div>
-      <h1>Franchise Explorer <small>v0.7.3 preview</small></h1>
+      <h1>Franchise Explorer <small>v0.7.4 preview</small></h1>
       <p class="fx-muted">Organize virtual franchises, eras, phases and viewing references without moving media files.</p>
     </div>
   </div>
@@ -503,8 +510,24 @@
       const allowedLinks=linkIds.filter(id=>{
         const link=knownLinks.get(String(id).toLowerCase());return link&&belongs(link.NodeId,parent);
       });
-      return {Id:String(r.Id),ParentNodeId:parent,Name:String(r.Name||'Custom Row').trim().slice(0,100)||'Custom Row',RowType:rowType,SortOrder:num(r.SortOrder),NodeIds:[...new Set(allowedNodes.map(String))].slice(0,250),MediaLinkIds:[...new Set(allowedLinks.map(String))].slice(0,3000)};
+      // Row-owned entries can reference ANY visible Jellyfin collection/movie/TV Show.
+      // They do not have to be linked in the parent group's MediaLinks.
+      const entries=(Array.isArray(r.Items)?r.Items:[]).map(item=>{
+        if(!item||!validGuid(String(item.Id||''))||!validGuid(String(item.JellyfinItemId||'')))throw new Error('Invalid direct row reference.');
+        const kind=String(item.ItemType||'Movie');
+        if(!['BoxSet','Movie','Series'].includes(kind))throw new Error('A row can only reference a collection, movie or TV Show.');
+        const base={Id:String(item.Id),JellyfinItemId:String(item.JellyfinItemId),DisplayName:String(item.DisplayName||'').slice(0,150),ItemType:kind};
+        return {...base,...rangeFields({...item,ItemType:kind})};
+      });
+      if(entries.length>3000||new Set(entries.map(x=>x.Id.toLowerCase())).size!==entries.length)throw new Error('Too many or duplicate row entries.');
+      const mediaLinkIds=[...new Set(allowedLinks.map(String))].slice(0,3000);
+      const available=[...mediaLinkIds,...entries.map(x=>x.Id)];
+      const availableSet=new Set(available.map(x=>x.toLowerCase()));
+      const preferred=(Array.isArray(r.MediaOrder)?r.MediaOrder:[]).map(String).filter(id=>availableSet.has(id.toLowerCase()));
+      const mediaOrder=[...new Set([...preferred,...available])];
+      return {Id:String(r.Id),ParentNodeId:parent,Name:String(r.Name||'Custom Row').trim().slice(0,100)||'Custom Row',RowType:rowType,SortOrder:num(r.SortOrder),NodeIds:[...new Set(allowedNodes.map(String))].slice(0,250),MediaLinkIds:mediaLinkIds,Items:entries,MediaOrder:mediaOrder};
     }).filter(Boolean);
+    if(safeRows.reduce((sum,r)=>sum+r.Items.length,0)>3000)throw new Error('Maximum 3,000 direct row entries per plugin.');
     if(new Set(safeRows.map(r=>r.Id.toLowerCase())).size!==safeRows.length)throw new Error('Duplicate browse row IDs.');
     return { NavigationLabel:String(raw.NavigationLabel || 'Franchises').trim().slice(0,64) || 'Franchises', Nodes:safeNodes, MediaLinks:safeLinks, Rows:safeRows };
   }
@@ -961,120 +984,175 @@
     model.MediaLinks.push({Id:guid(),NodeId:selected,JellyfinItemId:itemId,DisplayName:byId('fx-item-name').value.trim(),ItemType:byId('fx-item-type').value,ViewingOrder:byId('fx-view-order').value.trim()||'Custom',Position:num(byId('fx-position').value),...rangeFields({ItemType:byId('fx-item-type').value})});
     byId('fx-item-id').value='';byId('fx-item-name').value='';setDirty(true);setStatus('Virtual reference added locally. Save to persist.');render();
   });
-  // Horizontal rows are presentation-only references to existing groups/media.
-  // Renaming, moving and deleting never edits Jellyfin items or franchise members.
-  const rowTypes={Groups:'Subgroups',Media:'Movies / TV shows',Timeline:'Viewing order',Mixed:'Groups and media'};
+  // Subgroups use only immediate children. All other row types may search the
+  // ENTIRE Jellyfin library; direct row entries don't alter franchise members.
+  const rowTypes={Groups:'Subgroups only',Media:'Collections / Movies / TV Shows',Timeline:'Chronological or custom viewing order',Mixed:'Subgroups + library items'};
   const rowList=()=>model.Rows.filter(r=>r.ParentNodeId===selected).sort((a,b)=>a.SortOrder-b.SortOrder||a.Name.localeCompare(b.Name));
+  const rowSearchStates=new Map();
   const descendantLinks=(root)=>{
     const descendants=new Set([root]);let changed=true;
     while(changed){changed=false;for(const n of model.Nodes)if(descendants.has(n.ParentId)&&!descendants.has(n.Id)){descendants.add(n.Id);changed=true;}}
     return model.MediaLinks.filter(l=>descendants.has(l.NodeId)).sort((a,b)=>a.Position-b.Position||a.DisplayName.localeCompare(b.DisplayName));
   };
+  function rowState(id){if(!rowSearchStates.has(id))rowSearchStates.set(id,{query:'',results:[],chosen:new Set(),searchId:0,busy:false,status:'Search your full Jellyfin library. Results do not have to be linked to this franchise.'});return rowSearchStates.get(id);}
+  function syncMediaOrder(row){
+    if(!Array.isArray(row.MediaOrder))row.MediaOrder=[];
+    const ids=[...row.MediaLinkIds,...row.Items.map(x=>x.Id)];
+    row.MediaOrder=[...new Set([...row.MediaOrder.filter(id=>ids.includes(id)),...ids])];
+  }
   function reorderRow(rowId,delta){
     const ordered=rowList(),at=ordered.findIndex(r=>r.Id===rowId),target=at+delta;
     if(at<0||target<0||target>=ordered.length)return;
     [ordered[at],ordered[target]]=[ordered[target],ordered[at]];
     ordered.forEach((r,i)=>r.SortOrder=i+1);setDirty(true);renderRows();
   }
+  function listForMember(row,kind){return kind==='group'?row.NodeIds:row.MediaOrder;}
   function reorderMember(row,kind,id,delta){
-    const ids=kind==='group'?row.NodeIds:row.MediaLinkIds;
-    const pos=ids.indexOf(id),to=pos+delta;
-    if(pos<0||to<0||to>=ids.length)return;
-    [ids[pos],ids[to]]=[ids[to],ids[pos]];
-    setDirty(true);renderRows();
+    const list=listForMember(row,kind);const pos=list.findIndex(x=>(typeof x==='string'?x:x.Id)===id),to=pos+delta;
+    if(pos<0||to<0||to>=list.length)return;
+    [list[pos],list[to]]=[list[to],list[pos]];setDirty(true);renderRows();
   }
   function makeRowButton(label,handler,css=''){
     const b=document.createElement('button');b.type='button';b.className='fx-btn fx-btn-small '+css;b.textContent=label;b.addEventListener('click',handler);return b;
   }
-  function rowMemberName(kind,id){
-    if(kind==='group')return model.Nodes.find(n=>n.Id===id)?.Name||'Unknown group';
-    const l=model.MediaLinks.find(l=>l.Id===id);
-    return l?(l.DisplayName||l.JellyfinItemId)+' · '+linkRangeLabel(l):'Unavailable media';
+  function rowMemberName(kind,id,row){
+    if(kind==='group')return model.Nodes.find(n=>n.Id===id)?.Name||'Unknown subgroup';
+    const l=kind==='direct'?row.Items.find(x=>x.Id===id):model.MediaLinks.find(l=>l.Id===id);
+    return l?(l.DisplayName||l.JellyfinItemId)+' · '+(l.ItemType==='BoxSet'?'Jellyfin collection':displayType(l.ItemType))+' · '+linkRangeLabel(l):'Unavailable reference';
+  }
+  function addRowItem(row,item,range){
+    if(!['Movie','Series','BoxSet'].includes(item.Type))throw new Error('Select a Jellyfin collection, movie or TV Show.');
+    if(!validGuid(String(item.Id||'')))throw new Error('Invalid Jellyfin item ID.');
+    if(model.Rows.reduce((sum,r)=>sum+(r.Items||[]).length,0)>=3000)throw new Error('The limit of 3,000 direct row entries was reached.');
+    const entry={Id:guid(),JellyfinItemId:item.Id,DisplayName:String(item.Name||'Untitled').slice(0,150),ItemType:item.Type,...(range||rangeFields({ItemType:item.Type}))};
+    if(row.Items.some(x=>linkIdentity(x)===linkIdentity(entry)))return false;
+    row.Items.push(entry);syncMediaOrder(row);setDirty(true);return true;
+  }
+  function addRowWhole(row,item){
+    try{const added=addRowItem(row,item);renderRows();setStatus(added?'Added '+item.Name+' to "'+row.Name+'". Save plugin configuration.':'Already present in this row.');}
+    catch(e){setStatus(e.message,true);}
+  }
+  async function searchRowLibrary(rowId,query,sequence){
+    const state=rowState(rowId);
+    try{
+      const response=await jellyfinItems({searchTerm:query,recursive:true,includeItemTypes:'BoxSet,Movie,Series',limit:40,startIndex:0,enableImages:true,enableTotalRecordCount:false});
+      if(state.searchId!==sequence)return;
+      state.results=(response.Items||[]).filter(x=>['BoxSet','Movie','Series'].includes(x.Type)&&validGuid(String(x.Id||'')));
+      state.chosen=new Set();state.busy=false;state.status=state.results.length?state.results.length+' matching collections, movies and TV shows.':'No matching titles found.';
+    }catch(err){if(state.searchId!==sequence)return;state.results=[];state.busy=false;state.status='Search error: '+(err.message||err);}
+    if(selected&&model.Rows.some(r=>r.Id===rowId))renderRows();
+  }
+  function renderRowLibrary(row,pickers){
+    const state=rowState(row.Id),container=document.createElement('div');container.className='fx-library-search';
+    const header=document.createElement('strong');header.textContent='Add from your entire Jellyfin library';
+    const help=document.createElement('p');help.className='fx-muted';help.textContent='Choose an existing collection, movie, or TV Show without first adding it to the main franchise. TV Shows can use a complete title, season range, or episode range.';
+    const search=document.createElement('input');search.type='search';search.className='fx-input';search.placeholder='Search collections, movies or TV shows…';search.value=state.query;search.setAttribute('aria-label','Search Jellyfin library for '+row.Name);
+    search.addEventListener('input',()=>{
+      state.query=search.value.trim();const searchId=++state.searchId;
+      state.results=[];state.chosen.clear();
+      if(state.timer)clearTimeout(state.timer);
+      if(state.query.length<2){state.status='Type at least two characters.';renderRows();return;}
+      state.busy=true;state.status='Searching your Jellyfin library…';
+      state.timer=setTimeout(()=>searchRowLibrary(row.Id,state.query,searchId),300);
+    });
+    container.append(header,help,search);
+    const message=document.createElement('div');message.className='fx-library-status';message.textContent=state.status;container.append(message);
+    for(const item of state.results){
+      const result=document.createElement('div');result.className='fx-library-result';
+      const check=document.createElement('input');check.type='checkbox';check.checked=state.chosen.has(item.Id);check.setAttribute('aria-label','Select '+item.Name+' for '+row.Name);
+      check.addEventListener('change',()=>{if(check.checked)state.chosen.add(item.Id);else state.chosen.delete(item.Id);count.textContent=state.chosen.size+' selected';});
+      const label=document.createElement('span');label.textContent=(item.Name||'Untitled')+' · '+(item.Type==='BoxSet'?'Collection':displayType(item.Type))+(item.ProductionYear?' ('+item.ProductionYear+')':'');
+      const action=makeRowButton(item.Type==='Series'?'Choose TV Show range':'+ Add',()=>item.Type==='Series'?openRangeEditor(item,null,row.Id):addRowWhole(row,item));
+      result.append(check,label,action);container.append(result);
+    }
+    if(state.results.length){
+      const actions=document.createElement('div');actions.className='fx-library-actions';
+      const count=document.createElement('span');count.className='fx-library-status';count.textContent=state.chosen.size+' selected';
+      const selectAll=makeRowButton('Select all',()=>{state.results.forEach(x=>state.chosen.add(x.Id));renderRows();});
+      const clear=makeRowButton('Clear selection',()=>{state.chosen.clear();renderRows();});
+      const addAll=makeRowButton('Add selected full titles',()=>{
+        let added=0;for(const item of state.results.filter(x=>state.chosen.has(x.Id)))try{if(addRowItem(row,item))added++;}catch(e){setStatus(e.message,true);break;}
+        state.chosen.clear();renderRows();setStatus('Added '+added+' complete title(s) to '+row.Name+'. To choose season/episode ranges, use Choose TV Show range. Save configuration.');
+      },'fx-btn-primary');
+      actions.append(selectAll,clear,addAll,count);container.append(actions);
+    }
+    pickers.append(container);
   }
   function renderRows(){
     const list=byId('fx-rows-list');
-    // Keep opened pickers open when checking multiple media (important for large libraries).
     const expanded=new Set([...list.querySelectorAll('details[open]')].map(d=>d.closest('[data-row-id]')?.dataset.rowId+':'+d.dataset.kind));
     list.replaceChildren();
     if(!selected){const p=document.createElement('p');p.className='fx-muted';p.textContent='Select a franchise or subgroup to manage its rows.';list.append(p);return;}
     const rows=rowList();
-    if(!rows.length){const p=document.createElement('p');p.className='fx-muted';p.textContent='No custom rows yet. The browser currently displays suggested rows automatically; add a custom row or click Create suggested rows to customize and save the sections.';list.append(p);return;}
+    if(!rows.length){const p=document.createElement('p');p.className='fx-muted';p.textContent='No custom rows yet. Create a row or use Create suggested rows.';list.append(p);return;}
     rows.forEach((r,index)=>{
+      r.Items=Array.isArray(r.Items)?r.Items:[];syncMediaOrder(r);
       const card=document.createElement('article');card.className='fx-row-card';card.setAttribute('role','listitem');card.dataset.rowId=r.Id;
       const head=document.createElement('div');head.className='fx-row-head';
       const grip=makeRowButton('⠿',()=>{},'fx-row-drag');grip.title='Drag to reorder rows';grip.setAttribute('aria-label','Drag '+r.Name+' to reorder');grip.draggable=true;
       grip.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',r.Id);e.dataTransfer.effectAllowed='move';});
       card.addEventListener('dragover',e=>{if(e.dataTransfer.types.includes('text/plain')){e.preventDefault();card.classList.add('fx-row-drag-target');}});
       card.addEventListener('dragleave',()=>card.classList.remove('fx-row-drag-target'));
-      card.addEventListener('drop',e=>{
-        e.preventDefault();card.classList.remove('fx-row-drag-target');
-        const sourceId=e.dataTransfer.getData('text/plain');
-        const all=rowList(),from=all.findIndex(x=>x.Id===sourceId),to=all.findIndex(x=>x.Id===r.Id);
-        if(from<0||to<0||from===to)return;
-        const [item]=all.splice(from,1);all.splice(to,0,item);all.forEach((x,i)=>x.SortOrder=i+1);setDirty(true);renderRows();
-      });
-      const nameLabel=document.createElement('label');nameLabel.className='fx-field';
-      const nameTitle=document.createElement('span');nameTitle.textContent='Row name';
+      card.addEventListener('drop',e=>{e.preventDefault();card.classList.remove('fx-row-drag-target');const source=e.dataTransfer.getData('text/plain');const all=rowList(),from=all.findIndex(x=>x.Id===source),to=all.findIndex(x=>x.Id===r.Id);if(from<0||to<0||from===to)return;const [item]=all.splice(from,1);all.splice(to,0,item);all.forEach((x,i)=>x.SortOrder=i+1);setDirty(true);renderRows();});
+      const nameLabel=document.createElement('label');nameLabel.className='fx-field';const nameTitle=document.createElement('span');nameTitle.textContent='Row name';
       const name=document.createElement('input');name.type='text';name.className='fx-input';name.maxLength=100;name.value=r.Name;name.setAttribute('aria-label','Rename row '+r.Name);
-      name.addEventListener('input',()=>{r.Name=name.value;setDirty(true);});
-      name.addEventListener('blur',()=>{r.Name=r.Name.trim()||'Custom Row';renderRows();});
-      nameLabel.append(nameTitle,name);
+      name.addEventListener('input',()=>{r.Name=name.value;setDirty(true);});name.addEventListener('blur',()=>{r.Name=r.Name.trim()||'Custom Row';renderRows();});nameLabel.append(nameTitle,name);
       const typeLabel=document.createElement('label');typeLabel.className='fx-field';const typeTitle=document.createElement('span');typeTitle.textContent='Content type';
-      const type=document.createElement('select');type.className='fx-input';
-      for(const [value,label] of Object.entries(rowTypes)){const o=document.createElement('option');o.value=value;o.textContent=label;type.append(o);}
-      type.value=r.RowType;type.addEventListener('change',()=>{r.RowType=type.value;setDirty(true);renderRows();});
-      typeLabel.append(typeTitle,type);
-      const moveUp=makeRowButton('↑',()=>reorderRow(r.Id,-1));moveUp.disabled=index===0;moveUp.title='Move row up';moveUp.setAttribute('aria-label','Move '+r.Name+' up');
-      const moveDown=makeRowButton('↓',()=>reorderRow(r.Id,1));moveDown.disabled=index===rows.length-1;moveDown.title='Move row down';moveDown.setAttribute('aria-label','Move '+r.Name+' down');
-      const remove=makeRowButton('Delete row',()=>{
-        if(!confirm('Delete the row "'+r.Name+'"? Only this display row is removed. Franchise groups, artwork and media links remain intact.'))return;
-        model.Rows=model.Rows.filter(x=>x.Id!==r.Id);setDirty(true);renderRows();
-      },'fx-btn-danger');
-      head.append(grip,nameLabel,typeLabel,moveUp,moveDown,remove);card.append(head);
+      const type=document.createElement('select');type.className='fx-input';for(const [v,label] of Object.entries(rowTypes)){const option=document.createElement('option');option.value=v;option.textContent=label;type.append(option);}
+      type.value=r.RowType;type.addEventListener('change',()=>{r.RowType=type.value;setDirty(true);renderRows();});typeLabel.append(typeTitle,type);
+      const up=makeRowButton('↑',()=>reorderRow(r.Id,-1));up.disabled=index===0;up.setAttribute('aria-label','Move '+r.Name+' up');
+      const down=makeRowButton('↓',()=>reorderRow(r.Id,1));down.disabled=index===rows.length-1;down.setAttribute('aria-label','Move '+r.Name+' down');
+      const remove=makeRowButton('Delete row',()=>{if(!confirm('Delete row "'+r.Name+'"? This removes only its display references; your Jellyfin media and franchise links are unchanged.'))return;model.Rows=model.Rows.filter(x=>x.Id!==r.Id);rowSearchStates.delete(r.Id);setDirty(true);renderRows();},'fx-btn-danger');
+      head.append(grip,nameLabel,typeLabel,up,down,remove);card.append(head);
       const pickers=document.createElement('div');pickers.className='fx-row-pickers';
-      const includeGroups=['Groups','Mixed'].includes(r.RowType);
-      const includeMedia=['Media','Timeline','Mixed'].includes(r.RowType);
-      function selector(kind,available,memberIds){
-        const details=document.createElement('details');details.dataset.kind=kind;details.open=expanded.has(r.Id+':'+kind);
-        const summary=document.createElement('summary');summary.textContent=(kind==='group'?'Choose subgroups':'Choose movies / TV shows')+' ('+memberIds.length+' selected)';details.append(summary);
-        if(!available.length){const none=document.createElement('p');none.className='fx-muted';none.textContent='No eligible items yet. Add them to the franchise first.';details.append(none);}
-        for(const item of available){const id=item.Id,label=document.createElement('label');label.className='fx-row-option';
-          const cb=document.createElement('input');cb.type='checkbox';cb.checked=memberIds.includes(id);cb.setAttribute('aria-label','Show '+(item.Name||item.DisplayName||id)+' in '+r.Name);
-          cb.addEventListener('change',()=>{if(cb.checked){if(!memberIds.includes(id))memberIds.push(id);}else{const i=memberIds.indexOf(id);if(i>=0)memberIds.splice(i,1);}setDirty(true);renderRows();});
-          const name=document.createElement('span');name.textContent=(item.Name||item.DisplayName||id)+(kind==='media'?' ('+linkRangeLabel(item)+')':'');label.append(cb,name);details.append(label);
-        }
+      const includeGroups=['Groups','Mixed'].includes(r.RowType),includeMedia=['Media','Timeline','Mixed'].includes(r.RowType);
+      if(includeGroups){
+        const details=document.createElement('details');details.dataset.kind='group';details.open=expanded.has(r.Id+':group');
+        const summary=document.createElement('summary');summary.textContent='Choose subgroups from '+(model.Nodes.find(n=>n.Id===selected)?.Name||'this franchise')+' ('+r.NodeIds.length+' selected)';details.append(summary);
+        const groupOptions=children(selected);
+        if(!groupOptions.length){const msg=document.createElement('p');msg.className='fx-muted';msg.textContent='No subgroups in this franchise yet.';details.append(msg);}
+        for(const node of groupOptions){const label=document.createElement('label');label.className='fx-row-option';const cb=document.createElement('input');cb.type='checkbox';cb.checked=r.NodeIds.includes(node.Id);cb.addEventListener('change',()=>{if(cb.checked){if(!r.NodeIds.includes(node.Id))r.NodeIds.push(node.Id);}else r.NodeIds=r.NodeIds.filter(id=>id!==node.Id);setDirty(true);renderRows();});const name=document.createElement('span');name.textContent=node.Name;label.append(cb,name);details.append(label);}
         pickers.append(details);
       }
-      if(includeGroups)selector('group',children(selected),r.NodeIds);
-      if(includeMedia)selector('media',descendantLinks(selected),r.MediaLinkIds);
+      if(includeMedia){
+        // Older rows can still show their existing linked members; NEW selections
+        // come from the whole Jellyfin library and are stored independently.
+        if(r.MediaLinkIds.length){const legacy=document.createElement('details');legacy.dataset.kind='media';legacy.open=expanded.has(r.Id+':media');const summary=document.createElement('summary');summary.textContent='Previously assigned media ('+r.MediaLinkIds.length+')';legacy.append(summary);
+          for(const l of descendantLinks(selected).filter(l=>r.MediaLinkIds.includes(l.Id))){const label=document.createElement('label');label.className='fx-row-option';const cb=document.createElement('input');cb.type='checkbox';cb.checked=true;cb.addEventListener('change',()=>{r.MediaLinkIds=r.MediaLinkIds.filter(id=>id!==l.Id);syncMediaOrder(r);setDirty(true);renderRows();});const title=document.createElement('span');title.textContent=l.DisplayName+' ('+linkRangeLabel(l)+')';label.append(cb,title);legacy.append(label);}pickers.append(legacy);}
+        renderRowLibrary(r,pickers);
+      }
       card.append(pickers);
       const included=document.createElement('div');included.className='fx-row-included';
-      const members=[...(includeGroups?r.NodeIds.map(id=>({id,kind:'group'})):[]),...(includeMedia?r.MediaLinkIds.map(id=>({id,kind:'media'})):[])];
-      for(const member of members){const line=document.createElement('div');line.className='fx-row-included-item';
+      const members=[...(includeGroups?r.NodeIds.map(id=>({id,kind:'group'})):[]),...(includeMedia?r.MediaOrder.map(id=>({id,kind:r.MediaLinkIds.includes(id)?'media':'direct'})):[])];
+      for(const member of members){const line=document.createElement('div');line.className='fx-row-included-item';const ids=listForMember(r,member.kind);
         const grip=makeRowButton('⠿',()=>{},'fx-row-grip');grip.title='Drag to reorder this item';grip.draggable=true;
         grip.addEventListener('dragstart',e=>{e.stopPropagation();e.dataTransfer.setData('application/x-franchise-row-item',member.kind+':'+member.id);e.dataTransfer.effectAllowed='move';});
         line.addEventListener('dragover',e=>{if(e.dataTransfer.types.includes('application/x-franchise-row-item')){e.preventDefault();line.classList.add('fx-row-drag-target');}});
         line.addEventListener('dragleave',()=>line.classList.remove('fx-row-drag-target'));
-        line.addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();line.classList.remove('fx-row-drag-target');const origin=e.dataTransfer.getData('application/x-franchise-row-item');
-          const [kind,id]=origin.split(':');if(kind!==member.kind||!id||id===member.id)return;
-          const ids=kind==='group'?r.NodeIds:r.MediaLinkIds;const from=ids.indexOf(id),to=ids.indexOf(member.id);
-          if(from<0||to<0)return;ids.splice(from,1);ids.splice(to,0,id);setDirty(true);renderRows();
-        });
-        const label=document.createElement('span');label.textContent=rowMemberName(member.kind,member.id);
-        const ids=member.kind==='group'?r.NodeIds:r.MediaLinkIds,index=ids.indexOf(member.id);
-        const up=makeRowButton('↑',()=>reorderMember(r,member.kind,member.id,-1));up.disabled=index===0;up.title='Move item earlier';
-        const down=makeRowButton('↓',()=>reorderMember(r,member.kind,member.id,1));down.disabled=index===ids.length-1;down.title='Move item later';
-        const drop=makeRowButton('×',()=>{ids.splice(ids.indexOf(member.id),1);setDirty(true);renderRows();});drop.setAttribute('aria-label','Remove '+label.textContent+' from row');drop.title='Remove from this row only';
-        line.append(grip,label,up,down,drop);included.append(line);
+        line.addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();line.classList.remove('fx-row-drag-target');const origin=e.dataTransfer.getData('application/x-franchise-row-item');const [kind,id]=origin.split(':');if((kind==='group')!==(member.kind==='group')||id===member.id)return;const from=ids.findIndex(x=>(typeof x==='string'?x:x.Id)===id),to=ids.findIndex(x=>(typeof x==='string'?x:x.Id)===member.id);if(from<0||to<0)return;const [entry]=ids.splice(from,1);ids.splice(to,0,entry);setDirty(true);renderRows();});
+        const label=document.createElement('span');label.textContent=rowMemberName(member.kind,member.id,r);
+        const idx=ids.findIndex(x=>(typeof x==='string'?x:x.Id)===member.id);
+        const earlier=makeRowButton('↑',()=>reorderMember(r,member.kind,member.id,-1));earlier.disabled=idx===0;earlier.title='Move item earlier';
+        const later=makeRowButton('↓',()=>reorderMember(r,member.kind,member.id,1));later.disabled=idx===ids.length-1;later.title='Move item later';
+        line.append(grip,label);
+        if(member.kind==='direct'){
+          const entry=r.Items.find(x=>x.Id===member.id);
+          if(entry?.ItemType==='Series')line.append(makeRowButton('Edit range',()=>openRangeEditor({Id:entry.JellyfinItemId,Name:entry.DisplayName,Type:'Series'},entry,r.Id)));
+        }
+        line.append(earlier,later,makeRowButton('×',()=>{
+          if(member.kind==='group')r.NodeIds=r.NodeIds.filter(id=>id!==member.id);
+          else if(member.kind==='media')r.MediaLinkIds=r.MediaLinkIds.filter(id=>id!==member.id);
+          else r.Items=r.Items.filter(x=>x.Id!==member.id);
+          syncMediaOrder(r);setDirty(true);renderRows();
+        }));included.append(line);
       }
       card.append(included);
-      const note=document.createElement('p');note.className='fx-muted';note.textContent='Row '+(index+1)+' · '+members.length+' assigned cards'+(r.RowType==='Timeline'?' · Viewing order only; playback queue not implemented.':'');card.append(note);
-      list.append(card);
+      const note=document.createElement('p');note.className='fx-muted';note.textContent='Row '+(index+1)+' · '+members.length+' cards'+(r.RowType==='Timeline'?' · Viewing order only; continuous playback is not yet implemented.':'');card.append(note);list.append(card);
     });
   }
   function createPresentationRow(name,type,groupIds=[],mediaIds=[]){
     if(!selected)throw new Error('Select a franchise first.');
-    const r={Id:guid(),ParentNodeId:selected,Name:String(name||'Custom Row').trim().slice(0,100)||'Custom Row',RowType:type,SortOrder:rowList().length+1,NodeIds:[...groupIds],MediaLinkIds:[...mediaIds]};
+    const r={Id:guid(),ParentNodeId:selected,Name:String(name||'Custom Row').trim().slice(0,100)||'Custom Row',RowType:type,SortOrder:rowList().length+1,NodeIds:[...groupIds],MediaLinkIds:[...mediaIds],Items:[],MediaOrder:[...mediaIds]};
     model.Rows.push(r);setDirty(true);renderRows();return r;
   }
   byId('fx-create-row').addEventListener('click',()=>{
@@ -1171,6 +1249,7 @@
   }
   let pendingRangeItem=null;
   let editingRangeId='';
+  let pendingRowId='';
   let previousFocus=null;
   function updateRangeFields() {
     const mode=byId('fx-range-mode').value;
@@ -1178,13 +1257,14 @@
     page.querySelectorAll('.fx-episode-field').forEach(n=>n.classList.toggle('fx-hidden',mode!=='Episodes'));
   }
   byId('fx-range-mode').addEventListener('change',updateRangeFields);
-  function openRangeEditor(item,existingLink) {
+  function openRangeEditor(item,existingLink,forRowId='') {
     if(!selected||item.Type!=='Series'||!validGuid(String(item.Id||'')))return;
     previousFocus=document.activeElement;
+    pendingRowId=forRowId;
     editingRangeId=existingLink ? existingLink.Id : '';
     pendingRangeItem={Id:item.Id,Name:item.Name||'TV Show',Type:'Series'};
     byId('fx-range-title').textContent=(existingLink?'Edit':'Add')+' TV Show: '+pendingRangeItem.Name;
-    byId('fx-save-range').textContent=existingLink?'Save TV Show range':'Add to franchise';
+    byId('fx-save-range').textContent=existingLink?'Save TV Show range':forRowId?'Add to row':'Add to franchise';
     byId('fx-range-mode').value=existingLink?(existingLink.RangeMode||'Full'):'Full';
     byId('fx-start-season').value=existingLink&&existingLink.RangeMode!=='Full'?existingLink.StartSeason:'1';
     byId('fx-end-season').value=existingLink&&existingLink.RangeMode!=='Full'?existingLink.EndSeason:'1';
@@ -1196,7 +1276,7 @@
     byId('fx-range-mode').focus();
   }
   function closeRangeEditor() {
-    pendingRangeItem=null;editingRangeId='';
+    pendingRangeItem=null;editingRangeId='';pendingRowId='';
     byId('fx-tv-range').classList.add('fx-hidden');
     if(previousFocus && previousFocus.isConnected && previousFocus.focus) previousFocus.focus();
     previousFocus=null;
@@ -1225,8 +1305,23 @@
       StartSeason:byId('fx-start-season').value,EndSeason:byId('fx-end-season').value,
       StartEpisode:byId('fx-start-episode').value,EndEpisode:byId('fx-end-episode').value});}
     catch(err){rangeError(err.message);return;}
-    const existing=model.MediaLinks.filter(l=>l.NodeId===selected);
     const candidate={JellyfinItemId:item.Id,...range};
+    if(pendingRowId){
+      const row=model.Rows.find(r=>r.Id===pendingRowId&&r.ParentNodeId===selected);
+      if(!row){rangeError('The row is unavailable. Close and reopen the dialog.');return;}
+      const duplicate=row.Items.some(x=>x.Id!==editingRangeId&&linkIdentity(x)===linkIdentity(candidate));
+      if(duplicate){rangeError('This TV Show range is already present in this row.');return;}
+      if(editingRangeId){
+        const existingItem=row.Items.find(x=>x.Id===editingRangeId);
+        if(!existingItem){rangeError('The original row entry could not be found.');return;}
+        Object.assign(existingItem,range);
+      }else{
+        try{addRowItem(row,item,range);}catch(err){rangeError(err.message);return;}
+      }
+      const name=row.Name;closeRangeEditor();setDirty(true);renderRows();
+      setStatus('Saved '+item.Name+' ('+linkRangeLabel(candidate)+') in row "'+name+'". Save plugin configuration.');return;
+    }
+    const existing=model.MediaLinks.filter(l=>l.NodeId===selected);
     if(existing.some(l=>l.Id!==editingRangeId&&linkIdentity(l)===linkIdentity(candidate))) {
       rangeError('This TV Show with the same range is already linked to this group.');return;
     }
