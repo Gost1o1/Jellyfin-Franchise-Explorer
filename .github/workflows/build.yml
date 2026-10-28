@@ -37,7 +37,6 @@ jobs:
           node scripts/test_timeline_engine.js
           python3 scripts/test_timeline_contract.py
           python3 scripts/test_local_web_handoff_contract.py
-          python3 scripts/test_v085_card_progress.py
       - name: Restore and build Jellyfin 12.2 plugin
         working-directory: Jellyfin-Franchise-Explorer
         run: |
@@ -67,3 +66,4 @@ jobs:
           python3 scripts/test_my_media_tile_browser.py
           python3 scripts/test_my_media_tile_resize.py
           python3 scripts/test_v085_native_card.py
+          python3 scripts/test_v085_card_progress.py
