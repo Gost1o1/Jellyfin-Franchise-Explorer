@@ -1,5 +1,5 @@
 /*
- * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.6.0).
+ * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.7.0).
  * Adds ONE visual link in the existing "My Media" row. It does not create a
  * Jellyfin library, alter user preferences, or modify the server's media.
  * Requires a compatible JavaScript injector to run in jellyfin-web.
@@ -573,6 +573,51 @@
     finally{completionBusy=false;}
   },true);
 
+  // Jellyfin Web may remove its <video> before the browser dispatches ended,
+  // or navigate back to the movie details page as playback finishes. Observe
+  // the final playing frames *before* teardown as a last-resort completion
+  // signal. This does NOT fire on ordinary stop, pause, Back, or a seek alone:
+  // it needs uninterrupted forward playback in the final few seconds and an
+  // exact verified user/session/item match before committing completion.
+  const nearEndSamples=new WeakMap();
+  document.addEventListener('seeking',event=>{
+    if(event.target instanceof HTMLVideoElement)nearEndSamples.delete(event.target);
+  },true);
+  document.addEventListener('timeupdate',event=>{
+    const video=event.target;
+    if(!(video instanceof HTMLVideoElement)||video.paused||video.seeking||video.ended||completionBusy)return;
+    if(!Number.isFinite(video.duration)||video.duration<60||!Number.isFinite(video.currentTime))return;
+    const remaining=video.duration-video.currentTime;
+    if(remaining>4||remaining < -1){nearEndSamples.delete(video);return;}
+    const auth=localCredentials();if(!auth?.UserId)return;
+    const ownerKey='fe-local-follow-v1:'+String(auth.UserId).toLowerCase();
+    let owner;try{owner=JSON.parse(localStorage.getItem(ownerKey)||'null');}catch(_){return;}
+    if(!owner?.rowId||!owner.sessionId||Date.now()-owner.created>86400000)return;
+    let sample=nearEndSamples.get(video);
+    if(!sample){sample={last:video.currentTime,advanced:0,ownerId:owner.lastItemId};nearEndSamples.set(video,sample);return;}
+    if(!itemMatch(sample.ownerId,owner.lastItemId)){nearEndSamples.delete(video);return;}
+    const movement=video.currentTime-sample.last;
+    sample.last=video.currentTime;
+    if(movement>0&&movement<1.5)sample.advanced+=movement;
+    if(remaining>0.30||sample.advanced<0.6)return;
+    completionBusy=true;
+    (async()=>{
+      try{
+        const sessions=await api('/Sessions?ControllableByUserId='+encodeURIComponent(auth.UserId),auth);
+        const session=(sessions||[]).find(s=>s.Id===owner.sessionId);
+        // Do not complete an unrelated video, even if it happens to finish.
+        if(!session || !itemMatch(session.NowPlayingItem?.Id,owner.lastItemId))return;
+        if(video!==verifiedVideo && verifiedVideo?.isConnected && !verifiedVideo.ended)return;
+        const state=await api('/FranchiseExplorer/TimelineState/'+encodeURIComponent(owner.rowId)+'/Complete',auth,{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({sessionId:owner.sessionId,itemId:owner.lastItemId})});
+        console.info('Franchise Explorer: verified final playback frames; requested next timeline item',owner.rowId);
+        if(state?.pendingAutoAdvanceUtc)void followLocalTimeline();
+      }catch(error){console.debug('Franchise Explorer: final-frame completion fallback unavailable',error);}
+      finally{completionBusy=false;nearEndSamples.delete(video);}
+    })();
+  },true);
+
   function isVisible(el){return !!(el&&el.getClientRects().length&&getComputedStyle(el).visibility!=='hidden');}
   function startIfReady(){
     scheduled=false;
@@ -622,6 +667,8 @@
       const state=(states||[]).find(x=>x.rowId===owner.rowId && x.playbackMode==='playing'
         && x.sessionId===owner.sessionId && x.queueKeys?.length);
       if(!state?.pendingAutoAdvanceUtc)return;
+      console.info('Franchise Explorer: completed timeline entry detected; starting next media',
+        {rowId:owner.rowId,index:state.index,sessionId:owner.sessionId});
       const index=state.index;
       if(index<1 || index>=state.queueKeys.length)return;
       // Only respond to a fresh, explicit completion of the previous item.
@@ -645,11 +692,25 @@
           pendingAutoAdvanceUtc:null,pendingAutoAdvanceFromKey:'',pendingAutoAdvanceToKey:''},
         replayOnly:false,subtitleEnabled:!!owner.subtitleEnabled};
       localStorage.setItem(handoffPrefix+String(auth.UserId).toLowerCase(),JSON.stringify(intent));
-      location.hash='#/details?id='+encodeURIComponent(next)+'&feAutoPlay=1&feLocalTimeline=1&feSubs='+(owner.subtitleEnabled?'1':'0');
+      // Jellyfin may still be navigating back to the previous title's details
+      // after the video closes. A simple hash mutation loses that race.
+      // Reload the official Jellyfin Web route so the native Play handoff
+      // starts on a fresh details view; the short-lived intent survives reload.
+      const nextRoute='#/details?id='+encodeURIComponent(next)+
+        '&feAutoPlay=1&feLocalTimeline=1&feSubs='+(owner.subtitleEnabled?'1':'0');
+      if(location.protocol==='http:' || location.protocol==='https:'){
+        const webRoot=((location.pathname||'').match(/^(.*?)\/web(?:\/|$)/i)||[])[1]||'';
+        location.assign(webRoot+'/web/index.html'+nextRoute);
+      }else{
+        location.hash=nextRoute; // offline browser mocks
+      }
     }catch(e){console.warn('Franchise Explorer: automatic local transition unavailable:',e);showLocalNotice('Franchise Explorer could not start the next timeline item automatically. Resume the timeline from Franchises. Details: '+(e.message||e),13000);}
     finally{localFollowBusy=false;}
   }
-  setInterval(()=>void followLocalTimeline(),4000);
+  setInterval(()=>void followLocalTimeline(),2000);
+  addEventListener('pageshow',()=>void followLocalTimeline());
+  addEventListener('focus',()=>void followLocalTimeline());
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)void followLocalTimeline();});
   // Manual Play fallback: a user may start the media from the details page
   // if this Jellyfin Web build doesn't expose a compatible Play button.
   setInterval(()=>{const auth=localCredentials();const intent=localIntent(auth);
