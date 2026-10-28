@@ -16,9 +16,11 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-      - name: Validate repository and embedded JavaScript
+      - name: Validate repository and web scripts
+        working-directory: Jellyfin-Franchise-Explorer
         run: |
           python3 scripts/check_repo.py
+          python3 scripts/check_repository_completeness.py
           python3 scripts/smoke_tests.py
           node scripts/ui_contract_tests.js
           python3 scripts/test_artwork_contract.py
@@ -27,6 +29,7 @@ jobs:
           node scripts/test_tv_dialog_contract.js
           python3 scripts/test_responsive_layout.py
           node --check src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-my-media.js
+          node --check src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-timeline.js
           python3 scripts/test_my_media_tile_static.py
           python3 scripts/test_rows_contract.py
           python3 scripts/test_full_library_row_contract.py
@@ -34,17 +37,33 @@ jobs:
           node scripts/test_timeline_engine.js
           python3 scripts/test_timeline_contract.py
           python3 scripts/test_local_web_handoff_contract.py
-      - name: Restore dependencies
-        run: dotnet restore src/Jellyfin.Plugin.FranchiseExplorer/Jellyfin.Plugin.FranchiseExplorer.csproj
-      - name: Build Jellyfin 12.2 plugin
-        run: dotnet build src/Jellyfin.Plugin.FranchiseExplorer/Jellyfin.Plugin.FranchiseExplorer.csproj --no-restore -c Release
-      - name: Prepare test-only DLL artifact
+          python3 scripts/test_v085_card_progress.py
+      - name: Restore and build Jellyfin 12.2 plugin
+        working-directory: Jellyfin-Franchise-Explorer
         run: |
-          mkdir -p artifact
-          cp src/Jellyfin.Plugin.FranchiseExplorer/bin/Release/net10.0/Jellyfin.Plugin.FranchiseExplorer.dll artifact/
-      - name: Upload build artifact (NOT a release)
+          dotnet restore src/Jellyfin.Plugin.FranchiseExplorer/Jellyfin.Plugin.FranchiseExplorer.csproj
+          dotnet build src/Jellyfin.Plugin.FranchiseExplorer/Jellyfin.Plugin.FranchiseExplorer.csproj --no-restore -c Release
+      - name: Upload build artifact (not a release)
         uses: actions/upload-artifact@v4
         with:
           name: franchise-explorer-unverified-dll
-          path: artifact/*
+          path: Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/bin/Release/net10.0/Jellyfin.Plugin.FranchiseExplorer.dll
+          if-no-files-found: error
           retention-days: 14
+  ui-browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install browser test dependencies
+        run: |
+          python -m pip install playwright
+          python -m playwright install --with-deps chromium
+      - name: Run native tile geometry tests
+        working-directory: Jellyfin-Franchise-Explorer
+        run: |
+          python3 scripts/test_my_media_tile_browser.py
+          python3 scripts/test_my_media_tile_resize.py
+          python3 scripts/test_v085_native_card.py
