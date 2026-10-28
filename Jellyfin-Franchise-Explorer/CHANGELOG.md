@@ -1,3 +1,11 @@
+## v0.8.7.0 — Experimental playback completion handoff and banner cleanup
+
+- Remove the two large on-screen caution banners from browsing and configuration pages; the README and license caution remains.
+- Preserve the fixed My Media tile geometry.
+- Treat guarded near-end playback evidence as a fallback when Jellyfin reports completion=false, without completing ordinary early stops.
+- Add final-frame browser detection and force a fresh Jellyfin Web page navigation for the next chronological item to avoid a route race after playback ends.
+- Add a simulated end-frame regression test. Live Jellyfin 12.2 validation is still required.
+
 ## 0.8.5.0 (experimental)
 - Native Jellyfin library-card markup and CSS shape for the Franchises tile, including mobile.
 - Timeline-specific progress bars underneath titles, partial in-progress fill, and Watched overlays after all selected timeline episodes complete.
