@@ -21,6 +21,13 @@
   <a href="https://github.com/Gost1o1/Jellyfin-Franchise-Explorer/actions/workflows/build.yml"><img alt="Development builds" src="https://img.shields.io/badge/Preview-Test%20Builds-325A82?logo=githubactions&logoColor=white" /></a>
 </p>
 
+## Preview
+
+Explore your favorite franchises, browse phases and collections,
+and follow custom chronological watch orders.
+
+![Jellyfin Franchise Explorer showing the Marvel Cinematic Universe](Jellyfin-Franchise-Explorer/docs/franchise-explorer-preview.png)
+
 > [!IMPORTANT]
 > **Experimental project for Jellyfin 12.2.** Franchise Explorer is unfinished and is being tested on a personal Jellyfin server. Features and client compatibility can change. **Back up Jellyfin and your plugin data before installing or updating.** Chronological playback and automatic next-item playback are still experimental; do not assume they work in every client.
 
