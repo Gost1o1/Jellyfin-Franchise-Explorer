@@ -1,0 +1,170 @@
+## v0.8.9.0 — Explicit timeline activation and completion diagnostics (experimental)
+
+- Before opening a local Jellyfin Web movie, persist a short-lived **armed**
+  timeline row. Jellyfin server PlaybackStart/Progress binds its actual session
+  to that row when the expected item begins, independent of brittle browser
+  device-ID discovery. A stop alone cannot activate an armed row.
+- Add an authenticated, atomic `/TimelineState/{rowId}/Activate` confirmation
+  endpoint for the browser. It cannot overwrite an already-completed item or
+  replace an advanced server cursor with an older browser snapshot.
+- Log clear server outcomes for completed playback: successful persisted rows
+  or counts of valid, active, session-matching and item-matching rows. Logs do
+  not contain media paths or authentication tokens.
+- Normalize UserId GUID formatting in browser session verification, and stop
+  the optional home widget from marking skipped items completed or writing
+  stale state. Show fractional progress for long timelines (1/422 ~= 0.24%).
+- Preserve the exact My Media tile layout/geometry, existing configurations,
+  virtual hierarchies, user progress, media files and native collections.
+- Add tests for arm/replay/failure safety, activation contracts and mocked Web
+  follow-up. Real .NET compilation and Jellyfin 12.2 playback validation are
+  still required; **automatic next-title playback is not yet confirmed fixed**.
+
+## v0.8.8.0 — Local timeline completion persistence and quieter playback chooser
+
+- Hide the remote-control capability warning when local playback is selected.
+- Preserve verified movie/episode completion across Jellyfin returning to its details page, then retry the authenticated completion update when needed.
+- Restore an interrupted next-item route if Jellyfin navigates back to the previous title; do not interrupt an actively playing video.
+- Accept a single same-title Jellyfin session when the current local video demonstrably advances, even when the browser's cached device ID does not match the reported session ID.
+- Wait for next-title details to settle before clicking Jellyfin's Play button, avoiding a stale button from the preceding movie.
+- Preserve the exact My Media tile implementation from v0.8.7.0.
+
+**Still experimental:** These changes are based on offline browser simulations. Automatic continuation across Jellyfin Web clients is not verified on a live server.
+
+## v0.8.7.0 — Experimental playback completion handoff and banner cleanup
+
+- Remove the two large on-screen caution banners from browsing and configuration pages; the README and license caution remains.
+- Preserve the fixed My Media tile geometry.
+- Treat guarded near-end playback evidence as a fallback when Jellyfin reports completion=false, without completing ordinary early stops.
+- Add final-frame browser detection and force a fresh Jellyfin Web page navigation for the next chronological item to avoid a route race after playback ends.
+- Add a simulated end-frame regression test. Live Jellyfin 12.2 validation is still required.
+
+## 0.8.5.0 (experimental)
+- Native Jellyfin library-card markup and CSS shape for the Franchises tile, including mobile.
+- Timeline-specific progress bars underneath titles, partial in-progress fill, and Watched overlays after all selected timeline episodes complete.
+- Completion-event capture fallback for local Jellyfin Web playback, retaining session and item checks.
+- Browser-observed session progress fallback; no automatic completion from position alone.
+- Preserve all existing groups, artwork, and row definitions.
+
+## 0.8.4.0 — Completed-item handoff and My Media sizing (experimental)
+
+- Add an explicit completion marker to the *per-user timeline* state on Jellyfin PlaybackStopped/played-to-completion. Auto-next no longer requires an ended item to remain in Jellyfin Now Playing.
+- Add an authenticated and idempotent local HTML5 video-ended confirmation endpoint, scoped to the currently active timeline and session. It does not run on arbitrary player stops.
+- The optional Jellyfin Web bridge follows fresh, exact completion markers, rejects unrelated playback, and opens the next real episode or movie through Jellyfin's native player. Native players without browser video events still depend on server stop reporting.
+- Match the actual native My Media card *image height* and observe the native card on resize in addition to matching its width. Browser themes may still need separate live checks.
+- Preserve existing franchise groups, image overrides, rows and timeline state; no media or collections are moved.
+
+**Experimental warning:** This change has not been compiled with .NET or validated on a live Jellyfin 12.2 player. Auto-next must be tested with one short movie-to-episode sequence before trusting long timelines. The Web integration requires JavaScript Injector; native clients may not support it.
+
+## 0.8.3.0 — Mobile and playback verification hotfix (experimental)
+
+- Remove the `45vw` My Media tile width cap. Match the measured native Jellyfin library card without inventing a fallback width.
+- Verify that local playback belongs to the current browser/device and actually advances. Ignore matching sessions on other devices, and display a visible warning when no local playback can be verified. Do not mark timeline history as started on an unverified session.
+- On mobile, keep long chronological entry names readable on a full line, with action controls beneath rather than squeezing words into a narrow column.
+- Shorten the mobile browser's experimental caution banner and update the stale administrator description.
+- Keep the original custom license, all virtual groups, artwork, and media references unchanged.
+
+**Caution:** This cannot guarantee every embedded Android/native video player exposes enough progress information to verify playback. Native and long-queue autoplay must still be tested in Jellyfin 12.2; `PlayNow` acknowledgement alone is not proof of visible playback.
+
+## 0.8.2.0 — Experimental same-browser playback handoff
+
+- Add **This browser (local playback)** as the default chronological playback destination. This avoids Jellyfin's unreliable remote `PlayNow` commands directed at the same Web browser.
+- Use the optional installed JavaScript Injector bridge to open Jellyfin Web's own player and validate the actual first movie/episode before activating per-user timeline history.
+- Preserve the existing remote device mode for clients that do support remote queueing.
+- Add a guarded local follow-up mechanism for advancing to the next title after a completed episode or movie. It is not yet verified against every Jellyfin Web player/version.
+- **Replay only** does not intentionally affect the chronological cursor; a failed local start does not create false timeline progress.
+- Added offline browser regression tests for positive/negative playback verification.
+- **Caution:** The integrated browser bridge uses Jellyfin Web DOM controls and requires the optional JavaScript Injector. Browser history, native player behavior, and cross-device queue management require live verification. Test with three short items first.
+
+## 0.8.1.0 — Playback handoff, subtitle preference, stable media order
+
+- Clicking a movie or TV-show card requests playback through Jellyfin Web's native player via the optional JavaScript Injector, rather than simply showing its details. TV-show cards resolve the first episode within the saved episode/season selection.
+- New separate information (ⓘ) button opens the original Jellyfin details page.
+- Deterministic card rendering: results fetched asynchronously are appended in saved row order, not network-completion order. Returning from details restores the browsing group and scroll position.
+- A per-browser, per-Jellyfin-user subtitle option defaults to **off** for Franchise Explorer-launched playback. Jellyfin's native player may override it; web text-track suppression is best-effort, not a guaranteed override of every subtitle format.
+- Fix false timeline playback success: wait for the selected device to report the requested media playing before changing timeline progress.
+- Move custom-row bulk-selection checkboxes left and rename to **Add Selected (X)**.
+
+## 0.8.0.1 — Playback verification and UI hotfix
+
+- Fix false playback success: confirm that the selected Jellyfin session reports the requested movie or episode as Now Playing before saving timeline progress or appending queue chunks.
+- Reject sessions that explicitly report remote-control support as disabled, with actionable feedback instead of a silent no-op.
+- Preserve timeline state on unsuccessful playback attempts. Treat HTTP 204 as command acknowledgement, not proof of playback.
+- Use smaller initial batches to avoid building large queues on nonresponsive clients.
+- Align row library search checkboxes to the left and simplify the bulk action to Add Selected (X).
+- No change to season/episode filename parsing: resolution uses numeric Jellyfin episode metadata.
+
+## 0.8.0.0 — Chronological Playback Preview (EXPERIMENTAL)
+
+- Resolve exact Jellyfin movie and TV episode IDs for each chronological row, including whole seasons and cross-season episode ranges; warn about inaccessible content and missing episode boundaries.
+- Build a remote Jellyfin Play Now queue in saved chronological order, with chunked Play Last append commands for longer timelines where supported.
+- Add per-user timeline progress saved to plugin-owned JSON files, separate from Jellyfin's original watched flags and playlist state.
+- Follow Jellyfin playback start, progress and stop events for the selected session; keep unrelated viewing and independent replays from rewinding the timeline.
+- Add Play From Beginning, Resume, Replay Only, and Restart Timeline Here with confirmation, plus episode-by-episode progress and queue preview.
+- Optional Continue Your Franchises home section (JavaScript Injector); progress bars for timeline rows and associated media cards; adaptive TV/desktop/tablet/phone layout.
+- Preserve all existing 0.7.x franchise groups, art, custom rows, and media links. Same plugin GUID.
+- **UNFINISHED.** Mock tests pass; real Jellyfin 12.2 compile and device playback validation pending.
+
+## v0.7.4.1 — Full-library row search focus hotfix (experimental)
+
+- Fix loss of keyboard focus while typing in Collections / Movies / TV Shows and Timeline / Mixed row search fields.
+- Search now updates results and status below the existing input instead of rebuilding the row editor after each character or async response.
+- Preserve caret position, selection, input text, and scroll position while searches complete.
+- Keep existing full-library selection, TV show range, saved rows, group artwork and media references unchanged.
+- No change to original Jellyfin media files or native collections.
+
+## v0.7.4.0 — Full-library row selection (experimental)
+
+- Restrict Subgroups rows to direct child groups, as before.
+- Let media/mixed/timeline rows find any existing Jellyfin collection, movie or TV show without pre-linking to the franchise.
+- Per-row full-title selection, bulk adding and TV show range picker (whole show, season-to-season, season/episode-to-season/episode).
+- Independent direct row references with responsive cards; existing row memberships, artwork and configuration survive.
+- One combined presentation order across legacy franchise media links and newly selected row entries.
+- Browse each row's directly selected media using the viewer's own Jellyfin access.
+- Does not modify native collections or files; no continuous timeline playback yet.
+
+## 0.7.2.0 — My Media positioning and artwork association preferences
+
+- Place the Franchises card immediately after the Collections card, maintaining original library ordering.
+- Add a non-destructive artwork priority selector for associated collections. Newly linked collections preserve previously inherited artwork by default; old groups retain prior display behavior.
+- Add **+ Same-level group** to the admin editor and update sidebar names as you type.
+- Existing artwork overrides, virtual references, GUIDs and configuration backups remain compatible.
+- Experimental; GitHub build and live Jellyfin 12.2 runtime tests still required.
+
+# Changelog
+
+## 0.7.3.0 — Editable horizontal browse rows
+
+- Add XML-compatible `FranchiseRow` models stored as presentation-only references. `Nodes` and `MediaLinks` remain unchanged.
+- Allow **custom rows with user-defined names** to be created, renamed, deleted, assigned content, dragged and reordered (with touch-friendly move-button alternatives).
+- Assign existing direct-child groups or movies/TV show links from a franchise's descendants; cards have independent order in each row.
+- Browse rows as responsive horizontal carousels with snapping and scroll arrows; keep unassigned groups and media visible.
+- In the absence of saved rows, show suggested Phases, Collections, Eras, Sagas, other group and media sections automatically.
+- Add optional **Create suggested rows** migration assistant; Chronological Viewing Order starts empty until intentionally curated.
+- Continue preserving custom artwork, original Jellyfin collections, media files, per-user access, and the optional My Media tile integration.
+- Experimental: no continuous timeline playback, no universal native TV-client integration, and live Jellyfin runtime tests required.
+
+
+## 0.7.1.0 — Experimental optional My Media tile
+
+- Add an **opt-in web-only Franchises card** to the existing My Media row using the independent JavaScript Injector companion (when installed). This card links to `/FranchiseExplorer/Browse` and does not create a physical/virtual Jellyfin media library.
+- New bounded startup registration through the companion's published `PluginInterface.RegisterScript(JObject)` reflection contract. No runtime dependency is shipped and the server continues loading if Injector is absent or its API changes.
+- The JavaScript is isolated and idempotent, supports a Jellyfin base URL, watches for Home rerenders, and follows native My Media sizing when possible.
+- Maintain existing Franchise Explorer data model, artwork, media references and browsing interface; no changes to native Collections.
+- Include optional manual fallback script and setup/rollback guide. Test via simulated DOM only; the actual Jellyfin 12.2 Home UI remains unverified.
+
+
+## 0.7.0.0 — Experimental read-only Franchises browser
+
+- New `/FranchiseExplorer/Browse` standalone responsive page for Jellyfin Web desktop, laptop, tablet, phone and TV web browsers.
+- Uses existing saved groups, nested structure, linked media IDs, sort positions, overview text and artwork; no data migration.
+- Resolves inherited artwork from collection → parent → linked item, with existing image overrides taking precedence.
+- Browse nested franchise/era/phase cards, choose grid/list display, search current group, navigate with breadcrumbs and keyboard.
+- Linked items resolve through the viewing user's Jellyfin API permissions; TV show ranges display metadata only.
+- Adds a read-only authenticated `/FranchiseExplorer/Catalog` endpoint and grants authenticated users read access to uploaded group previews (uploads remain admin-only).
+- Adds **Open Franchises browser** to the administrator page.
+- Documents supported Jellyfin Web `menuLinks` integration; native "My Media" tiles and non-web-client categories are not provided.
+- Preserves original Jellyfin files, collections, plugin GUID, virtual group config and personal/noncommercial license.
+
+**Warning:** Untested on a running Jellyfin 12.2 server; back up configurations before installing. Runtime validation remains required.
+
+See Git history for earlier releases.
