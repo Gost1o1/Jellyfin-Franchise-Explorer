@@ -1,3 +1,13 @@
+## 0.8.4.0 — Completed-item handoff and My Media sizing (experimental)
+
+- Add an explicit completion marker to the *per-user timeline* state on Jellyfin PlaybackStopped/played-to-completion. Auto-next no longer requires an ended item to remain in Jellyfin Now Playing.
+- Add an authenticated and idempotent local HTML5 video-ended confirmation endpoint, scoped to the currently active timeline and session. It does not run on arbitrary player stops.
+- The optional Jellyfin Web bridge follows fresh, exact completion markers, rejects unrelated playback, and opens the next real episode or movie through Jellyfin's native player. Native players without browser video events still depend on server stop reporting.
+- Match the actual native My Media card *image height* and observe the native card on resize in addition to matching its width. Browser themes may still need separate live checks.
+- Preserve existing franchise groups, image overrides, rows and timeline state; no media or collections are moved.
+
+**Experimental warning:** This change has not been compiled with .NET or validated on a live Jellyfin 12.2 player. Auto-next must be tested with one short movie-to-episode sequence before trusting long timelines. The Web integration requires JavaScript Injector; native clients may not support it.
+
 ## 0.8.3.0 — Mobile and playback verification hotfix (experimental)
 
 - Remove the `45vw` My Media tile width cap. Match the measured native Jellyfin library card without inventing a fallback width.

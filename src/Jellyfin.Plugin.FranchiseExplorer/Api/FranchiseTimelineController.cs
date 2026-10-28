@@ -40,6 +40,11 @@ public sealed class FranchiseTimelineController : ControllerBase
         public List<string> QueueSourceItemIds { get; set; } = new();
         public List<int> QueueSeasons { get; set; } = new();
         public List<int> QueueEpisodes { get; set; } = new();
+        // Set only after the current item actually completes. The web bridge
+        // uses this marker rather than relying on a now-cleared NowPlayingItem.
+        public string PendingAutoAdvanceFromKey { get; set; } = string.Empty;
+        public string PendingAutoAdvanceToKey { get; set; } = string.Empty;
+        public DateTimeOffset? PendingAutoAdvanceUtc { get; set; }
         public DateTimeOffset UpdatedUtc { get; set; } = DateTimeOffset.UtcNow;
     }
 
@@ -146,6 +151,80 @@ public sealed class FranchiseTimelineController : ControllerBase
         Response.Headers["Cache-Control"] = "no-store";
         return Ok(record);
     }
+    public sealed class TimelineCompletionRequest
+    {
+        public string SessionId { get; set; } = string.Empty;
+        public string ItemId { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Confirm the HTML5 video 'ended' event from a verified local web player.
+    /// This is idempotent with Jellyfin's own PlaybackStopped event and cannot
+    /// advance another user's timeline or an unrelated playback session.
+    /// </summary>
+    [HttpPost("{rowId:guid}/Complete")]
+    [RequestSizeLimit(4096)]
+    public async Task<IActionResult> ConfirmLocalCompletion(Guid rowId, [FromBody] TimelineCompletionRequest request, CancellationToken cancellationToken)
+    {
+        if (!TryIdentity(out var user)) return Unauthorized();
+        if (!ValidRow(rowId)) return NotFound();
+        if (request is null || !Guid.TryParse(request.ItemId, out var itemId)
+            || string.IsNullOrWhiteSpace(request.SessionId) || request.SessionId.Length > 256) return BadRequest();
+        var path = PathFor(user, rowId);
+        if (path is null || !System.IO.File.Exists(path)) return NotFound();
+        await WriteLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            TimelineProgress? state;
+            try { state = JsonSerializer.Deserialize<TimelineProgress>(await System.IO.File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false), JsonOptions); }
+            catch (IOException) { return StatusCode(503); }
+            catch (JsonException) { return StatusCode(503); }
+            if (state is null || state.PlaybackMode != "playing" || state.SessionId != request.SessionId) return Conflict("Timeline session not active.");
+            bool SameItem(string key) => key.EndsWith(":" + itemId.ToString("D"), StringComparison.OrdinalIgnoreCase)
+                || key.EndsWith(":" + itemId.ToString("N"), StringComparison.OrdinalIgnoreCase);
+            if (state.Index > 0 && state.QueueKeys.Count > state.Index - 1
+                && SameItem(state.QueueKeys[state.Index - 1]) && state.PendingAutoAdvanceUtc.HasValue)
+                return Ok(state); // Server PlaybackStopped already advanced it.
+            if (state.Index < 0 || state.Index >= state.QueueKeys.Count || !SameItem(state.QueueKeys[state.Index]))
+                return Conflict("The ended video is not the current timeline item.");
+            var from = state.QueueKeys[state.Index];
+            if (!state.CompletedKeys.Contains(from)) state.CompletedKeys.Add(from);
+            state.Index++;
+            state.PositionTicks = 0;
+            if (state.Index >= state.QueueKeys.Count)
+            {
+                state.PlaybackMode = "complete";
+                state.PendingAutoAdvanceUtc = null;
+                state.PendingAutoAdvanceFromKey = string.Empty;
+                state.PendingAutoAdvanceToKey = string.Empty;
+            }
+            else
+            {
+                var next = state.QueueKeys[state.Index];
+                var separator = next.LastIndexOf(':');
+                state.ItemId = separator >= 0 ? next[(separator + 1)..] : string.Empty;
+                state.PendingAutoAdvanceFromKey = from;
+                state.PendingAutoAdvanceToKey = next;
+                state.PendingAutoAdvanceUtc = DateTimeOffset.UtcNow;
+            }
+            state.UpdatedUtc = DateTimeOffset.UtcNow;
+            await WriteProgressAsync(path, state, cancellationToken).ConfigureAwait(false);
+            return Ok(state);
+        }
+        finally { WriteLock.Release(); }
+    }
+
+    private static async Task WriteProgressAsync(string path, TimelineProgress state, CancellationToken cancellationToken)
+    {
+        var temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            await System.IO.File.WriteAllTextAsync(temp, JsonSerializer.Serialize(state, JsonOptions), cancellationToken).ConfigureAwait(false);
+            System.IO.File.Move(temp, path, overwrite: true);
+        }
+        finally { if (System.IO.File.Exists(temp)) System.IO.File.Delete(temp); }
+    }
+
     /// <summary>
     /// Called by the Jellyfin server playback listener. Track only a previously
     /// started, explicitly selected timeline and its exact session and item.
@@ -197,12 +276,21 @@ public sealed class FranchiseTimelineController : ControllerBase
                     if (!progress.CompletedKeys.Contains(key)) progress.CompletedKeys.Add(key);
                     progress.PositionTicks = 0;
                     progress.Index = index + 1;
-                    if (progress.Index >= progress.QueueKeys.Count) progress.PlaybackMode = "complete";
+                    if (progress.Index >= progress.QueueKeys.Count)
+                    {
+                        progress.PlaybackMode = "complete";
+                        progress.PendingAutoAdvanceUtc = null;
+                        progress.PendingAutoAdvanceFromKey = string.Empty;
+                        progress.PendingAutoAdvanceToKey = string.Empty;
+                    }
                     else
                     {
                         var next = progress.QueueKeys[progress.Index];
                         var separator = next.LastIndexOf(':');
                         progress.ItemId = separator >= 0 ? next[(separator + 1)..] : string.Empty;
+                        progress.PendingAutoAdvanceFromKey = key;
+                        progress.PendingAutoAdvanceToKey = next;
+                        progress.PendingAutoAdvanceUtc = DateTimeOffset.UtcNow;
                     }
                     changed = true;
                 }
@@ -212,6 +300,10 @@ public sealed class FranchiseTimelineController : ControllerBase
                     // every native playback-progress event.
                     progress.PositionTicks = positionTicks.Value;
                     progress.ItemId = itemId.ToString("D");
+                    // Next playback has actually begun: consume the marker.
+                    progress.PendingAutoAdvanceUtc = null;
+                    progress.PendingAutoAdvanceFromKey = string.Empty;
+                    progress.PendingAutoAdvanceToKey = string.Empty;
                     changed = true;
                 }
                 if (!changed) continue;

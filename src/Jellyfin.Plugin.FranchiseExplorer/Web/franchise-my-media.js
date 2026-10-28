@@ -1,5 +1,5 @@
 /*
- * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.7.2).
+ * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.4.0).
  * Adds ONE visual link in the existing "My Media" row. It does not create a
  * Jellyfin library, alter user preferences, or modify the server's media.
  * Requires a compatible JavaScript injector to run in jellyfin-web.
@@ -15,6 +15,8 @@
   const TILE_ID = 'franchise-explorer-my-media-tile';
   const STYLE_ID = 'franchise-explorer-my-media-style';
   let queued = false;
+  let observedCard = null;
+  let observedResize = null;
 
   function browseUrl() {
     // Keep Jellyfin base-path prefixes (e.g. /jellyfin/web/index.html).
@@ -126,6 +128,18 @@
         tile.style.setProperty('flex-basis', measured, 'important');
       }
     }
+    // Native Jellyfin skins can override the card image aspect ratio. Use its
+    // measured visual image height so Franchises is not a strangely sized tile.
+    const artwork = reference.querySelector('.cardScalable, .cardImageContainer, .poster') || reference;
+    const dimensions = artwork.getBoundingClientRect();
+    const tileArt = tile.querySelector('.fe-tile-art');
+    if (tileArt && dimensions.height > 55 && dimensions.height < 700) {
+      const height = Math.round(dimensions.height) + 'px';
+      if (tileArt.style.height !== height) {
+        tileArt.style.height = height;
+        tileArt.style.setProperty('aspect-ratio','auto');
+      }
+    }
   }
 
   // Match the visible Collections library card, regardless of user library order.
@@ -202,6 +216,15 @@
       placeTile(container,tile);
     }
     fitTile(tile, ref);
+    if (typeof ResizeObserver === 'function' && observedCard !== ref) {
+      observedResize?.disconnect();
+      observedCard = ref;
+      observedResize = new ResizeObserver(() => {
+        const liveTile = document.getElementById(TILE_ID);
+        if (liveTile && observedCard?.isConnected) fitTile(liveTile, observedCard);
+      });
+      observedResize.observe(ref);
+    }
     tile.href = browseUrl();
   }
 
@@ -367,6 +390,8 @@
   const handoffPrefix='fe-local-timeline-v1:';
   let pendingCheck=false;
   let lastAutoplayItem='';
+  let verifiedVideo = null;
+  let completedVideoListener = null;
   function localCredentials(){
     try{
       const all=JSON.parse(localStorage.getItem('jellyfin_credentials')||'{}').Servers||[];
@@ -466,9 +491,41 @@
       }
       localStorage.removeItem(intent.key);
       lastAutoplayItem=expectedId;
-      if(!intent.replayOnly)localStorage.setItem('fe-local-follow-v1:'+String(auth.UserId).toLowerCase(),JSON.stringify({rowId:intent.rowId,created:Date.now(),subtitleEnabled:intent.subtitleEnabled}));
+      if(!intent.replayOnly){
+        const owner={rowId:intent.rowId,created:Date.now(),subtitleEnabled:intent.subtitleEnabled,
+          sessionId:started.Id,lastItemId:expectedId};
+        localStorage.setItem('fe-local-follow-v1:'+String(auth.UserId).toLowerCase(),JSON.stringify(owner));
+        attachVerifiedEndHandler(auth,owner);
+      }
     }catch(e){console.warn('Franchise Explorer: could not verify local timeline playback:',e);}
     finally{pendingCheck=false;}
+  }
+  // A real HTML5 ended event is stronger evidence than a Jellyfin session
+  // disappearing. It is attached only to a locally verified video element.
+  function attachVerifiedEndHandler(auth,owner){
+    if(verifiedVideo && completedVideoListener)verifiedVideo.removeEventListener('ended',completedVideoListener);
+    verifiedVideo=[...document.querySelectorAll('video')].find(v=>!v.paused && v.getClientRects().length)||null;
+    completedVideoListener=null;
+    if(!verifiedVideo)return; // Native players may rely on server completion events.
+    const video=verifiedVideo;
+    completedVideoListener=async()=>{
+      if(verifiedVideo!==video || !video.ended)return;
+      const key='fe-local-follow-v1:'+String(auth.UserId).toLowerCase();
+      const current=JSON.parse(localStorage.getItem(key)||'null');
+      if(!current || current.rowId!==owner.rowId || current.sessionId!==owner.sessionId ||
+        !itemMatch(current.lastItemId,owner.lastItemId))return;
+      try{
+        // If unrelated playback has taken over the session, never auto-skip it.
+        const sessions=await api('/Sessions?ControllableByUserId='+encodeURIComponent(auth.UserId),auth);
+        const session=(sessions||[]).find(s=>s.Id===owner.sessionId);
+        if(session?.NowPlayingItem?.Id && !itemMatch(session.NowPlayingItem.Id,owner.lastItemId))return;
+        const state=await api('/FranchiseExplorer/TimelineState/'+encodeURIComponent(owner.rowId)+'/Complete',auth,{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({sessionId:owner.sessionId,itemId:owner.lastItemId})});
+        if(state?.pendingAutoAdvanceUtc)await followLocalTimeline();
+      }catch(e){console.debug('Franchise Explorer: ended-video handoff unavailable',e);}
+    };
+    video.addEventListener('ended',completedVideoListener,{once:true});
   }
   function isVisible(el){return !!(el&&el.getClientRects().length&&getComputedStyle(el).visibility!=='hidden');}
   function startIfReady(){
@@ -512,28 +569,35 @@
     const auth=localCredentials();if(!auth?.UserId)return;
     localFollowBusy=true;
     try{
-      const states=await api('/FranchiseExplorer/TimelineState',auth);
-      const rows=(states||[]).filter(x=>x.playbackMode==='playing'&&x.sessionId&&x.queueKeys?.length);
-      if(rows.length!==1)return; // Do not guess which of several timelines to advance.
-      const state=rows[0];
       const localKey='fe-local-follow-v1:'+String(auth.UserId).toLowerCase();
       const owner=JSON.parse(localStorage.getItem(localKey)||'null');
-      if(!owner || owner.rowId!==state.rowId || Date.now()-owner.created>86400000)return;
+      if(!owner?.rowId||!owner.sessionId||Date.now()-owner.created>86400000)return;
+      const states=await api('/FranchiseExplorer/TimelineState',auth);
+      const state=(states||[]).find(x=>x.rowId===owner.rowId && x.playbackMode==='playing'
+        && x.sessionId===owner.sessionId && x.queueKeys?.length);
+      if(!state?.pendingAutoAdvanceUtc)return;
       const index=state.index;
       if(index<1 || index>=state.queueKeys.length)return;
-      const next=state.queueKeys[index].split(':').pop();
-      const prior=state.queueKeys[index-1].split(':').pop();
+      // Only respond to a fresh, explicit completion of the previous item.
+      const when=Date.parse(state.pendingAutoAdvanceUtc);
+      if(!Number.isFinite(when) || Date.now()-when>120000 || when>Date.now()+5000)return;
+      const from=state.queueKeys[index-1];
+      const to=state.queueKeys[index];
+      if(from!==state.pendingAutoAdvanceFromKey || to!==state.pendingAutoAdvanceToKey)return;
+      const prior=from.split(':').pop(),next=to.split(':').pop();
+      if(!itemMatch(prior,owner.lastItemId) || itemMatch(next,prior))return;
       const sessions=await api('/Sessions?ControllableByUserId='+encodeURIComponent(auth.UserId),auth);
-      const session=(sessions||[]).find(s=>s.Id===state.sessionId);
-      if(!session||session.NowPlayingItem?.Id && !itemMatch(session.NowPlayingItem.Id,prior))return;
+      const session=(sessions||[]).find(s=>s.Id===owner.sessionId);
+      // Jellyfin may have REMOVED the previous item from Now Playing after it
+      // ended. This is expected. Refuse only if a different item is active.
+      if(session?.NowPlayingItem?.Id && !itemMatch(session.NowPlayingItem.Id,prior))return;
       const key=state.rowId+':'+index;
-      if(lastFollowKey===key||itemMatch(next,prior))return;
+      if(lastFollowKey===key)return;
       lastFollowKey=key;
-      // The native web player opens the next item using its normal play UI.
-      // We only follow when the previous item is still the reported active item.
       const intent={version:1,created:Date.now(),rowId:state.rowId,expectedId:next,
-        state:{...state,itemId:next,sessionId:'',playbackMode:'paused'},replayOnly:false,
-        subtitleEnabled:!!owner.subtitleEnabled};
+        state:{...state,itemId:next,sessionId:'',playbackMode:'paused',
+          pendingAutoAdvanceUtc:null,pendingAutoAdvanceFromKey:'',pendingAutoAdvanceToKey:''},
+        replayOnly:false,subtitleEnabled:!!owner.subtitleEnabled};
       localStorage.setItem(handoffPrefix+String(auth.UserId).toLowerCase(),JSON.stringify(intent));
       location.hash='#/details?id='+encodeURIComponent(next)+'&feAutoPlay=1&feLocalTimeline=1&feSubs='+(owner.subtitleEnabled?'1':'0');
     }catch(e){console.debug('Franchise Explorer: automatic local transition unavailable:',e);}

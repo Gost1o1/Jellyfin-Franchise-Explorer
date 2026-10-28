@@ -12,6 +12,8 @@ assert 'Jellyfin-UserId' in controller and '[Authorize]' in controller
 assert 'timeline-progress' in controller and 'WriteLock' in controller
 assert 'RecordPlaybackAsync' in controller and 'PlaybackMode != "playing"' in controller
 assert 'PlaybackStart +=' in listener and 'PlaybackProgress +=' in listener and 'PlaybackStopped +=' in listener
+assert 'PendingAutoAdvanceUtc' in controller and 'ConfirmLocalCompletion' in controller
+assert 'pendingAutoAdvanceUtc' in (root/'Web/franchise-my-media.js').read_text()
 assert 'TimelinePlaybackMonitorService' in reg
 assert 'HttpGet("TimelineClient.js")' in api
 assert 'EmbeddedResource Include="Web/franchise-timeline.js"' in (root/'Jellyfin.Plugin.FranchiseExplorer.csproj').read_text()

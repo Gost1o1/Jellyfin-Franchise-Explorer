@@ -25,7 +25,7 @@ If the companion is installed but the automatic plugin registration fails, open 
 
 ## Responsive behavior
 
-The card uses the first real My Media card to establish its width; its visual artwork scales to the tile width. It supports click, tap, keyboard Enter, and Space. The separate Franchises browse page retains its responsive TV/desktop/tablet/phone layout from v0.7. Tested with **simulated** web-client markup at 390, 620, 900, 1440 and 1920 pixels; production Jellyfin markup or a television browser may differ. Native Roku, Apple TV and Android TV apps do not load this web script.
+The card uses the first real My Media card to establish its width; its visual artwork matches the measured height of a native My Media tile and resizes when native card dimensions change. It supports click, tap, keyboard Enter, and Space. The separate Franchises browse page retains its responsive TV/desktop/tablet/phone layout from v0.7. Tested with **simulated** web-client markup at 390, 620, 900, 1440 and 1920 pixels; production Jellyfin markup or a television browser may differ. Native Roku, Apple TV and Android TV apps do not load this web script.
 
 ## Safety and rollback
 
