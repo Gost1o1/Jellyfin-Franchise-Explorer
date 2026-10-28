@@ -5,7 +5,7 @@ on:
       version:
         description: 'Release version; must equal csproj Version'
         required: true
-        default: '0.8.6.0'
+        default: '0.8.8.0'
         type: string
       confirm:
         description: 'Type RELEASE_EXPERIMENTAL to publish'
@@ -38,6 +38,8 @@ jobs:
           python3 scripts/test_my_media_tile_resize.py
           python3 scripts/test_v085_native_card.py
           python3 scripts/test_v085_card_progress.py
+          python3 scripts/test_v087_completion_handoff.py
+          python3 scripts/test_v088_completion_recovery.py
 
   publish:
     needs: ui-browser
