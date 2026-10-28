@@ -119,6 +119,19 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
 .timeline-entry-actions .btn{min-height:42px;font-size:.82rem;padding:8px}
 .timeline-complete{border-color:#267965}
 @media(max-width:650px){.timeline-entry{align-items:stretch;flex-direction:column}.timeline-entry-actions{display:grid;grid-template-columns:1fr 1fr}.timeline-chooser .btn{flex:1}.timeline-dialog{max-height:96dvh}}
+
+/* v0.8.1: distinct info control, deterministic card order and player preferences. */
+.tile-info{position:absolute;top:7px;right:7px;z-index:4;display:grid;place-items:center;
+  width:39px;height:39px;border:1px solid #9fb6c6;border-radius:50%;background:#111923dd;
+  color:#fff;font-size:23px;font-weight:700;line-height:1;box-shadow:0 2px 8px #0008}
+.tile-info:hover,.tile-info:focus-visible{background:#067f92;outline:2px solid #53f1ff}
+.cover .tag{left:8px;right:auto;max-width:calc(100% - 55px)}
+.playback-settings{display:flex;align-items:center;gap:10px 15px;flex-wrap:wrap;
+  padding:10px 14px;border:1px solid #354554;border-radius:10px;margin-bottom:16px;background:#182129}
+.subtitle-option{display:flex;align-items:center;gap:9px;font-weight:650;cursor:pointer;font-size:.91rem}
+.subtitle-option input{height:21px;width:21px;accent-color:#09b1c5}
+.subtitle-note{font-size:.78rem;color:#b3c2cd;line-height:1.45}
+@media(max-width:650px){.tile-info{width:43px;height:43px}}
 </style>
 </head>
 <body>
@@ -130,13 +143,14 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
   <div class="notice" id="preview-notice">Experimental timeline playback preview · Play Now queues are sent to Jellyfin clients that accept remote control. Playback progress is tracked while supported web monitoring is active. Keep a backup and test with a short timeline before relying on it.</div>
   <nav id="breadcrumbs" class="crumbs" aria-label="Breadcrumbs"></nav>
   <div class="hero"><img id="hero-backdrop" class="hero-art hidden" alt=""><div class="hero-inner"><div id="hero-poster-wrap" class="hero-poster hidden"><img id="hero-poster" alt=""></div><div class="hero-info"><div id="hero-type" class="eyebrow">Virtual library</div><h1 id="hero-title">Franchises</h1><p id="hero-description">Browse the franchises and story universes in your Jellyfin collection.</p><div id="hero-count" class="counter"></div></div></div></div>
+  <div class="playback-settings"><label class="subtitle-option"><input id="fe-subtitles" type="checkbox"> Enable subtitles during Franchise Explorer playback</label><span class="subtitle-note">Default off. Jellyfin's own player or client settings may override this preference.</span></div>
   <div class="tools"><div class="tools-left"><h2 id="items-heading">Your franchises</h2><input id="search" class="field search" type="search" placeholder="Search this level..." aria-label="Filter franchises and titles"></div><div class="tools-left"><label for="sort" class="hidden">Sort order</label><select id="sort" class="field" aria-label="Sort items"><option value="custom">Your order</option><option value="alpha">A to Z</option></select><button id="toggle-view" class="btn" type="button" aria-pressed="false">☷ List</button></div></div>
   <p class="status" id="status" role="status" aria-live="polite">Loading franchises...</p>
   <section id="groups-section" class="section hidden"><div class="section-header"><h2>Groups and subgroups</h2><span class="counter" id="groups-count"></span></div><div class="gallery" id="group-grid"></div></section>
   <section id="media-section" class="section hidden"><div class="section-header"><h2>Movies and TV shows</h2><span class="counter" id="media-count"></span></div><div class="gallery" id="media-grid"></div></section>
   <div id="rows-container" class="rows-container"></div>
   <div id="empty" class="empty hidden">No items to display in this group.</div>
-  <div class="footer">Franchise Explorer v0.8.0.0 · Experimental chronological playback. Per-user timeline progress is separate from Jellyfin watched history; native client support varies.</div>
+  <div class="footer">Franchise Explorer v0.8.1.0 · Experimental chronological playback. Per-user timeline progress is separate from Jellyfin watched history; native client support varies.</div>
 </main>
 <script src="TimelineClient.js"></script>
 <script>
@@ -221,7 +235,11 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
     if(mode==='Episodes')return 'S'+l.startSeason+'E'+l.startEpisode+' – S'+l.endSeason+'E'+l.endEpisode;return '';
   }
   function makeTile(title, subtitle, tag, onClick, kind){
-    const button=document.createElement('button');button.className='tile';button.type='button';button.addEventListener('click',onClick);
+    // Separate focusable card and info control: nested buttons are invalid HTML.
+    const button=document.createElement('div');button.className='tile';
+    button.setAttribute('role','button');button.tabIndex=0;
+    button.addEventListener('click',e=>{if(!e.target.closest('.tile-info'))onClick();});
+    button.addEventListener('keydown',e=>{if(e.target===button&&(e.key==='Enter'||e.key===' ')){e.preventDefault();onClick();}});
     button.setAttribute('aria-label',title+(subtitle?' — '+subtitle:''));
     const cover=document.createElement('span');cover.className='cover';const placeholder=fallbackCover(kind);cover.append(placeholder);
     if(tag){const badge=document.createElement('span');badge.className='tag';text(badge,tag);cover.append(badge);}
@@ -249,21 +267,62 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
     }
     return '';
   }
-  function openJellyfinItem(item){
-    // Link to Jellyfin's own details UI. The user remains authenticated there.
+  function openJellyfinItem(item,autoPlay=false){
+    // Use the authenticated Jellyfin Web client, not a raw video URL; it owns
+    // codec negotiation, transcoding, resume, and accessibility settings.
+    // The optional Jellyfin Web integration recognizes feAutoPlay=1 and
+    // activates the native player's Play button. Without it this falls back
+    // gracefully to the real item's detail page.
     const sid=serverId?'&serverId='+encodeURIComponent(serverId):'';
-    location.href=serverPath('/web/#/details?id='+encodeURIComponent(item.Id)+sid);
+    const playable=autoPlay?'&feAutoPlay=1&feSubs='+($('fe-subtitles').checked?'1':'0'):'';
+    location.href=serverPath('/web/#/details?id='+encodeURIComponent(item.Id)+sid+playable);
+  }
+  function playbackPreferenceKey(){return 'fe-subtitles:'+serverId+':'+userId;}
+  function pauseTimelineForIndependentPlayback(){
+    if(!timeline)return Promise.resolve();
+    const active=[...timeline.states.values()].filter(x=>x.playbackMode==='playing');
+    return Promise.all(active.map(x=>timeline.save({...x,playbackMode:'paused',sessionId:''}))).then(()=>{});
+  }
+  async function playMediaItem(item,ref){
+    if(!item)return;
+    try{
+      let target=item;
+      if(item.Type==='Series'){
+        if(!timeline)throw Error('The TV Show episode resolver is unavailable.');
+        const episodes=await timeline.getEpisodes(item.Id);
+        const eligible=episodes.filter(ep=>window.FranchiseTimeline.inRange(ep,ref||{rangeMode:'Full'}));
+        if(!eligible.length)throw Error('No playable episodes found for the selected season/episode range.');
+        target=eligible[0];
+      }
+      if(!['Movie','Episode'].includes(target.Type)){
+        openJellyfinItem(item,false);return;
+      }
+      // A card click is an independent playback request, not a chronological
+      // Play Now operation. The timeline queue must remain at its saved cursor.
+      await pauseTimelineForIndependentPlayback();
+      sessionStorage.setItem('fe-return-group',current||'');
+      sessionStorage.setItem('fe-return-scroll',String(window.scrollY||0));
+      openJellyfinItem(target,true);
+    }catch(err){status('Unable to start playback: '+err.message);}
   }
   async function showMedia(l, grid, ticket, filter='', row=null){
     const item=await getItem(l.itemId);
     if(ticket!==renderSerial||!item||filter&&!String(item.Name||'').toLocaleLowerCase().includes(filter))return false;
     const range=mediaRange(l);
     const type=item.Type==='Series'?'TV Show':(item.Type==='BoxSet'?'Collection':(item.Type==='Movie'?'Movie':item.Type||'Video'));
-    const tile=makeTile(item.Name||'Untitled', [type,item.ProductionYear||'',range].filter(Boolean).join(' · '),range||type,()=>openJellyfinItem(item),type);
-    grid.append(tile.button);shownCards.push(tile.button);
+    const tile=makeTile(item.Name||'Untitled', [type,item.ProductionYear||'',range].filter(Boolean).join(' · '),range||type,()=>void playMediaItem(item,l),type);
+    const info=document.createElement('button');info.className='tile-info';info.type='button';
+    info.textContent='ⓘ';info.title='Information about '+(item.Name||'this title');
+    info.setAttribute('aria-label','Information about '+(item.Name||'this title'));
+    info.addEventListener('click',event=>{event.stopPropagation();
+      sessionStorage.setItem('fe-return-group',current||'');
+      sessionStorage.setItem('fe-return-scroll',String(window.scrollY||0));
+      openJellyfinItem(item,false);
+    });
+    tile.cover.append(info);
     if(timeline)timeline.decorateMedia(tile,l,row);
     void secureImage(imagePath(item,'Primary')).then(url=>{if(ticket===renderSerial)addImageToTile(tile,url);});
-    return true;
+    return tile;
   }
   async function showNode(n,grid,ticket){
     const total=countDescendants(n.id);
@@ -327,7 +386,7 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
     const combined=[...inherited,...own];
     const order=Array.isArray(r.mediaOrder)?r.mediaOrder:[];
     const mediaRank=new Map(order.map((id,i)=>[id,i]));
-    const rowMedia=order.length?[...combined].sort((a,b)=>(mediaRank.get(a.id)??99999)-(mediaRank.get(b.id)??99999)):combined;
+    const rowMedia=order.length?[...combined].sort((a,b)=>(mediaRank.get(a.id)??99999)-(mediaRank.get(b.id)??99999) || (combined.indexOf(a)-combined.indexOf(b))):combined;
     const groupMatches=rowGroups.filter(n=>!filter||n.name.toLocaleLowerCase().includes(filter));
     const orderedGroups=$('sort').value==='alpha'?groupMatches.sort(compare):groupMatches;
     for(const n of orderedGroups)void showNode(n,frame.track,ticket);
@@ -336,7 +395,9 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
     for(let i=0;i<media.length;i+=6){
       const batch=await Promise.all(media.slice(i,i+6).map(l=>showMedia(l,frame.track,ticket,filter,r)));
       if(ticket!==renderSerial)return 0;
-      seen+=batch.filter(Boolean).length;
+      // Batch fetches can resolve in any order. Append synchronously in the
+      // original row order, not network completion order (the back-button bug).
+      for(const tile of batch){if(!tile)continue;frame.track.append(tile.button);shownCards.push(tile.button);seen++;}
     }
     if(!seen){const p=document.createElement('div');p.className='shelf-empty';p.textContent=(r.rowType==='Timeline'?'No titles assigned to this viewing order yet.':'No matching items in this row.');frame.track.append(p);}
     frame.count.textContent=seen+' item'+(seen===1?'':'s');
@@ -384,6 +445,13 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
     if(ticket!==renderSerial)return;
     $('empty').classList.toggle('hidden',shown>0);
     status('');
+    // On return from Jellyfin details/player, restore the same group and
+    // scroll location after the media cards have actually been rendered.
+    if(sessionStorage.getItem('fe-return-group')===(current||'') && sessionStorage.getItem('fe-return-scroll')!==null){
+      const value=Number(sessionStorage.getItem('fe-return-scroll'))||0;
+      sessionStorage.removeItem('fe-return-group');sessionStorage.removeItem('fe-return-scroll');
+      requestAnimationFrame(()=>window.scrollTo(0,value));
+    }
   }
   $('browse-back').onclick=()=>{const n=nodeById(current);openGroup(n?n.parentId:'');};
   $('toggle-view').addEventListener('click',()=>{view=view==='grid'?'list':'grid';$('toggle-view').setAttribute('aria-pressed',String(view==='list'));text($('toggle-view'),view==='list'?'▦ Grid':'☷ List');void render();});
@@ -403,6 +471,8 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
   async function init(){
     if(!(await session())){status('Sign in to Jellyfin Web on this device first, then return to Franchises.');$('empty').classList.remove('hidden');text($('empty'),'No Jellyfin Web login session was found for this server.');return;}
     try{
+      $('fe-subtitles').checked=localStorage.getItem(playbackPreferenceKey())==='1';
+      $('fe-subtitles').addEventListener('change',()=>localStorage.setItem(playbackPreferenceKey(),$('fe-subtitles').checked?'1':'0'));
       catalog=await api('/FranchiseExplorer/Catalog');
       if(!Array.isArray(catalog.nodes)||!Array.isArray(catalog.links))throw new Error('Unexpected catalog format.');
       // Ensure identifiers are structurally safe before constructing any URL.

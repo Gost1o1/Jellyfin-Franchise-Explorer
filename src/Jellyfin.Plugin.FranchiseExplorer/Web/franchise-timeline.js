@@ -1,4 +1,4 @@
-/* Franchise Explorer v0.8 experimental timeline playback controller.
+/* Franchise Explorer v0.8.0.1 playback verification hotfix.
  * A Jellyfin PlayNow queue is built from item IDs, never from filenames.
  * Timeline state is separate from Jellyfin watched flags and user-specific.
  */
@@ -111,6 +111,13 @@
       this.queues.set(row.id,queue);
       return {queue,warnings};
     }
+    // A Jellyfin 204 response only acknowledges dispatch. It does not prove
+    // that the destination client accepted the remote play command.
+    isRemoteCapable(session){
+      return session && session.SupportsRemoteControl !== false &&
+        session.SupportsMediaControl !== false &&
+        session.Capabilities?.SupportsMediaControl !== false;
+    }
     async sessions(){
       const all=await this.request('/Sessions?ControllableByUserId='+encodeURIComponent(this.context.userId));
       return (Array.isArray(all)?all:[]).filter(s=>s?.Id &&
@@ -118,26 +125,61 @@
           (s.AdditionalUsers||[]).some(u=>String(u.UserId||'').toLowerCase()===this.context.userId.toLowerCase()))
       );
     }
+    async verifyStarted(sessionId,expectedItemId,options={}){
+      const retries=options.retries??12;
+      const delay=options.delay??900;
+      for(let i=0;i<retries;i++){
+        // The server's NowPlayingItem is an observed state, unlike the HTTP
+        // return code from the remote command. Never infer playback from 204.
+        try{
+          const sessions=await this.sessions();
+          const session=sessions.find(s=>s.Id===sessionId);
+          const actual=String(session?.NowPlayingItem?.Id||'').replace(/-/g,'').toLowerCase();
+          const expected=String(expectedItemId).replace(/-/g,'').toLowerCase();
+          if(actual && actual===expected)return session;
+        }catch(error){
+          if(i===retries-1)throw new Error('Unable to verify Jellyfin playback: '+error.message);
+        }
+        if(i<retries-1)await new Promise(resolve=>setTimeout(resolve,delay));
+      }
+      throw new Error('Jellyfin accepted the Play Now command but '+
+        'the selected device did not report starting the requested movie/episode. '+
+        'Nothing was added to chronological watch history. '+
+        'This client may not support remote control. Check its playback/casting capabilities, '+
+        'choose a supported device, and retry using a short timeline.');
+    }
     async play(queue,sessionId,index=0,positionTicks=0){
-      if(!sessionId || !queue.length || index<0 || index>=queue.length)throw new Error('Choose a playback device and playable item.');
-      // Jellyfin's PlayNow operation accepts ItemIds in the query string. A
-      // full multi-season Marvel timeline can exceed common URL length limits,
-      // so append later chunks with PlayLast. Not every client supports remote
-      // PlayLast; test with a short timeline on that playback client first.
+      if(!sessionId || !queue.length || index<0 || index>=queue.length)
+        throw new Error('Choose a playback device and playable item.');
+      const devices=await this.sessions();
+      const destination=devices.find(s=>s.Id===sessionId);
+      if(!destination)throw new Error('The selected Jellyfin device is no longer connected or accessible. Reopen the playback dialog.');
+      if(!this.isRemoteCapable(destination))
+        throw new Error((destination.DeviceName||destination.Client||'This playback device')+
+          ' reports that remote media control is disabled. Jellyfin cannot start a queue on it via the Sessions API. '+
+          'Choose a remote-controllable player or enable casting/remote control in the device. '+
+          'Your timeline history was not changed.');
       const chunks=[];
-      for(let i=index;i<queue.length;i+=60)chunks.push(queue.slice(i,i+60));
+      // Start with a modest batch; adding all 422 titles before verifying the
+      // client can start a single item is both slow and misleading.
+      for(let i=index;i<queue.length;i+=24)chunks.push(queue.slice(i,i+24));
       const command=async (ids,cmd,position)=>{
         const url='/Sessions/'+encodeURIComponent(sessionId)+'/Playing?playCommand='+cmd+
           '&itemIds='+encodeURIComponent(ids.map(q=>q.id).join(','))+
           '&startIndex=0&startPositionTicks='+Math.max(0,position);
         const res=await fetch(this.url(url),{method:'POST',headers:this.headers()});
-        if(!res.ok)throw new Error('Playback command '+cmd+' rejected by Jellyfin (HTTP '+res.status+'). The playback client may not support remote chronological queues.');
+        if(!res.ok)throw new Error('Jellyfin rejected '+cmd+' for the selected device (HTTP '+res.status+').');
       };
       await command(chunks[0],'PlayNow',positionTicks);
+      await this.verifyStarted(sessionId,queue[index].id);
+      // Append only after the player has really started the correct item.
+      // PlayLast support can still vary by client; test longer queues on the
+      // real device before trusting unattended chronological playback.
       for(let i=1;i<chunks.length;i++){
         await new Promise(resolve=>setTimeout(resolve,250));
         await command(chunks[i],'PlayLast',0);
       }
+      return {started:true,appendedChunks:chunks.length-1};
     }
     makeState(row,queue,index=0){
       const old=this.getState(row.id);const same=old && Array.isArray(old.queueKeys) &&
@@ -252,23 +294,32 @@
         const select=this.make('select','field timeline-device');select.setAttribute('aria-label','Choose a Jellyfin playback session');
         chooser.append(sessionLabel,select);
         const activeDevices=await this.sessions();if(this.activeDialog!==panel)return;
-        for(const s of activeDevices){const option=this.make('option','',((s.DeviceName||s.Client||'Device')+' · '+(s.UserName||'User')));option.value=s.Id;select.append(option);}
-        if(saved?.sessionId && activeDevices.some(s=>s.Id===saved.sessionId))select.value=saved.sessionId;
-        if(!activeDevices.length)feedback.textContent+=' No controllable Jellyfin playback session is active. Open Jellyfin Web or another supported client, then reopen this dialog.';
+        for(const s of activeDevices){
+          const supported=this.isRemoteCapable(s);
+          const description=(s.DeviceName||s.Client||'Device')+' · '+(s.UserName||'User');
+          const option=this.make('option','',description+(supported?'':' · Remote playback unavailable'));
+          option.value=s.Id;option.disabled=!supported;select.append(option);
+        }
+        const playableDevices=activeDevices.filter(s=>this.isRemoteCapable(s));
+        if(playableDevices.length)select.value=playableDevices[0].Id;
+        if(saved?.sessionId && playableDevices.some(s=>s.Id===saved.sessionId))select.value=saved.sessionId;
+        if(!playableDevices.length)feedback.textContent+=
+          ' No connected session reports remote playback support. The selected Chrome client may not accept remote Play Now commands. '+
+          'Try Jellyfin’s cast controls or a different remotely controllable player. Your episode-number formatting is not the cause.';
         const startIndex=queue.findIndex(q=>q.key===saved?.queueKeys?.[saved?.index]);
         const resumeIndex=startIndex>=0?startIndex:0;
         const start=this.button('▶ Play from beginning',async()=>{
-          await this.start(row,queue,select.value,0,0,'playing',true);feedback.textContent='Playback queue sent. Your client should start playing.';
+          await this.start(row,queue,select.value,0,0,'playing',true);feedback.textContent='Jellyfin confirmed the first movie/episode is playing. Remaining queue commands were sent; long-queue support depends on the client.';
         },'btn btn-primary');
         const resume=this.button('↻ Resume timeline',async()=>{
-          await this.start(row,queue,select.value,resumeIndex,n(saved?.positionTicks));feedback.textContent='Resume queue sent to Jellyfin.';
+          await this.start(row,queue,select.value,resumeIndex,n(saved?.positionTicks));feedback.textContent='Jellyfin confirmed the requested movie/episode is playing. Remaining queue commands were sent.';
         });
-        start.disabled=!activeDevices.length;resume.disabled=!activeDevices.length;
+        start.disabled=!playableDevices.length;resume.disabled=!playableDevices.length;
         chooser.append(start,resume);
-        if(autoResume && activeDevices.length===1){
+        if(autoResume && playableDevices.length===1){
           // Dashboard's explicitly clicked Resume Timeline link.
           void this.start(row,queue,select.value,resumeIndex,n(saved?.positionTicks)).then(()=>{
-            if(this.activeDialog===panel) feedback.textContent='Timeline resume queue sent to Jellyfin.';
+            if(this.activeDialog===panel) feedback.textContent='Jellyfin confirmed the resumed movie/episode is playing.';
           }).catch(error=>this.showError(error));
         }
         queue.forEach((q,i)=>{
@@ -279,15 +330,15 @@
           const act=this.make('div','timeline-entry-actions');
           const replay=this.button('Replay only',async()=>{
             await this.replay(row,queue,i,select.value,false);
-            feedback.textContent='Playing this item independently. Chronological watch history has NOT changed.';
+            feedback.textContent='Jellyfin confirmed independent replay started. The chronological cursor and completed items were preserved.';
           });
           const reset=this.button('Restart timeline here',async()=>{
             const okay=confirm('Move this timeline back to '+q.label+'? Later entries will be marked unfinished in THIS timeline only.');
             if(!okay)return;
             await this.replay(row,queue,i,select.value,true);
-            feedback.textContent='Timeline restarted here. Jellyfin was sent the remaining chronological queue.';
+            feedback.textContent='Jellyfin confirmed playback restarted here; remaining queue commands were sent.';
           });
-          replay.disabled=reset.disabled=!activeDevices.length;act.append(replay,reset);line.append(details,act);
+          replay.disabled=reset.disabled=!playableDevices.length;act.append(replay,reset);line.append(details,act);
           if(isCurrent && !done && q.runTimeTicks){
             const partial=Math.min(100,100*n(saved?.positionTicks)/q.runTimeTicks);
             if(partial>0){details.append(this.progressBar(partial));details.append(this.make('small','',Math.round(partial)+'% through this movie/episode'));}

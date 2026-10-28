@@ -198,6 +198,32 @@
 #FranchiseExplorerConfigPage .fx-row-included-item .fx-row-grip{cursor:grab}
 #FranchiseExplorerConfigPage .fx-row-drag-target{outline:2px dashed #49d9e9}
 @container (max-width:580px){#FranchiseExplorerConfigPage .fx-row-head .fx-field{flex-basis:100%}#FranchiseExplorerConfigPage .fx-row-create .fx-btn{flex:1 1 auto}}
+/* v0.8.0.1: keep the bulk-selection checkbox left of each result. */
+#FranchiseExplorerConfigPage .fx-library-result {
+  display:grid!important;
+  grid-template-columns:24px minmax(0,1fr) auto;
+  align-items:center!important;
+  gap:10px;
+}
+#FranchiseExplorerConfigPage .fx-library-result input[type="checkbox"] {
+  grid-column:1;
+  grid-row:1;
+  appearance:auto;
+  -webkit-appearance:checkbox;
+  display:block;
+  margin:0;
+  inline-size:18px;
+  block-size:18px;
+  min-inline-size:18px;
+  justify-self:start;
+  align-self:center;
+}
+#FranchiseExplorerConfigPage .fx-library-result > span {grid-column:2;grid-row:1;min-width:0;flex:none}
+#FranchiseExplorerConfigPage .fx-library-result > .fx-btn {grid-column:3;grid-row:1;justify-self:end}
+@container (max-width:520px) {
+  #FranchiseExplorerConfigPage .fx-library-result {grid-template-columns:24px minmax(0,1fr)}
+  #FranchiseExplorerConfigPage .fx-library-result > .fx-btn {grid-column:2;grid-row:2;justify-self:start}
+}
 </style>
 <div data-role="content" class="fx-wrap">
   <div class="fx-heading">
@@ -1059,7 +1085,7 @@
     for(const item of state.results){
       const result=document.createElement('div');result.className='fx-library-result';
       const check=document.createElement('input');check.type='checkbox';check.checked=state.chosen.has(item.Id);check.setAttribute('aria-label','Select '+item.Name+' for '+row.Name);
-      check.addEventListener('change',()=>{if(check.checked)state.chosen.add(item.Id);else state.chosen.delete(item.Id);const count=host.querySelector('.fx-library-selection-count');if(count)count.textContent=state.chosen.size+' selected';});
+      check.addEventListener('change',()=>{if(check.checked)state.chosen.add(item.Id);else state.chosen.delete(item.Id);const count=host.querySelector('.fx-library-selection-count');if(count)count.textContent=state.chosen.size+' selected';const addButton=host.querySelector('.fx-add-selected');if(addButton)addButton.textContent='Add Selected ('+state.chosen.size+')';});
       const label=document.createElement('span');label.textContent=(item.Name||'Untitled')+' · '+(item.Type==='BoxSet'?'Collection':displayType(item.Type))+(item.ProductionYear?' ('+item.ProductionYear+')':'');
       const action=makeRowButton(item.Type==='Series'?'Choose TV Show range':'+ Add',()=>item.Type==='Series'?openRangeEditor(item,null,row.Id):addRowWhole(row,item));
       result.append(check,label,action);host.append(result);
@@ -1069,11 +1095,11 @@
       const count=document.createElement('span');count.className='fx-library-status fx-library-selection-count';count.textContent=state.chosen.size+' selected';
       const selectAll=makeRowButton('Select all',()=>{state.results.forEach(x=>state.chosen.add(x.Id));refreshRowSearchResults(row.Id);});
       const clear=makeRowButton('Clear selection',()=>{state.chosen.clear();refreshRowSearchResults(row.Id);});
-      const addAll=makeRowButton('Add selected full titles',()=>{
+      const addAll=makeRowButton('Add Selected ('+state.chosen.size+')',()=>{
         let added=0;for(const item of state.results.filter(x=>state.chosen.has(x.Id)))try{if(addRowItem(row,item))added++;}catch(e){setStatus(e.message,true);break;}
         state.chosen.clear();renderRows();setStatus('Added '+added+' complete title(s) to '+row.Name+'. To choose season/episode ranges, use Choose TV Show range. Save configuration.');
       },'fx-btn-primary');
-      actions.append(selectAll,clear,addAll,count);host.append(actions);
+      addAll.classList.add('fx-add-selected');actions.append(selectAll,clear,addAll,count);host.append(actions);
     }
   }
   function renderRowLibrary(row,pickers){

@@ -25,7 +25,7 @@ setup=f'''<script>
 const SAMPLE_CATALOG={json.dumps(cat)};
 const SAMPLE_ITEMS={json.dumps(items)};
 const SAMPLE_EPISODES={json.dumps(episodes)};
-window.__played=[];window.__state=null;
+window.__played=[];window.__state=null;window.__nowPlaying=null;
 Object.defineProperty(window,'localStorage',{{configurable:true,value:{{getItem:()=>JSON.stringify({{Servers:[{{Id:'testserver',UserId:'{user}',AccessToken:'fake',ManualAddress:'http://test.invalid'}}]}})}}}});
 window.fetch=async function(input,options={{}}){{
  const path=String(input);
@@ -35,8 +35,8 @@ window.fetch=async function(input,options={{}}){{
  if(path.includes('/FranchiseExplorer/TimelineState/')&&options.method==='PUT'){{window.__state=JSON.parse(options.body);return ok(window.__state);}}
  if(path.includes('/FranchiseExplorer/TimelineState'))return ok(window.__state?[window.__state]:[]);
  if(path.includes('/Shows/{showid}/Episodes'))return ok({{Items:SAMPLE_EPISODES,TotalRecordCount:SAMPLE_EPISODES.length}});
- if(path.includes('/Sessions?'))return ok([{{Id:'dev1',UserId:'{user}',DeviceName:'Chrome Web',UserName:'Mock'}}]);
- if(path.includes('/Sessions/dev1/Playing')){{window.__played.push(path);return new Response(null,{{status:204}});}}
+ if(path.includes('/Sessions?'))return ok([{{Id:'dev1',UserId:'{user}',DeviceName:'Chrome Web',UserName:'Mock',SupportsMediaControl:true,SupportsRemoteControl:true,NowPlayingItem:window.__nowPlaying?{{Id:window.__nowPlaying}}:null}}]);
+ if(path.includes('/Sessions/dev1/Playing')){{window.__played.push(path);if(path.includes('playCommand=PlayNow')){{window.__nowPlaying=new URLSearchParams(path.split('?')[1]).get('itemIds').split(',')[0];}}return new Response(null,{{status:204}});}}
  const key=path.split('?')[0].split('/').pop();if(SAMPLE_ITEMS[key])return ok(SAMPLE_ITEMS[key]);
  return new Response('',{{status:404}});
 }};

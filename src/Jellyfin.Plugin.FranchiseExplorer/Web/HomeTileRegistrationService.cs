@@ -131,7 +131,7 @@ public sealed class HomeTileRegistrationService : IHostedService, IDisposable
             ["requiresAuthentication"] = false,
             ["pluginId"] = global::Jellyfin.Plugin.FranchiseExplorer.Plugin.PluginId.ToString(),
             ["pluginName"] = "Franchise Explorer",
-            ["pluginVersion"] = "0.8.0.0"
+            ["pluginVersion"] = "0.8.1.0"
         });
 
         object? payload = parse.Invoke(null, new object[] { json });

@@ -8,9 +8,13 @@
 
 Jellyfin Franchise Explorer manages **virtual** franchises, eras, phases, and media references without relocating or duplicating movies and shows. This code targets Jellyfin **12.2** / **.NET 10** and uses the same plugin GUID and backward-compatible configuration format as v0.2–v0.5.
 
+**v0.8.1.0** adds deterministic card order, click-to-play with separate ⓘ details, a subtitles-off-by-default preference, and verified remote timeline playback. The item-card autoplay handoff requires the optional JavaScript Injector integration on Jellyfin Web. It may briefly show Jellyfin details while the native player loads. Subtitle control cannot be guaranteed on every client; the preference does not silently change global Jellyfin user settings.
+
 ## Version 0.8.0.0 — experimental chronological playback and history
 
-**New:** Chronological viewing-order rows can now resolve existing movies, whole TV shows, season-to-season selections, and specific episode ranges into a Jellyfin Play Now queue. The selected Jellyfin playback session performs the playback; the plugin stores an independent, per-user timeline cursor, per-episode completion and resume position in its own private data directory.
+**New in v0.8.0.1:** The playback dialog checks session remote-control capability and confirms the requested title is actually reported as playing before updating chronological history. HTTP success alone no longer counts as playback. Search-result checkboxes are left-aligned and the bulk button reads Add Selected (X). Some Jellyfin Web clients do not support remote Play Now; this is now shown as a diagnostic instead of a success message.
+
+**Previous v0.8:** Chronological viewing-order rows can now resolve existing movies, whole TV shows, season-to-season selections, and specific episode ranges into a Jellyfin Play Now queue. The selected Jellyfin playback session performs the playback; the plugin stores an independent, per-user timeline cursor, per-episode completion and resume position in its own private data directory.
 
 The user-facing franchise browser includes a **Play chronological order** button and an episode-by-episode dialog with **Play from beginning**, **Resume timeline**, **Replay only**, and **Restart timeline here**. Replay does not rewind the franchise timeline. A server-side playback event listener maintains per-user progress while matching playback is reported, even after closing the Franchises browser. An optional JavaScript Injector widget adds **Continue Your Franchises** to Jellyfin Web Home.
 

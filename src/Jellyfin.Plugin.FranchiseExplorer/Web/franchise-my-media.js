@@ -319,3 +319,76 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>void tick(),{once:true});
   else void tick();
 })();
+
+
+/* v0.8.1 — Native-player handoff for item cards.
+ * A title card opens Jellyfin Web with feAutoPlay=1. The bridge waits for the
+ * correct details page and clicks Jellyfin's own Play control. This avoids
+ * bypassing Jellyfin's normal transcoding and codec negotiation.
+ * The feature depends on Jellyfin Web's DOM and the installed JS Injector.
+ */
+(function(){
+  'use strict';
+  if(window.__franchiseAutoplayBridgeLoaded)return;
+  window.__franchiseAutoplayBridgeLoaded=true;
+  let currentKey='',attempts=0,scheduled=false;
+  const MAX_ATTEMPTS=36;
+  function params(){
+    const hash=location.hash||'';
+    if(!/^#\/?details\?/i.test(hash))return null;
+    const query=hash.slice(hash.indexOf('?')+1);
+    const p=new URLSearchParams(query);
+    if(p.get('feAutoPlay')!=='1'||!/^[a-f0-9-]{32,36}$/i.test(p.get('id')||''))return null;
+    return p;
+  }
+  function clearMarker(p){
+    const clean=new URLSearchParams(p);
+    clean.delete('feAutoPlay');clean.delete('feSubs');
+    try { history.replaceState(history.state,'',location.pathname+location.search+'#/details?'+clean.toString()); }
+    catch (_) { location.hash='#/details?'+clean.toString(); }
+  }
+  function disableBrowserTextTracks(){
+    for(const video of document.querySelectorAll('video')){
+      try{for(const track of video.textTracks||[])track.mode='disabled';}catch(_){/* Not all browsers expose tracks */}
+    }
+  }
+  function isVisible(el){return !!(el&&el.getClientRects().length&&getComputedStyle(el).visibility!=='hidden');}
+  function startIfReady(){
+    scheduled=false;
+    const p=params();if(!p){currentKey='';attempts=0;return;}
+    const id=p.get('id');
+    const key=id+'|'+(p.get('feSubs')||'0');
+    if(currentKey!==key){currentKey=key;attempts=0;}
+    // Jellyfin Web renders the details page asynchronously. Wait for a visible
+    // Play control; never click an element in a hidden/previous item page.
+    const root=[...document.querySelectorAll('.page, .mainAnimatedPage, main')]
+      .filter(isVisible).reverse().find(x=>x.querySelector('.btnPlay,button[data-action="play"],button[data-action="resume"]'));
+    const play=root?.querySelector('.btnPlay,button[data-action="play"],button[data-action="resume"]');
+    if(play&&isVisible(play)){
+      const subs=p.get('feSubs')==='1';
+      clearMarker(p);currentKey='';attempts=0;
+      play.click();
+      if(!subs){
+        // Best-effort web text-track suppression: Jellyfin settings and
+        // separately rendered subtitle formats can override this.
+        for(const t of [800,2000,4500])setTimeout(disableBrowserTextTracks,t);
+      }
+      return;
+    }
+    attempts++;
+    if(attempts<MAX_ATTEMPTS)setTimeout(schedule,250);
+    else{
+      // Give users a clear fallback rather than an endless silent attempt.
+      console.warn('Franchise Explorer: Jellyfin Web did not expose its Play button. Open item details and choose Play manually.');
+      clearMarker(p);currentKey='';attempts=0;
+    }
+  }
+  function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(startIfReady);}
+  const observer=new MutationObserver(()=>{if(params())schedule();});
+  const init=()=>{
+    observer.observe(document.body,{subtree:true,childList:true});
+    addEventListener('hashchange',schedule);
+    schedule();
+  };
+  if(document.readyState==='loading')addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();

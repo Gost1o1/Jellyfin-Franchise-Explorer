@@ -1,3 +1,21 @@
+## 0.8.1.0 — Playback handoff, subtitle preference, stable media order
+
+- Clicking a movie or TV-show card requests playback through Jellyfin Web's native player via the optional JavaScript Injector, rather than simply showing its details. TV-show cards resolve the first episode within the saved episode/season selection.
+- New separate information (ⓘ) button opens the original Jellyfin details page.
+- Deterministic card rendering: results fetched asynchronously are appended in saved row order, not network-completion order. Returning from details restores the browsing group and scroll position.
+- A per-browser, per-Jellyfin-user subtitle option defaults to **off** for Franchise Explorer-launched playback. Jellyfin's native player may override it; web text-track suppression is best-effort, not a guaranteed override of every subtitle format.
+- Fix false timeline playback success: wait for the selected device to report the requested media playing before changing timeline progress.
+- Move custom-row bulk-selection checkboxes left and rename to **Add Selected (X)**.
+
+## 0.8.0.1 — Playback verification and UI hotfix
+
+- Fix false playback success: confirm that the selected Jellyfin session reports the requested movie or episode as Now Playing before saving timeline progress or appending queue chunks.
+- Reject sessions that explicitly report remote-control support as disabled, with actionable feedback instead of a silent no-op.
+- Preserve timeline state on unsuccessful playback attempts. Treat HTTP 204 as command acknowledgement, not proof of playback.
+- Use smaller initial batches to avoid building large queues on nonresponsive clients.
+- Align row library search checkboxes to the left and simplify the bulk action to Add Selected (X).
+- No change to season/episode filename parsing: resolution uses numeric Jellyfin episode metadata.
+
 ## 0.8.0.0 — Chronological Playback Preview (EXPERIMENTAL)
 
 - Resolve exact Jellyfin movie and TV episode IDs for each chronological row, including whole seasons and cross-season episode ranges; warn about inaccessible content and missing episode boundaries.

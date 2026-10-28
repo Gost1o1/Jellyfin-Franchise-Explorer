@@ -55,3 +55,15 @@ Create a temporary chronology row with **one short movie → two episodes → an
 - **Continue Your Franchises** resumes correctly from Jellyfin Web Home if JavaScript Injector is installed.
 
 If something fails, capture **Dashboard → Logs**, the screenshot/error from the Franchises dialog, and the relevant GitHub Actions log. Do not delete existing plugin data during diagnosis.
+
+### v0.8.0.1 remote playback diagnostic
+
+Jellyfin can acknowledge a Play Now command without the client actually starting playback. This update verifies the first Now Playing item before saving progress or appending the remaining timeline. A session reporting remote control disabled cannot be used for a chronological remote queue. If your Chrome web session is unavailable, try a Jellyfin client that supports casting/remote commands. The plugin does **not** automatically turn on remote playback in Chrome. Season `01` in a folder and numeric season `1` are equivalent for range matching because Jellyfin metadata is used.
+
+### v0.8.1.0 Jellyfin Web item cards
+
+Clicking a media card requests native Jellyfin Web playback via the optional JavaScript Injector integration. The adjacent ⓘ button opens details. On clients without the companion, clicking a card falls back to Jellyfin details rather than pretending playback started. For a TV show, this first version plays the first regular episode inside the chosen range; it is not a new full-timeline queue.
+
+The Franchise Explorer subtitle toggle is **off by default** in each browser for each signed-in Jellyfin user. Playback uses the native Jellyfin player; that player may apply subtitle preferences or unsupported subtitle formats, so the toggle is a best-effort request rather than guaranteed global enforcement.
+
+Rows now append media cards in deterministic saved order, independent of API response timing. Returning from the information page restores the group and scroll position.
