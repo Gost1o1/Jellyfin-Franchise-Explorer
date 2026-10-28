@@ -67,3 +67,5 @@ jobs:
           python3 scripts/test_my_media_tile_resize.py
           python3 scripts/test_v085_native_card.py
           python3 scripts/test_v085_card_progress.py
+          python3 scripts/test_v087_completion_handoff.py
+          python3 scripts/test_v088_completion_recovery.py
