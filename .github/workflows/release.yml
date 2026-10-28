@@ -17,7 +17,30 @@ concurrency:
   group: franchise-release
   cancel-in-progress: false
 jobs:
+  ui-browser:
+    if: github.ref == 'refs/heads/main' && inputs.confirm == 'RELEASE_EXPERIMENTAL'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Playwright and Chromium
+        run: |
+          python -m pip install playwright
+          python -m playwright install --with-deps chromium
+      - name: Validate browser UI before publishing
+        working-directory: Jellyfin-Franchise-Explorer
+        run: |
+          python3 scripts/test_my_media_tile_browser.py
+          python3 scripts/test_my_media_tile_resize.py
+          python3 scripts/test_v085_native_card.py
+          python3 scripts/test_v085_card_progress.py
+
   publish:
+    needs: ui-browser
     if: github.ref == 'refs/heads/main' && inputs.confirm == 'RELEASE_EXPERIMENTAL'
     runs-on: ubuntu-latest
     steps:
@@ -50,7 +73,6 @@ jobs:
           node scripts/test_timeline_engine.js
           python3 scripts/test_timeline_contract.py
           python3 scripts/test_local_web_handoff_contract.py
-          python3 scripts/test_v085_card_progress.py
           python3 scripts/check_version.py "$RELEASE_VERSION"
       - name: Build release assembly
         working-directory: Jellyfin-Franchise-Explorer
