@@ -15,4 +15,7 @@ public sealed class PluginConfiguration : BasePluginConfiguration
     public List<FranchiseNode> Nodes { get; set; } = new();
 
     public List<MediaLink> MediaLinks { get; set; } = new();
+
+    // Presentation-only horizontal shelves. Existing v0.7.2 XML loads with an empty list.
+    public List<FranchiseRow> Rows { get; set; } = new();
 }

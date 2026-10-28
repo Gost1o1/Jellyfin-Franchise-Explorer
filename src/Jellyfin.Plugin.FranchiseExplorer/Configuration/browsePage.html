@@ -75,6 +75,26 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
 @media(min-width:1600px){.gallery{grid-template-columns:repeat(auto-fill,minmax(195px,1fr))}.tile strong{font-size:1.03rem}}
 @media(pointer:coarse){.btn,.crumbs button,.tile{touch-action:manipulation}.tile{min-height:46px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;scroll-behavior:auto!important}}
+
+/* v0.7.3 horizontal shelves; scroll-snapping works on TV, laptop, and touch. */
+.rows-container{display:grid;gap:24px;min-width:0;margin:6px 0 28px}
+.shelf{min-width:0;max-width:100%;overflow:hidden}
+.shelf-header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin:0 0 12px}
+.shelf-header h2{margin:0;font-size:clamp(1.08rem,1.7vw,1.4rem);overflow-wrap:anywhere}
+.shelf-tools{display:flex;gap:6px;flex:none;align-items:center}
+.shelf-count{font-size:.79rem;color:var(--muted);margin-right:6px}
+.shelf-arrow{border:1px solid #505e6d;background:#262e37;border-radius:8px;min-width:43px;min-height:43px;color:#f4f8fa;font-size:1.25rem}
+.shelf-arrow:hover{background:#3e4856}
+.shelf-track{display:flex;align-items:stretch;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scrollbar-color:#4c596a #141820;scrollbar-width:thin;gap:clamp(11px,1.3vw,18px);padding:3px 1px 14px;min-width:0}
+.shelf-track .tile{scroll-snap-align:start;flex:0 0 clamp(125px,13.5vw,188px);max-width:50vw}
+.shelf-track .cover{width:100%}
+.shelf-empty{border:1px dashed #4a5c6b;border-radius:11px;padding:17px;color:var(--muted);font-size:.89rem}
+.shelf-list .shelf-track{flex-direction:column;overflow-x:hidden;scroll-snap-type:none;gap:7px}
+.shelf-list .tile{flex:0 0 auto;max-width:100%;flex-direction:row;align-items:center;padding:8px;border:1px solid var(--line);background:var(--surface);border-radius:10px}
+.shelf-list .cover{flex:none;width:70px;aspect-ratio:2/3}
+.shelf-list .shelf-arrow{display:none}
+@media(max-width:650px){.rows-container{gap:20px}.shelf-track .tile{flex-basis:clamp(112px,36vw,160px)}.shelf-track{gap:12px}.shelf-arrow{min-height:44px;min-width:44px}}
+@media(max-width:430px){.shelf-count{display:none}.shelf-track .tile{flex-basis:clamp(114px,41vw,145px)}.shelf-arrow{min-width:40px}.shelf-header h2{font-size:1.12rem}}
 </style>
 </head>
 <body>
@@ -90,8 +110,9 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
   <p class="status" id="status" role="status" aria-live="polite">Loading franchises...</p>
   <section id="groups-section" class="section hidden"><div class="section-header"><h2>Groups and subgroups</h2><span class="counter" id="groups-count"></span></div><div class="gallery" id="group-grid"></div></section>
   <section id="media-section" class="section hidden"><div class="section-header"><h2>Movies and TV shows</h2><span class="counter" id="media-count"></span></div><div class="gallery" id="media-grid"></div></section>
+  <div id="rows-container" class="rows-container"></div>
   <div id="empty" class="empty hidden">No items to display in this group.</div>
-  <div class="footer">Franchise Explorer v0.7.0 · An experimental virtual browsing page. Season/episode ranges describe references; they do not yet launch a continuous playlist.</div>
+  <div class="footer">Franchise Explorer v0.7.3 · An experimental virtual browsing page. Season/episode ranges describe references; they do not yet launch a continuous playlist.</div>
 </main>
 <script>
 'use strict';
@@ -100,7 +121,7 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
   const prefix = location.pathname.split('/FranchiseExplorer/')[0].replace(/\/$/,'');
   const serverPath = path => prefix + (path.startsWith('/') ? path : '/' + path);
   $('return-jellyfin').href = serverPath('/web/index.html');
-  let token = '', userId = '', serverId = '', catalog = {nodes:[],links:[]}, current = '', view = 'grid', shownCards = [], renderSerial = 0;
+  let token = '', userId = '', serverId = '', catalog = {nodes:[],links:[],rows:[]}, current = '', view = 'grid', shownCards = [], renderSerial = 0;
   const itemCache = new Map(), blobCache = new Map();
   const imageKeys = {Primary:'primaryUrl',Backdrop:'backdropUrl',Logo:'logoUrl',Thumb:'thumbUrl',Banner:'bannerUrl'};
   const text = (el, value) => {el.textContent = value == null ? '' : String(value);return el;};
@@ -208,9 +229,9 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
     const sid=serverId?'&serverId='+encodeURIComponent(serverId):'';
     location.href=serverPath('/web/#/details?id='+encodeURIComponent(item.Id)+sid);
   }
-  async function showMedia(l, grid, ticket){
+  async function showMedia(l, grid, ticket, filter=''){
     const item=await getItem(l.itemId);
-    if(ticket!==renderSerial||!item)return false;
+    if(ticket!==renderSerial||!item||filter&&!String(item.Name||'').toLocaleLowerCase().includes(filter))return false;
     const range=mediaRange(l);
     const type=item.Type==='Series'?'TV Show':(item.Type==='Movie'?'Movie':item.Type||'Video');
     const tile=makeTile(item.Name||'Untitled', [type,item.ProductionYear||'',range].filter(Boolean).join(' · '),range||type,()=>openJellyfinItem(item),type);
@@ -230,9 +251,66 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
     for(const n of path){const sep=text(document.createElement('span'),'›');sep.setAttribute('aria-hidden','true');$('breadcrumbs').append(sep);
       const crumb=document.createElement('button');crumb.textContent=n.name;crumb.className=n.id===current?'current':'';crumb.addEventListener('click',()=>openGroup(n.id));$('breadcrumbs').append(crumb);}
   }
+  function nestedLinks(root){
+    const ids=new Set([root]);let changed=true;
+    while(changed){changed=false;for(const n of catalog.nodes){if(ids.has(n.parentId)&&!ids.has(n.id)){ids.add(n.id);changed=true;}}}
+    return catalog.links.filter(l=>ids.has(l.nodeId));
+  }
+  function defaultRows(id, groups, directMedia){
+    // Backward compatible: v0.7.2 franchises appear in rows without changing
+    // their saved groups or requiring an admin migration.
+    const specs=[['Eras',['Era']],['Phases',['Phase']],['Sagas',['Saga']],['Collections',['Collection','Character']]];
+    const rows=[],used=new Set();
+    for(const [name,types] of specs){const nodeIds=groups.filter(n=>types.includes(n.nodeType)).map(n=>n.id);
+      if(nodeIds.length){rows.push({id:'suggested-'+name,name,rowType:'Groups',nodeIds,mediaLinkIds:[]});nodeIds.forEach(x=>used.add(x));}}
+    const rest=groups.filter(n=>!used.has(n.id)).map(n=>n.id);
+    if(rest.length)rows.push({id:'suggested-other',name:'Other Groups',rowType:'Groups',nodeIds:rest,mediaLinkIds:[]});
+    if(directMedia.length)rows.push({id:'suggested-media',name:'Movies & TV Shows',rowType:'Media',nodeIds:[],mediaLinkIds:directMedia.map(l=>l.id||l.itemId)});
+    return rows;
+  }
+  function rowIsMedia(r){return ['Media','Timeline','Mixed'].includes(r.rowType);}
+  function rowIsGroups(r){return ['Groups','Mixed'].includes(r.rowType);}
+  // Catalog media links are keyed by plugin link ID. Older catalogs did not
+  // expose it; create a unique in-memory fallback for their read-only view.
+  function findLink(key){return catalog.links.find(l=>l.id===key)||null;}
+  function shelfElement(r){
+    const shelf=document.createElement('section');shelf.className='shelf'+(view==='list'?' shelf-list':'');shelf.setAttribute('aria-label',r.name);
+    const header=document.createElement('div');header.className='shelf-header';
+    const heading=document.createElement('h2');heading.textContent=r.name;
+    const tools=document.createElement('div');tools.className='shelf-tools';
+    const count=document.createElement('span');count.className='shelf-count';count.textContent='';
+    const prev=document.createElement('button');prev.type='button';prev.className='shelf-arrow';prev.textContent='‹';prev.setAttribute('aria-label','Scroll '+r.name+' left');
+    const next=document.createElement('button');next.type='button';next.className='shelf-arrow';next.textContent='›';next.setAttribute('aria-label','Scroll '+r.name+' right');
+    const track=document.createElement('div');track.className='shelf-track';track.setAttribute('role','region');track.setAttribute('aria-label',r.name+' titles');
+    prev.addEventListener('click',()=>track.scrollBy({left:-Math.max(track.clientWidth*.85,190),behavior:'smooth'}));
+    next.addEventListener('click',()=>track.scrollBy({left:Math.max(track.clientWidth*.85,190),behavior:'smooth'}));
+    tools.append(count,prev,next);header.append(heading,tools);shelf.append(header,track);
+    return {shelf,count,track};
+  }
+  async function renderShelf(r,ticket,filter){
+    if(ticket!==renderSerial)return 0;
+    const frame=shelfElement(r),root=$('rows-container');root.append(frame.shelf);
+    const siblings=children(current);
+    const possibleLinks=nestedLinks(current),possibleIds=new Set(possibleLinks.map(l=>l.id));
+    const rowGroups=rowIsGroups(r)?(r.nodeIds||[]).map(id=>siblings.find(n=>n.id===id)).filter(Boolean):[];
+    const rowMedia=rowIsMedia(r)?(r.mediaLinkIds||[]).map(findLink).filter(l=>l&&possibleIds.has(l.id)):[];
+    const groupMatches=rowGroups.filter(n=>!filter||n.name.toLocaleLowerCase().includes(filter));
+    const orderedGroups=$('sort').value==='alpha'?groupMatches.sort(compare):groupMatches;
+    for(const n of orderedGroups)void showNode(n,frame.track,ticket);
+    let seen=orderedGroups.length;
+    const media=$('sort').value==='alpha'?[...rowMedia].sort(compare):rowMedia;
+    for(let i=0;i<media.length;i+=6){
+      const batch=await Promise.all(media.slice(i,i+6).map(l=>showMedia(l,frame.track,ticket,filter)));
+      if(ticket!==renderSerial)return 0;
+      seen+=batch.filter(Boolean).length;
+    }
+    if(!seen){const p=document.createElement('div');p.className='shelf-empty';p.textContent=(r.rowType==='Timeline'?'No titles assigned to this viewing order yet.':'No matching items in this row.');frame.track.append(p);}
+    frame.count.textContent=seen+' item'+(seen===1?'':'s');
+    return seen;
+  }
   async function render(){
     const ticket=++renderSerial;current=hashGroup();shownCards=[];
-    const selected=nodeById(current), title=selected?selected.name:(catalog.title||'Franchises');
+    const selected=nodeById(current),title=selected?selected.name:(catalog.title||'Franchises');
     text($('brand-title'),catalog.title||'Franchises');document.title=title+' · Jellyfin';drawBreadcrumbs(selected);
     $('browse-back').disabled=!selected;$('browse-back').onclick=()=>openGroup(selected?selected.parentId:'');
     text($('hero-type'),selected?selected.nodeType:'Virtual library');text($('hero-title'),title);
@@ -243,34 +321,35 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
       void nodeArtwork(selected,'Primary').then(url=>{if(ticket===renderSerial&&url){$('hero-poster').src=url;$('hero-poster-wrap').classList.remove('hidden');}});
       void nodeArtwork(selected,'Backdrop').then(url=>{if(ticket===renderSerial&&url){$('hero-backdrop').src=url;$('hero-backdrop').classList.remove('hidden');}});
     }
-    const groupList=children(current).sort(compare);const mediaList=current?links(current).sort(compare):[];
+    const groupList=children(current).sort(compare),mediaList=current?links(current).sort(compare):[];
     const filter=$('search').value.trim().toLocaleLowerCase();
-    const visibleGroups=groupList.filter(n=>!filter||n.name.toLocaleLowerCase().includes(filter));
-    $('group-grid').replaceChildren();$('media-grid').replaceChildren();
+    $('rows-container').replaceChildren();$('group-grid').replaceChildren();$('media-grid').replaceChildren();
     $('group-grid').classList.toggle('listview',view==='list');$('media-grid').classList.toggle('listview',view==='list');
-    $('groups-section').classList.toggle('hidden',!visibleGroups.length);
-    $('media-section').classList.toggle('hidden',!mediaList.length);
-    text($('groups-count'),visibleGroups.length+' groups');text($('media-count'),mediaList.length+' references');
     text($('items-heading'),selected?'Browse '+selected.name:'Your franchises');
-    status(mediaList.length?'Resolving media visible to your account...':'');
-    for(const n of visibleGroups)void showNode(n,$('group-grid'),ticket);
-    // Resolve linked items with limited concurrency; Jellyfin checks each user's access.
-    let visibleMedia=0;
-    for(let i=0;i<mediaList.length;i+=6){
-      const chunk=mediaList.slice(i,i+6);
-      const results=await Promise.all(chunk.map(l=>showMedia(l,$('media-grid'),ticket)));
-      if(ticket!==renderSerial)return;
-      visibleMedia+=results.filter(Boolean).length;
-    }
-    if(filter){
-      for(const card of shownCards){card.classList.toggle('hidden',!(card.innerText||card.textContent).toLocaleLowerCase().includes(filter));}
+    $('groups-section').classList.add('hidden');$('media-section').classList.add('hidden');
+    status('');let shown=0;
+    if(selected){
+      const explicit=(catalog.rows||[]).filter(r=>r.parentNodeId===selected.id).sort((a,b)=>a.sortOrder-b.sortOrder||a.name.localeCompare(b.name));
+      let rows=explicit.length?explicit:defaultRows(selected.id,groupList,mediaList);
+      if(explicit.length){
+        const usedGroups=new Set(rows.filter(rowIsGroups).flatMap(r=>r.nodeIds||[]));
+        const usedMedia=new Set(rows.filter(rowIsMedia).flatMap(r=>r.mediaLinkIds||[]));
+        const leftoverGroups=groupList.filter(n=>!usedGroups.has(n.id)).map(n=>n.id);
+        const leftoverMedia=mediaList.filter(l=>!usedMedia.has(l.id)).map(l=>l.id);
+        if(leftoverGroups.length)rows=[...rows,{id:'fallback-groups',name:'Unassigned Groups',rowType:'Groups',nodeIds:leftoverGroups,mediaLinkIds:[]}];
+        if(leftoverMedia.length)rows=[...rows,{id:'fallback-media',name:'Unassigned Movies & TV Shows',rowType:'Media',nodeIds:[],mediaLinkIds:leftoverMedia}];
+      }
+      for(const r of rows){shown+=await renderShelf(r,ticket,filter);if(ticket!==renderSerial)return;}
+    }else{
+      const visible=groupList.filter(n=>!filter||n.name.toLocaleLowerCase().includes(filter));
+      $('groups-section').classList.toggle('hidden',!visible.length);
+      text($('groups-count'),visible.length+' groups');
+      for(const n of visible)void showNode(n,$('group-grid'),ticket);
+      shown=visible.length;
     }
     if(ticket!==renderSerial)return;
-    const shown=shownCards.filter(c=>!c.classList.contains('hidden')).length;
-    $('groups-section').classList.toggle('hidden',!Array.from($('group-grid').children).some(c=>!c.classList.contains('hidden')));
-    $('media-section').classList.toggle('hidden',!Array.from($('media-grid').children).some(c=>!c.classList.contains('hidden')));
     $('empty').classList.toggle('hidden',shown>0);
-    status(visibleMedia<mediaList.length?`${mediaList.length-visibleMedia} linked item(s) unavailable or not accessible to your account.`:'');
+    status('');
   }
   $('browse-back').onclick=()=>{const n=nodeById(current);openGroup(n?n.parentId:'');};
   $('toggle-view').addEventListener('click',()=>{view=view==='grid'?'list':'grid';$('toggle-view').setAttribute('aria-pressed',String(view==='list'));text($('toggle-view'),view==='list'?'▦ Grid':'☷ List');void render();});
@@ -294,7 +373,8 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
       if(!Array.isArray(catalog.nodes)||!Array.isArray(catalog.links))throw new Error('Unexpected catalog format.');
       // Ensure identifiers are structurally safe before constructing any URL.
       catalog.nodes=catalog.nodes.filter(n=>safeGuid(n.id));
-      catalog.links=catalog.links.filter(l=>safeGuid(l.nodeId)&&safeGuid(l.itemId));
+      catalog.links=catalog.links.filter(l=>safeGuid(l.nodeId)&&safeGuid(l.itemId)).map((l,i)=>({...l,id:safeGuid(l.id)?l.id:'legacy-'+i}));
+      catalog.rows=Array.isArray(catalog.rows)?catalog.rows.filter(r=>safeGuid(r.id)&&safeGuid(r.parentNodeId)):[];
       void render();
     }catch(error){status('Cannot load Franchises: '+error.message+'. Confirm the plugin is running and your Jellyfin session is active.');}
   }

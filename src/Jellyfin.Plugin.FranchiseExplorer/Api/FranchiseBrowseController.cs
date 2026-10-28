@@ -51,7 +51,7 @@ public sealed class FranchiseBrowseController : ControllerBase
         // titles that a particular user isn't allowed to browse.
         return Ok(new
         {
-            version = "0.7.2.0",
+            version = "0.7.3.0",
             title = string.IsNullOrWhiteSpace(config.NavigationLabel) ? "Franchises" : config.NavigationLabel,
             nodes = config.Nodes.Select(n => new
             {
@@ -71,8 +71,19 @@ public sealed class FranchiseBrowseController : ControllerBase
                     bannerUrl = n.Artwork?.BannerUrl ?? ""
                 }
             }).ToArray(),
+            rows = config.Rows.Select(r => new
+            {
+                id = r.Id,
+                parentNodeId = r.ParentNodeId,
+                name = r.Name,
+                rowType = r.RowType,
+                sortOrder = r.SortOrder,
+                nodeIds = r.NodeIds,
+                mediaLinkIds = r.MediaLinkIds
+            }).ToArray(),
             links = config.MediaLinks.Select(l => new
             {
+                id = l.Id,
                 nodeId = l.NodeId,
                 itemId = l.JellyfinItemId,
                 rangeMode = l.RangeMode,

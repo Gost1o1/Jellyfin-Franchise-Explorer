@@ -8,6 +8,18 @@
 
 # Changelog
 
+## 0.7.3.0 — Editable horizontal browse rows
+
+- Add XML-compatible `FranchiseRow` models stored as presentation-only references. `Nodes` and `MediaLinks` remain unchanged.
+- Allow **custom rows with user-defined names** to be created, renamed, deleted, assigned content, dragged and reordered (with touch-friendly move-button alternatives).
+- Assign existing direct-child groups or movies/TV show links from a franchise's descendants; cards have independent order in each row.
+- Browse rows as responsive horizontal carousels with snapping and scroll arrows; keep unassigned groups and media visible.
+- In the absence of saved rows, show suggested Phases, Collections, Eras, Sagas, other group and media sections automatically.
+- Add optional **Create suggested rows** migration assistant; Chronological Viewing Order starts empty until intentionally curated.
+- Continue preserving custom artwork, original Jellyfin collections, media files, per-user access, and the optional My Media tile integration.
+- Experimental: no continuous timeline playback, no universal native TV-client integration, and live Jellyfin runtime tests required.
+
+
 ## 0.7.1.0 — Experimental optional My Media tile
 
 - Add an **opt-in web-only Franchises card** to the existing My Media row using the independent JavaScript Injector companion (when installed). This card links to `/FranchiseExplorer/Browse` and does not create a physical/virtual Jellyfin media library.

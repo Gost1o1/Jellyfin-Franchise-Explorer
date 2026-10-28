@@ -8,6 +8,14 @@
 
 Jellyfin Franchise Explorer manages **virtual** franchises, eras, phases, and media references without relocating or duplicating movies and shows. This code targets Jellyfin **12.2** / **.NET 10** and uses the same plugin GUID and backward-compatible configuration format as v0.2–v0.5.
 
+## Version 0.7.3.0 — customizable horizontal franchise rows
+
+**Create, rename, reorder, and delete your own rows** within each franchise or subgroup. This release separates *Phases*, *Collections*, and custom viewing orders into independent, horizontally scrollable sections rather than one combined grid. Choose which existing subgroups and linked movie/TV titles appear in each row, including saved season/episode-range references. Drag-and-drop or use accessible move buttons to reorder shelves and their contents. Reusing the same media reference in multiple rows does not copy media.
+
+In the administration editor, select a franchise → **Browse rows** → **Create suggested rows** (optional) or **+ Add custom row**. Edit **Row name** to rename, use **Delete row** to remove it without deleting linked media, and select its content type and assignments. Click **Save plugin configuration** to persist. The plugin preserves the same Jellyfin plugin identity, existing artwork overrides, media reference IDs and virtual groups. Old configurations with no rows continue to display automatic sections until you choose to customize them.
+
+**Chronological viewing-order rows are manually curated display sequences only**, not an automatic lore timeline or playback queue. The browser remains Web-oriented; native Jellyfin TV/mobile apps do not automatically get the new interface. See [v0.7.3 upgrade and usage guide](docs/UPGRADE_V073.md).
+
 ## Version 0.7.2.0 — placement and artwork preference hotfix
 
 - Put Franchises **directly after Collections** in Jellyfin Web's My Media row, without moving other libraries.
