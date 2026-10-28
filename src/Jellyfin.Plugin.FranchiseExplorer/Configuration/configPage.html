@@ -171,7 +171,7 @@
   <div class="fx-heading">
     <div>
       <div class="fx-eyebrow">Jellyfin plugin • Early development</div>
-      <h1>Franchise Explorer <small>v0.7.1 preview</small></h1>
+      <h1>Franchise Explorer <small>v0.7.2 preview</small></h1>
       <p class="fx-muted">Organize virtual franchises, eras, phases and viewing references without moving media files.</p>
     </div>
   </div>
@@ -182,7 +182,8 @@
   <div class="fx-toolbar">
     <div class="fx-toolbar-left">
       <button type="button" id="fx-add-root" class="fx-btn fx-btn-primary">+ New franchise</button>
-      <button type="button" id="fx-add-child" class="fx-btn">+ Subgroup</button>
+      <button type="button" id="fx-add-child" class="fx-btn" title="Create a group inside the selected group">+ Subgroup</button>
+      <button type="button" id="fx-add-sibling" class="fx-btn" title="Create a group alongside the selected group, under the same parent">+ Same-level group</button>
       <button type="button" id="fx-demo" class="fx-btn">Insert example groups</button>
       <a id="fx-open-browser" class="fx-btn fx-btn-primary" href="/FranchiseExplorer/Browse" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">Open Franchises browser ↗</a>
     </div>
@@ -218,8 +219,15 @@
         <label class="fx-field"><span>Sort position</span><input type="number" id="fx-sort" min="0" max="100000"></label>
         <hr class="fx-divider">
         <h3>Existing Jellyfin collection</h3>
-        <p class="fx-muted">Connect a collection (BoxSet) to inherit its existing posters, logos and backdrops. Import its movie and show members as virtual references in one click. This is a snapshot import, not automatic ongoing synchronization.</p>
+        <p class="fx-muted">Connect a collection (BoxSet) to import its movies and shows as virtual references. Existing artwork is preserved by default; you can explicitly choose to use the collection's images instead. This is a snapshot import, not automatic ongoing synchronization.</p>
         <div class="fx-info" id="fx-connected-collection">No Jellyfin collection connected.</div>
+        <label class="fx-field" id="fx-collection-artwork-field"><span>Artwork when a collection is connected</span>
+          <select id="fx-collection-artwork-mode" class="fx-input">
+            <option value="Preserve">Preserve current artwork (recommended)</option>
+            <option value="Collection">Use linked collection artwork first</option>
+          </select>
+          <small class="fx-muted">Importing collection members never changes artwork by itself. Uploaded images always win. Preserve current artwork prefers parent/linked-media images; if none exist, collection artwork remains the fallback.</small>
+        </label>
         <label class="fx-field"><span>Find a collection</span><input type="search" id="fx-collection-search" class="fx-input" placeholder="Search Marvel, Thor, Star Wars..." autocomplete="off"></label>
         <div class="fx-row">
           <button type="button" id="fx-find-collections" class="fx-btn fx-btn-small">Find collections</button>
@@ -414,7 +422,10 @@
       const a = n.Artwork || {};
       const collectionId=String(n.CollectionId || '').trim();
       if(collectionId && !validGuid(collectionId)) throw new Error('Invalid associated Jellyfin collection ID.');
-      return {Id:String(n.Id), ParentId:String(n.ParentId || ''), Name:String(n.Name || '').trim().slice(0,120), NodeType:String(n.NodeType || 'Custom').slice(0,40), CollectionId:collectionId, Overview:String(n.Overview || '').slice(0,1500), SortOrder:num(n.SortOrder),Artwork:{PrimaryUrl:artRef(a.PrimaryUrl),BackdropUrl:artRef(a.BackdropUrl),LogoUrl:artRef(a.LogoUrl),ThumbUrl:artRef(a.ThumbUrl),BannerUrl:artRef(a.BannerUrl)}};
+      // Old v0.7.1 configuration omitted this setting; default to its original
+      // collection-first behavior so upgrading doesn't change existing art.
+      const mode=n.CollectionArtworkMode==='Preserve'?'Preserve':'Collection';
+      return {Id:String(n.Id), ParentId:String(n.ParentId || ''), Name:String(n.Name || '').trim().slice(0,120), NodeType:String(n.NodeType || 'Custom').slice(0,40), CollectionId:collectionId, CollectionArtworkMode:mode, Overview:String(n.Overview || '').slice(0,1500), SortOrder:num(n.SortOrder),Artwork:{PrimaryUrl:artRef(a.PrimaryUrl),BackdropUrl:artRef(a.BackdropUrl),LogoUrl:artRef(a.LogoUrl),ThumbUrl:artRef(a.ThumbUrl),BannerUrl:artRef(a.BannerUrl)}};
     });
     const ids = new Set(safeNodes.map(n => n.Id.toLowerCase()));
     if (ids.size !== safeNodes.length) throw new Error('Duplicate group IDs.');
@@ -560,11 +571,17 @@
   async function inheritedArt(node,slot,visited=new Set()) {
     if(!node || visited.has(node.Id.toLowerCase()))return null;
     visited.add(node.Id.toLowerCase());
-    // An explicitly associated native BoxSet outranks parent and media artwork.
-    if(node.CollectionId) {
+    // Existing v0.7.1 groups retain collection-first behavior. New associations
+    // prefer the artwork already shown by their parent or linked media.
+    const connectedArtwork=async()=>{
+      if(!node.CollectionId)return null;
       const collection=await jellyfinItem(node.CollectionId);
       const url=jellyfinImageUrl(collection,slot);
-      if(url)return {url,source:'Jellyfin collection: '+(collection.Name||node.CollectionId)};
+      return url?{url,source:'Jellyfin collection: '+(collection.Name||node.CollectionId)}:null;
+    };
+    if(node.CollectionArtworkMode!=='Preserve') {
+      const fromCollection=await connectedArtwork();
+      if(fromCollection)return fromCollection;
     }
     // Reuse a parent franchise image, including its selected override, if present.
     const parent=model.Nodes.find(n=>n.Id===node.ParentId);
@@ -583,6 +600,8 @@
       const url=jellyfinImageUrl(item,slot);
       if(url)return {url,source:'Linked '+(item.Type||'media')+': '+(item.Name||link.DisplayName)};
     }
+    // Still inherit available collection artwork when nothing else exists.
+    if(node.CollectionArtworkMode==='Preserve')return await connectedArtwork();
     return null;
   }
   async function artworkPreview(ref,slot,sequence,caption) {
@@ -683,10 +702,12 @@
     const connected=Boolean(node.CollectionId);
     byId('fx-import-collection').disabled=!connected;
     byId('fx-unlink-collection').disabled=!connected;
+    byId('fx-collection-artwork-field').classList.toggle('fx-hidden',!connected);
+    byId('fx-collection-artwork-mode').value=node.CollectionArtworkMode==='Preserve'?'Preserve':'Collection';
     const label=byId('fx-connected-collection');
     label.textContent=connected?'Connected collection ID: '+node.CollectionId+' · loading name...':'No Jellyfin collection connected. Search to connect one.';
     if(connected){const id=node.Id,cid=node.CollectionId;
-      void jellyfinItem(cid).then(item=>{if(selected===id && node.CollectionId===cid && item) label.textContent='Connected: '+item.Name+' (Jellyfin collection) · artwork inherits automatically';});}
+      void jellyfinItem(cid).then(item=>{if(selected===id && node.CollectionId===cid && item) label.textContent='Connected: '+item.Name+' (Jellyfin collection) · artwork preference: '+(node.CollectionArtworkMode==='Preserve'?'preserve existing':'use collection first');});}
   }
   async function findCollections() {
     if(!selected)return;
@@ -705,13 +726,22 @@
         b.textContent=(item.Name||'Unnamed collection')+' · '+(item.ChildCount||'?')+' items';
         b.addEventListener('click',()=>{
           const node=model.Nodes.find(n=>n.Id===selected);if(!node)return;
+          // Associating a different collection must not change images already
+          // displayed for this node. Existing custom uploads remain untouched.
+          if(node.CollectionId!==item.Id)node.CollectionArtworkMode='Preserve';
           node.CollectionId=item.Id;mediaCache.set(item.Id.toLowerCase(),Promise.resolve(item));setDirty(true);
           renderCollectionConnection(node);renderArtwork();
-          collectionStatus('Connected '+item.Name+'. Click Import collection members to add current contents, then Save configuration.');
+          collectionStatus('Connected '+item.Name+'. Existing artwork is preserved. Import members if desired; then Save configuration.');
         });container.appendChild(b);
       }
     }catch(err){if(sequence===collectionSearchSequence)collectionStatus('Collection lookup failed: '+(err.message||err),true);}
   }
+  byId('fx-collection-artwork-mode').addEventListener('change',e=>{
+    const node=model.Nodes.find(n=>n.Id===selected);if(!node||!node.CollectionId)return;
+    node.CollectionArtworkMode=e.target.value==='Collection'?'Collection':'Preserve';
+    setDirty(true);renderCollectionConnection(node);renderArtwork();
+    collectionStatus(node.CollectionArtworkMode==='Preserve'?'Preserving existing/inherited images; collection artwork is fallback only.':'Using linked collection artwork first. Custom uploads remain untouched.');
+  });
   byId('fx-find-collections').addEventListener('click',findCollections);
   byId('fx-collection-search').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();void findCollections();}});
   byId('fx-unlink-collection').addEventListener('click',()=>{
@@ -757,6 +787,7 @@
     byId('fx-selected').classList.toggle('fx-hidden',!node);
     byId('fx-no-selection').classList.toggle('fx-hidden',!!node);
     byId('fx-add-child').disabled=!node;
+    byId('fx-add-sibling').disabled=!node;
     byId('fx-group-actions').classList.toggle('fx-hidden',!node);
     if(node) {
       const parent=model.Nodes.find(n=>n.Id===node.ParentId);
@@ -815,20 +846,31 @@
     node[field]=value;
     setDirty(true);
     if (field==='Name'||field==='NodeType'||field==='SortOrder') renderTree();
+    if (field==='Name'||field==='NodeType') {
+      const parent=model.Nodes.find(n=>n.Id===node.ParentId);
+      byId('fx-artwork-scope').textContent='Editing '+node.NodeType+': '+node.Name+' · Artwork uploaded here overrides this group only.'+(parent?' Parent: '+parent.Name+'. Parent images remain unchanged.':' This is a top-level franchise.');
+    }
   }
-  for(const [id,key] of [['fx-name','Name'],['fx-type','NodeType'],['fx-overview','Overview'],['fx-sort','SortOrder']]) {
+  // Update the sidebar while typing, instead of leaving "New subgroup" visible
+  // until the input loses focus. Never rebuild the active edit form here.
+  byId('fx-name').addEventListener('input',e=>edit('Name',e.target.value));
+  for(const [id,key] of [['fx-type','NodeType'],['fx-overview','Overview'],['fx-sort','SortOrder']]) {
     byId(id).addEventListener('change',e=>edit(key,key==='SortOrder'?num(e.target.value):e.target.value));
   }
   byId('fx-tree-search').addEventListener('input',renderTree);
   byId('fx-nav-label').addEventListener('change',e=>{model.NavigationLabel=e.target.value;setDirty(true);});
   function addNode(parent, name, type) {
     if(model.Nodes.length >= 250) throw new Error('Preview group limit reached.');
-    const n={Id:guid(),ParentId:parent||'',Name:name||'New group',NodeType:type||'Custom',Overview:'',CollectionId:'',SortOrder:model.Nodes.filter(x=>x.ParentId===(parent||'')).length,Artwork:emptyArt()};
+    const n={Id:guid(),ParentId:parent||'',Name:name||'New group',NodeType:type||'Custom',Overview:'',CollectionId:'',CollectionArtworkMode:'Preserve',SortOrder:model.Nodes.filter(x=>x.ParentId===(parent||'')).length+1,Artwork:emptyArt()};
     model.Nodes.push(n);selected=n.Id;setDirty(true);render();
     return n;
   }
   byId('fx-add-root').addEventListener('click',()=>{try{addNode('','New franchise','Franchise');}catch(e){setStatus(e.message,true);}});
   byId('fx-add-child').addEventListener('click',()=>{try{addNode(selected,'New subgroup','Era');}catch(e){setStatus(e.message,true);}});
+  byId('fx-add-sibling').addEventListener('click',()=>{
+    const node=model.Nodes.find(n=>n.Id===selected);if(!node)return;
+    try{addNode(node.ParentId,'New '+(node.ParentId?'subgroup':'franchise'),node.NodeType);}catch(e){setStatus(e.message,true);}
+  });
   function moveGroupByButton(direction) {
     const node=model.Nodes.find(n=>n.Id===selected);if(!node)return;
     const siblings=children(node.ParentId),index=siblings.findIndex(n=>n.Id===node.Id),swap=index+direction;

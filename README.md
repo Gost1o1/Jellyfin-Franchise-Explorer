@@ -8,6 +8,13 @@
 
 Jellyfin Franchise Explorer manages **virtual** franchises, eras, phases, and media references without relocating or duplicating movies and shows. This code targets Jellyfin **12.2** / **.NET 10** and uses the same plugin GUID and backward-compatible configuration format as v0.2–v0.5.
 
+## Version 0.7.2.0 — placement and artwork preference hotfix
+
+- Put Franchises **directly after Collections** in Jellyfin Web's My Media row, without moving other libraries.
+- When connecting a collection, preserve the current artwork unless the user explicitly chooses to use collection artwork first. Existing linked collections retain their earlier behavior; uploaded artwork is never overwritten.
+- Add **+ Same-level group** to create a sibling of a phase or era, with live name updates in the hierarchy.
+- Same plugin ID and configuration schema as v0.7.1. Read [v0.7.2 upgrade guide](docs/UPGRADE_V072.md).
+
 ## Version 0.7.1.0 — optional Franchises tile in My Media (Jellyfin Web only)
 
 **UNFINISHED EXPERIMENTAL PROJECT — USE WITH EXTREME CAUTION.** This release adds an opt-in Jellyfin Web **Franchises** card at the END of the native **My Media** row. Clicking it opens the already-working `/FranchiseExplorer/Browse` page. The card is a **client-side link**, not a real Jellyfin media library, and is not automatically available in native Roku/Android TV/iOS clients.

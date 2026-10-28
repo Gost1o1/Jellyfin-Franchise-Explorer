@@ -1,3 +1,11 @@
+## 0.7.2.0 — My Media positioning and artwork association preferences
+
+- Place the Franchises card immediately after the Collections card, maintaining original library ordering.
+- Add a non-destructive artwork priority selector for associated collections. Newly linked collections preserve previously inherited artwork by default; old groups retain prior display behavior.
+- Add **+ Same-level group** to the admin editor and update sidebar names as you type.
+- Existing artwork overrides, virtual references, GUIDs and configuration backups remain compatible.
+- Experimental; GitHub build and live Jellyfin 12.2 runtime tests still required.
+
 # Changelog
 
 ## 0.7.1.0 — Experimental optional My Media tile

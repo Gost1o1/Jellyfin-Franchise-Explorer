@@ -1,5 +1,5 @@
 /*
- * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.7.1).
+ * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.7.2).
  * Adds ONE visual link in the existing "My Media" row. It does not create a
  * Jellyfin library, alter user preferences, or modify the server's media.
  * Requires a compatible JavaScript injector to run in jellyfin-web.
@@ -120,6 +120,34 @@
     }
   }
 
+  // Match the visible Collections library card, regardless of user library order.
+  // Do not rely on its image filename or on a hard-coded array index.
+  function findCollectionsCard(container) {
+    for (const card of Array.from(container.children)) {
+      if (card.id === TILE_ID || !card.matches?.('.card, .libraryCard, .homeLibraryTile')) continue;
+      const labels = [card.getAttribute('aria-label'), card.getAttribute('title')];
+      card.querySelectorAll('.cardText, .cardText-first, .cardText-primary, .cardText-secondary, .cardTextContainer, .libraryName, span')
+        .forEach(el => labels.push(el.textContent));
+      // Some Jellyfin themes have no conventional card text class.
+      labels.push(card.textContent);
+      if (labels.some(label => (label || '').replace(/\s+/g, ' ').trim().toLowerCase() === 'collections')) return card;
+    }
+    return null;
+  }
+
+  function placeTile(container,tile) {
+    const collections = findCollectionsCard(container);
+    if (collections) {
+      // If already correctly placed, make no DOM changes (MutationObserver safe).
+      if (collections.nextElementSibling !== tile) {
+        container.insertBefore(tile, collections.nextElementSibling);
+      }
+    } else if (container.lastElementChild !== tile) {
+      // A missing Collections library must never hide the Franchises card.
+      container.appendChild(tile);
+    }
+  }
+
   function makeTile(reference) {
     const tile = document.createElement('a');
     tile.id = TILE_ID;
@@ -159,8 +187,11 @@
     }
     if (!tile) {
       tile = makeTile(ref);
-      // Add at the end, never replace or reorder the user's real libraries.
-      container.appendChild(tile);
+      // Only the Franchises tile moves; original library cards stay untouched.
+      placeTile(container,tile);
+    } else {
+      // Jellyfin can update its My Media row without recreating our tile.
+      placeTile(container,tile);
     }
     fitTile(tile, ref);
     tile.href = browseUrl();

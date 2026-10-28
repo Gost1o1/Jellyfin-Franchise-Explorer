@@ -37,6 +37,14 @@ with sync_playwright() as p:
         href = page.locator('#franchise-explorer-my-media-tile').get_attribute('href')
         assert href == '/FranchiseExplorer/Browse',href
         assert page.locator('#home-my-media .card').count()==4
+        # The custom tile must be immediately after the existing Collections
+        # library, rather than appended at the end or replacing another card.
+        order = page.locator('#home-my-media .itemsContainer').evaluate('''el =>
+          Array.from(el.children).map(x => x.id === 'franchise-explorer-my-media-tile'
+            ? 'Franchises' : x.querySelector('span')?.textContent.trim()).join('|')
+        ''')
+        print('ORDER',order)
+        assert order == 'Books|Collections|Franchises|Movies', order
         assert page.locator('section').nth(1).locator('.card').count()==1
         assert page.evaluate('document.documentElement.scrollWidth <= innerWidth'), 'horizontal overflow at '+str(width)
         tile_width=page.locator('#franchise-explorer-my-media-tile').bounding_box()['width']
