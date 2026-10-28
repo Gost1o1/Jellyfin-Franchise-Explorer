@@ -28,7 +28,7 @@ public sealed class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     public override Guid Id => PluginId;
 
     public override string Description =>
-        "Experimental virtual franchises with a read-only responsive browser, inherited artwork, and collection imports.";
+        "Experimental virtual franchises, timeline queue preview, and independent per-user viewing progress.";
 
     public IEnumerable<PluginPageInfo> GetPages()
     {

@@ -131,7 +131,7 @@ public sealed class HomeTileRegistrationService : IHostedService, IDisposable
             ["requiresAuthentication"] = false,
             ["pluginId"] = global::Jellyfin.Plugin.FranchiseExplorer.Plugin.PluginId.ToString(),
             ["pluginName"] = "Franchise Explorer",
-            ["pluginVersion"] = "0.7.4.1"
+            ["pluginVersion"] = "0.8.0.0"
         });
 
         object? payload = parse.Invoke(null, new object[] { json });
@@ -149,5 +149,6 @@ public sealed class PluginServiceRegistrator : IPluginServiceRegistrator
     public void RegisterServices(IServiceCollection services, IServerApplicationHost applicationHost)
     {
         services.AddHostedService<HomeTileRegistrationService>();
+        services.AddHostedService<TimelinePlaybackMonitorService>();
     }
 }

@@ -8,6 +8,16 @@
 
 Jellyfin Franchise Explorer manages **virtual** franchises, eras, phases, and media references without relocating or duplicating movies and shows. This code targets Jellyfin **12.2** / **.NET 10** and uses the same plugin GUID and backward-compatible configuration format as v0.2–v0.5.
 
+## Version 0.8.0.0 — experimental chronological playback and history
+
+**New:** Chronological viewing-order rows can now resolve existing movies, whole TV shows, season-to-season selections, and specific episode ranges into a Jellyfin Play Now queue. The selected Jellyfin playback session performs the playback; the plugin stores an independent, per-user timeline cursor, per-episode completion and resume position in its own private data directory.
+
+The user-facing franchise browser includes a **Play chronological order** button and an episode-by-episode dialog with **Play from beginning**, **Resume timeline**, **Replay only**, and **Restart timeline here**. Replay does not rewind the franchise timeline. A server-side playback event listener maintains per-user progress while matching playback is reported, even after closing the Franchises browser. An optional JavaScript Injector widget adds **Continue Your Franchises** to Jellyfin Web Home.
+
+**Important limitations:** Jellyfin's chosen client must support remote PlayNow queues (and PlayLast for long sequences). The code has not yet been tested on your live Jellyfin server or native TV devices. External replays can update Jellyfin's regular played flags even though the separate franchise watch history remains untouched. Progress is only as complete as native playback events reported by the client. **Back up all plugin data before upgrading.**
+
+Read the [full v0.8 setup, device compatibility, warning and safe-test guide](docs/UPGRADE_V08.md).
+
 ## Version 0.7.4.1 — stable row searches
 
 Search fields in custom rows now keep keyboard focus while the matching Jellyfin titles load. This fixes having to click the input after each typed character. All existing rows, group links, and uploaded images use the same configuration as v0.7.4.0.

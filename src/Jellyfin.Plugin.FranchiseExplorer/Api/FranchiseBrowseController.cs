@@ -37,6 +37,19 @@ public sealed class FranchiseBrowseController : ControllerBase
         return Content(html, "text/html; charset=utf-8");
     }
 
+    [HttpGet("TimelineClient.js")]
+    [AllowAnonymous]
+    public IActionResult TimelineClient()
+    {
+        var assembly = typeof(Plugin).Assembly;
+        using var stream = assembly.GetManifestResourceStream("Jellyfin.Plugin.FranchiseExplorer.Web.franchise-timeline.js");
+        if (stream is null) return NotFound();
+        using var reader = new StreamReader(stream);
+        Response.Headers["Cache-Control"] = "no-store";
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+        return Content(reader.ReadToEnd(), "text/javascript; charset=utf-8");
+    }
+
     [HttpGet("Catalog")]
     [Authorize]
     public IActionResult Catalog()
@@ -51,7 +64,7 @@ public sealed class FranchiseBrowseController : ControllerBase
         // titles that a particular user isn't allowed to browse.
         return Ok(new
         {
-            version = "0.7.4.1",
+            version = "0.8.0.0",
             title = string.IsNullOrWhiteSpace(config.NavigationLabel) ? "Franchises" : config.NavigationLabel,
             nodes = config.Nodes.Select(n => new
             {

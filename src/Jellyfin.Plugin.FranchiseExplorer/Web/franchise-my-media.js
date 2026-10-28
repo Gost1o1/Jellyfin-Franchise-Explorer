@@ -218,3 +218,104 @@
   window.addEventListener('popstate', schedule);
   window.addEventListener('resize', schedule);
 })();
+
+/* v0.8 — Optional home-screen timeline resume and playback progress bridge.
+ * This script runs only in an authenticated Jellyfin Web client. It cannot
+ * intercept native client playback; supported clients should be tested before
+ * relying on seamless unattended progress persistence.
+ */
+(function () {
+  'use strict';
+  if (window.__franchiseTimelineHomeLoaded) return;
+  window.__franchiseTimelineHomeLoaded = true;
+  const WIDGET_ID='franchise-timeline-resume';
+  const serverPrefix=()=>{
+    const match=(location.pathname||'').match(/^(.*?)\/web(?:\/|$)/i);
+    return match?match[1]:'';
+  };
+  let lastFetch=0,busy=false;
+  function credential(){
+    let servers=[];
+    try{servers=JSON.parse(localStorage.getItem('jellyfin_credentials')||'{}').Servers||[];}catch(_){}
+    const matching=servers.filter(s=>s.AccessToken&&s.UserId);
+    return matching.find(s=>[s.ManualAddress,s.LocalAddress,s.RemoteAddress].some(a=>{
+      try{return new URL(a).origin===location.origin;}catch(_){return false;}
+    }))||(matching.length===1?matching[0]:null);
+  }
+  async function request(path,auth,options={}){
+    const r=await fetch(serverPrefix()+path,{cache:'no-store',...options,
+      headers:{Authorization:'MediaBrowser Token="'+auth.AccessToken+'"',...(options.headers||{})}});
+    if(!r.ok)throw new Error('HTTP '+r.status);return r.status===204?null:r.json();
+  }
+  function findHomeAnchor(){
+    const headers=[...document.querySelectorAll('h1,h2,h3,h4,.sectionTitle')];
+    const anchor=headers.find(h=>(h.textContent||'').trim()==='Continue Watching');
+    if(anchor)return anchor.closest('.verticalSection, .homeSection, section')||anchor.parentElement?.parentElement;
+    const myMedia=headers.find(h=>(h.textContent||'').trim()==='My Media');
+    return myMedia?.closest('.verticalSection, .homeSection, section')||null;
+  }
+  function makeHomeSection(states){
+    let widget=document.getElementById(WIDGET_ID);
+    const home=findHomeAnchor();if(!home?.parentNode)return;
+    if(!widget){
+      widget=document.createElement('section');widget.id=WIDGET_ID;
+      widget.style.cssText='box-sizing:border-box;width:100%;padding:12px max(16px,3vw);min-width:0;color:#fff;';
+      home.parentNode.insertBefore(widget,home.nextSibling);
+    }
+    const heading=document.createElement('h2');heading.textContent='Continue Your Franchises';heading.style.cssText='font-size:1.3rem;margin:8px 0 14px';
+    const list=document.createElement('div');list.style.cssText='display:flex;gap:13px;flex-wrap:wrap;';
+    for(const state of states.slice(0,8)){
+      const link=document.createElement('a');link.href=serverPrefix()+'/FranchiseExplorer/Browse?timeline='+encodeURIComponent(state.rowId)+'&resume=1';
+      link.style.cssText='display:block;flex:1 1 210px;max-width:320px;color:#fff;text-decoration:none;min-width:170px;border:1px solid #536270;border-radius:11px;background:#232c37;padding:14px';
+      const name=document.createElement('strong');name.textContent=state.name||'Chronological Timeline';
+      const sub=document.createElement('div');sub.style.cssText='color:#c9d2de;font-size:.82rem;margin:9px 0';
+      const percent=state.total?Math.round(100*(state.completedKeys||[]).length/state.total):0;
+      sub.textContent=percent+'% complete · '+(state.index+1)+' of '+state.total+' · Resume timeline';
+      const bar=document.createElement('div');bar.style.cssText='height:6px;background:#3b4855;border-radius:8px;overflow:hidden';
+      const fill=document.createElement('span');fill.style.cssText='display:block;background:#16b2c6;height:100%;width:'+Math.max(0,Math.min(100,percent))+'%';bar.append(fill);
+      link.append(name,sub,bar);list.append(link);
+    }
+    widget.replaceChildren(heading,list);
+  }
+  async function updateProgress(auth,states){
+    const active=states.filter(x=>x.playbackMode==='playing'&&x.sessionId&&Array.isArray(x.queueKeys));
+    if(!active.length)return;
+    const sessions=await request('/Sessions?ControllableByUserId='+encodeURIComponent(auth.UserId),auth);
+    for(const state of active){
+      const session=(sessions||[]).find(s=>s.Id===state.sessionId&&String(s.UserId||'').toLowerCase()===String(auth.UserId).toLowerCase());
+      if(!session?.NowPlayingItem?.Id)continue;
+      const id=String(session.NowPlayingItem.Id).toLowerCase();
+      const current=state.queueKeys.findIndex((key,i)=>i>=state.index&&key.toLowerCase().endsWith(':'+id));
+      if(current<0)continue; // Do not move the timeline when watching unrelated content.
+      let changed=false;
+      if(current>state.index){
+        for(let i=state.index;i<current;i++)state.completedKeys.push(state.queueKeys[i]);
+        state.index=current;changed=true;
+      }
+      const ticks=Number(session.PlayState?.PositionTicks)||0;
+      if(Math.abs(ticks-(state.positionTicks||0))>25000000){state.positionTicks=ticks;changed=true;}
+      if(changed){
+        state.completedKeys=[...new Set(state.completedKeys)];state.itemId=id;
+        await request('/FranchiseExplorer/TimelineState/'+encodeURIComponent(state.rowId),auth,{
+          method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});
+      }
+    }
+  }
+  async function tick(){
+    if(busy||document.hidden||Date.now()-lastFetch<10000)return;
+    busy=true;lastFetch=Date.now();
+    try{
+      const auth=credential();if(!auth)return;
+      const states=await request('/FranchiseExplorer/TimelineState',auth);
+      if(!Array.isArray(states))return;
+      const active=states.filter(s=>s.total>0&&s.playbackMode!=='complete');
+      if(findHomeAnchor()&&active.length)makeHomeSection(active);
+      // Jellyfin server playback events update persistent progress, even when
+      // this optional home widget is closed. The browser only displays it.
+    }catch(e){/* The optional home integration must never break Jellyfin itself. */}
+    finally{busy=false;}
+  }
+  setInterval(()=>void tick(),12000);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>void tick(),{once:true});
+  else void tick();
+})();

@@ -1,3 +1,14 @@
+## 0.8.0.0 — Chronological Playback Preview (EXPERIMENTAL)
+
+- Resolve exact Jellyfin movie and TV episode IDs for each chronological row, including whole seasons and cross-season episode ranges; warn about inaccessible content and missing episode boundaries.
+- Build a remote Jellyfin Play Now queue in saved chronological order, with chunked Play Last append commands for longer timelines where supported.
+- Add per-user timeline progress saved to plugin-owned JSON files, separate from Jellyfin's original watched flags and playlist state.
+- Follow Jellyfin playback start, progress and stop events for the selected session; keep unrelated viewing and independent replays from rewinding the timeline.
+- Add Play From Beginning, Resume, Replay Only, and Restart Timeline Here with confirmation, plus episode-by-episode progress and queue preview.
+- Optional Continue Your Franchises home section (JavaScript Injector); progress bars for timeline rows and associated media cards; adaptive TV/desktop/tablet/phone layout.
+- Preserve all existing 0.7.x franchise groups, art, custom rows, and media links. Same plugin GUID.
+- **UNFINISHED.** Mock tests pass; real Jellyfin 12.2 compile and device playback validation pending.
+
 ## v0.7.4.1 — Full-library row search focus hotfix (experimental)
 
 - Fix loss of keyboard focus while typing in Collections / Movies / TV Shows and Timeline / Mixed row search fields.
