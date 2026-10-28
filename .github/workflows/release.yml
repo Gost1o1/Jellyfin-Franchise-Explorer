@@ -5,7 +5,7 @@ on:
       version:
         description: 'Release version; must equal csproj Version'
         required: true
-        default: '0.8.8.0'
+        default: '0.8.9.0'
         type: string
       confirm:
         description: 'Type RELEASE_EXPERIMENTAL to publish'
@@ -40,6 +40,7 @@ jobs:
           python3 scripts/test_v085_card_progress.py
           python3 scripts/test_v087_completion_handoff.py
           python3 scripts/test_v088_completion_recovery.py
+          python3 scripts/test_v089_activation_browser.py
 
   publish:
     needs: ui-browser
@@ -73,7 +74,9 @@ jobs:
           python3 scripts/test_full_library_row_contract.py
           python3 scripts/test_row_search_focus_contract.py
           node scripts/test_timeline_engine.js
+          node scripts/test_v089_arming.js
           python3 scripts/test_timeline_contract.py
+          python3 scripts/test_v089_activation_contract.py
           python3 scripts/test_local_web_handoff_contract.py
           python3 scripts/check_version.py "$RELEASE_VERSION"
       - name: Build release assembly
