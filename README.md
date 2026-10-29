@@ -31,6 +31,18 @@ and follow custom chronological watch orders.
 > [!IMPORTANT]
 > **Experimental project for Jellyfin 12.2.** Franchise Explorer is unfinished and is being tested on a personal Jellyfin server. Features and client compatibility can change. **Back up Jellyfin and your plugin data before installing or updating.** Chronological playback and automatic next-item playback are still experimental; do not assume they work in every client.
 
+## Watch the walkthrough
+
+Want to see the process before starting? Watch the step-by-step walkthrough by **Gost1o1**:
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=n81hzCCk8M0" title="Watch the YouTube Music Takeout to Lidarr walkthrough on YouTube">
+    <img src="https://img.youtube.com/vi/n81hzCCk8M0/hqdefault.jpg" alt="Watch Gost1o1's YouTube Music Takeout to Lidarr walkthrough" width="560" />
+  </a>
+</p>
+
+<p align="center"><a href="https://www.youtube.com/watch?v=n81hzCCk8M0"><strong>▶ Watch the setup and usage video on YouTube</strong></a></p>
+
 ## Install or update
 
 1. **Back up** your Jellyfin server and Franchise Explorer configuration/artwork. The plugin's JSON export includes franchise metadata, **not the image files**.
