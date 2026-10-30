@@ -37,9 +37,9 @@ installable plugin. Save a backup of your plugin and configuration first.
 - Show the My Media three-dot button only while hovered/focused with a mouse
   or keyboard, while leaving it available on touch screens and when its menu
   is expanded.
-- Add **Show active franchise titles in Continue Watching and Next Up** beside
-  the Franchise Explorer browser's subtitle checkbox. It defaults to on.
-  Turning it off hides only the active watch-order movie or series from the
+- Add **Hide active franchise titles from Continue Watching and Next Up** beside
+  the Franchise Explorer browser's subtitle checkbox. It defaults to off.
+  Turning it on hides only the active watch-order movie or series from the
   two native Jellyfin Web rows (including other episodes of the same series).
   It never changes watched flags or Jellyfin server recommendations. This
   setting is stored per Jellyfin user and per browser, not server-synchronized.
@@ -61,7 +61,7 @@ installable plugin. Save a backup of your plugin and configuration first.
    Check that the tracker below Continue Watching still works. Open
    **Franchises** to try the new native-row visibility checkbox; verify that
    only the active franchise's series/movie disappears from **Continue
-   Watching** and **Next Up** when unchecked.
+   Watching** and **Next Up** when checked.
 
 If you still see the older position, check the current browser script version:
 

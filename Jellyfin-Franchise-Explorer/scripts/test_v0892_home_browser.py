@@ -164,6 +164,19 @@ with sync_playwright() as p:
         assert tile.get_attribute("data-fe-version") == "0.8.9.4"
         assert page.locator("#franchise-timeline-resume").get_attribute("data-fe-version") == "0.8.9.4"
         before_menu = page.url
+        # The options button is hidden until the tile is hovered or focused.
+        # Playwright's button.click() does not reliably establish hover when the
+        # initial pointer-events:none makes the native artwork the hit target.
+        page.evaluate('document.activeElement?.blur()')
+        page.mouse.move(0, 0)
+        tile.hover()
+        page.wait_for_function("""() => {
+          const button=document.querySelector('#franchise-explorer-my-media-tile .fe-settings-toggle');
+          const holder=button?.closest('.fe-settings-holder');
+          return button && getComputedStyle(button).opacity==='1' &&
+            getComputedStyle(button).pointerEvents==='auto' &&
+            getComputedStyle(holder).pointerEvents==='auto';
+        }""")
         tile.locator(".fe-settings-toggle").click()
         assert tile.locator(".fe-settings-menu").is_visible()
         assert page.url == before_menu, "Clicking the three dots must not open browsing"
@@ -190,6 +203,9 @@ with sync_playwright() as p:
             page.wait_for_timeout(200)
             assert tile.locator('.fe-settings-toggle').evaluate('(el) => getComputedStyle(el).opacity') == '0'
             tile.hover()
+            page.wait_for_function("getComputedStyle(document.querySelector('#franchise-explorer-my-media-tile .fe-settings-toggle')).opacity === '1'")
+            page.evaluate("document.querySelector('#franchise-explorer-my-media-tile .fe-settings-toggle').focus()")
+            page.mouse.move(0, 0)
             page.wait_for_function("getComputedStyle(document.querySelector('#franchise-explorer-my-media-tile .fe-settings-toggle')).opacity === '1'")
 
         # Jellyfin destroys both the custom section and its native anchor.

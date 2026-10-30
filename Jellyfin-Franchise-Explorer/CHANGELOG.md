@@ -6,8 +6,8 @@
 - Align the control with the native bottom-right three dots, using a neutral
   white icon instead of a permanently filled turquoise circle. Reveal it on
   desktop hover/keyboard focus; keep it accessible on touch screens.
-- Add a per-user, per-browser **Show active franchise titles in Continue
-  Watching and Next Up** option, enabled by default. When off, hide the
+- Add a per-user, per-browser **Hide active franchise titles from Continue
+  Watching and Next Up** option, disabled by default. When on, hide the
   currently active franchise movie/series from those two native Jellyfin Web
   homepage rows without modifying library data or watched state.
 - On phone portrait orientation, prefer the film/series Primary vertical poster
