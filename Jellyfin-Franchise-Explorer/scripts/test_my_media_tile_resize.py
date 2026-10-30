@@ -16,9 +16,19 @@ with sync_playwright() as p:
         return page.evaluate('''()=>{
           const a=document.querySelector('#franchise-explorer-my-media-tile');
           return [Math.round(a.getBoundingClientRect().width),Math.round(a.querySelector('.fe-tile-art').getBoundingClientRect().height)];}''')
+    def menu_geometry():
+        return page.evaluate('''()=>{
+          const tile=document.querySelector('#franchise-explorer-my-media-tile');
+          const image=tile.querySelector('.cardScalable');
+          const holder=tile.querySelector('.fe-settings-holder');
+          const rect=image.getBoundingClientRect(), btn=holder.querySelector('button').getBoundingClientRect();
+          return [holder.parentElement===image,
+            Math.round(rect.right-btn.right),Math.round(rect.bottom-btn.bottom)];}''')
     assert size()==[250,145],size()
+    assert menu_geometry()==[True,6,3],menu_geometry()
     page.evaluate('''()=>{let n=document.querySelector('#native');n.style.width='180px';n.style.flexBasis='180px';n.querySelector('.cardScalable').style.height='95px'}''')
     page.wait_for_timeout(180)
     assert size()==[180,95],size()
+    assert menu_geometry()==[True,6,3],menu_geometry()
     print('PASS My Media tile exact native width and image height, including dynamic resize')
     browser.close()

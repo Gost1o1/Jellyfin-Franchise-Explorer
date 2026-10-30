@@ -1,3 +1,23 @@
+## v0.8.9.4 — My Media three-dot artwork alignment (experimental)
+
+- Fix the confirmed screenshot bug: the three-dot Franchises options control
+  was attached to the caption-inclusive outer native card and consequently
+  appeared **below** the artwork. Place it in the actual image container.
+- Align the control with the native bottom-right three dots, using a neutral
+  white icon instead of a permanently filled turquoise circle.
+- On phone portrait orientation, prefer the film/series Primary vertical poster
+  on homepage resume cards; keep Thumb/Backdrop art in landscape and on desktop.
+  Re-render on rotation, and fall back gracefully when no poster exists.
+- Add viewport-aware mock-browser geometry assertions to ensure the options
+  control stays within the artwork at multiple screen widths and resize.
+- Register a new v0.8.9.4 Injector script and retire only old, plugin-owned
+  v0.8.9.3/v1 IDs after successful registration, avoiding stale code.
+- Preserve the now-working homepage franchise card, progress display,
+  authorized artwork loading and existing chronological playback behavior.
+
+**Live test still required:** Browser mocks can verify image-relative
+positioning but not every Jellyfin Web client or third-party skin.
+
 ## v0.8.9.3 — Injector script migration and refresh diagnostics (experimental)
 
 - Give the My Media integration a new script ID to avoid reusing a cached

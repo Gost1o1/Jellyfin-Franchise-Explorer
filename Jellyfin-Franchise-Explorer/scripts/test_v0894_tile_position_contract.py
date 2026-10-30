@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+"""Guard against placing Franchises options below the My Media artwork."""
+from pathlib import Path
+
+root = Path(__file__).resolve().parents[1]
+script = (root / "src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-my-media.js").read_text(encoding="utf-8")
+service = (root / "src/Jellyfin.Plugin.FranchiseExplorer/Web/HomeTileRegistrationService.cs").read_text(encoding="utf-8")
+browser = (root / "scripts/test_my_media_tile_browser.py").read_text(encoding="utf-8")
+
+assert "const controlsHost = imageHost || art;" in script
+assert "controlsHost.append(controls)" in script
+assert "tile.append(controls)" not in script
+assert "window.getComputedStyle(controlsHost).position === 'static'" in script
+assert script.index("syncNativeInlineStyles(tile, ref);") < script.index("window.getComputedStyle(controlsHost).position === 'static'")
+assert "if (!imageHost) controlsHost.style.pointerEvents = 'auto'" in script
+assert "bottom:3px" in script and "right:6px" in script
+assert "background:transparent;color:white" in script
+assert "const image=tile.querySelector(" in browser
+assert "holder.parentElement===image" in browser
+assert "menu_geometry['bottomGap']" in browser
+assert 'CurrentScriptId = "jellyfin-franchise-explorer-my-media-v0894"' in service
+assert '"jellyfin-franchise-explorer-my-media-v0893"' in service
+assert '"jellyfin-franchise-explorer-my-media-v1"' in service
+print('v0.8.9.4 image-anchored menu placement contract passed; browser tests still required.')

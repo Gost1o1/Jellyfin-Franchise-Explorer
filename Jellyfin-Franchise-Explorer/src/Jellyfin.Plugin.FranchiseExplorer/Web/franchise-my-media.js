@@ -1,5 +1,5 @@
 /*
- * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.3).
+ * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.4).
  * Adds ONE visual link in the existing "My Media" row. It does not create a
  * Jellyfin library, alter user preferences, or modify the server's media.
  * Requires a compatible JavaScript injector to run in jellyfin-web.
@@ -11,7 +11,7 @@
   // Programmatic registration plus a manual fallback must not create two observers.
   if (window.__franchiseExplorerMyMediaTileLoaded) return;
   window.__franchiseExplorerMyMediaTileLoaded = true;
-  window.__franchiseExplorerUiVersion = '0.8.9.3';
+  window.__franchiseExplorerUiVersion = '0.8.9.4';
 
   const TILE_ID = 'franchise-explorer-my-media-tile';
   const STYLE_ID = 'franchise-explorer-my-media-style';
@@ -61,18 +61,18 @@
         text-shadow:0 2px 5px #001a22;
       }
       #${TILE_ID} .fe-settings-holder {
-        position:absolute;right:9px;bottom:9px;z-index:999;line-height:1;
+        position:absolute;right:6px;bottom:3px;z-index:999;line-height:1;
         pointer-events:auto!important;isolation:isolate;
       }
       #${TILE_ID} .fe-settings-toggle {
-        display:flex;align-items:center;justify-content:center;width:30px;height:30px;
-        border:0;border-radius:50%;background:#0a596c;color:white;cursor:pointer;
-        font:bold 20px/1 Arial,sans-serif;box-shadow:0 1px 5px #001b25bb;
+        display:flex;align-items:center;justify-content:center;width:28px;height:28px;
+        border:0;border-radius:50%;background:transparent;color:white;cursor:pointer;
+        font:bold 20px/1 Arial,sans-serif;text-shadow:0 1px 4px #001b25;
       }
       #${TILE_ID} .fe-settings-toggle:hover,
-      #${TILE_ID} .fe-settings-toggle:focus-visible {background:#087f95;outline:2px solid #74dcec;}
+      #${TILE_ID} .fe-settings-toggle:focus-visible {background:#075a71;outline:2px solid #74dcec;}
       #${TILE_ID} .fe-settings-menu {
-        position:absolute;right:0;bottom:37px;min-width:224px;max-width:min(85vw,280px);padding:5px;
+        position:absolute;right:0;bottom:33px;min-width:224px;max-width:min(85vw,280px);padding:5px;
         background:#182430;color:#fff;border:1px solid #4b6878;border-radius:9px;
         box-shadow:0 8px 24px #000a;box-sizing:border-box;
       }
@@ -192,7 +192,7 @@
       }
     }
     tile.id = TILE_ID;
-    tile.setAttribute('data-fe-version','0.8.9.3');
+    tile.setAttribute('data-fe-version','0.8.9.4');
     tile.setAttribute('aria-label','Open Franchises');
     tile.setAttribute('href',browseUrl());
     // Native actions from a cloned Collections card cannot operate on the
@@ -238,7 +238,14 @@
     openBrowse.setAttribute('role','menuitem');openBrowse.textContent='▶  Open Franchises';
     const settings=document.createElement('a');settings.className='fe-settings-link';settings.href=settingsUrl();
     settings.setAttribute('role','menuitem');settings.textContent='⚙  Franchise Explorer Settings';
-    menu.append(openBrowse,settings);controls.append(trigger,menu);tile.append(controls);
+    // The visible artwork ends ABOVE Jellyfin's separate card caption.
+    // Positioning against the outer card put the three dots below the image,
+    // so anchor the menu to the image itself, like Jellyfin's native tiles.
+    const controlsHost = imageHost || art;
+    // Do not inspect computed styles until the clone is connected to the
+    // document: disconnected nodes can report wrong theme positions.
+    if (!imageHost) controlsHost.style.pointerEvents = 'auto';
+    menu.append(openBrowse,settings);controls.append(trigger,menu);controlsHost.append(controls);
     const setOpen=open=>{
       if(open && activeSettingsMenu && activeSettingsMenu.controls!==controls)activeSettingsMenu.close();
       menu.hidden=!open;trigger.setAttribute('aria-expanded',open?'true':'false');
@@ -293,6 +300,11 @@
       placeTile(container,tile);
     }
     syncNativeInlineStyles(tile, ref);
+    // Preserve native absolute image positioning if the theme uses it. Only
+    // establish a positioning context for genuinely static image elements.
+    const controlsHost=tile.querySelector('.fe-settings-holder')?.parentElement;
+    if(controlsHost && window.getComputedStyle(controlsHost).position === 'static')
+      controlsHost.style.position='relative';
     if (typeof ResizeObserver === 'function' && observedCard !== ref) {
       observedResize?.disconnect();
       observedCard = ref;
@@ -302,7 +314,7 @@
       if (sourceScalable) observedResize.observe(sourceScalable);
     }
     tile.setAttribute('href',browseUrl());
-    tile.setAttribute('data-fe-version','0.8.9.3');
+    tile.setAttribute('data-fe-version','0.8.9.4');
   }
 
   function schedule() {
@@ -332,7 +344,7 @@
   window.addEventListener('resize', schedule);
 })();
 
-/* v0.8.9.3 — Read-only, per-user franchise resume cards on Jellyfin Web's home.
+/* v0.8.9.4 — Read-only, per-user franchise resume cards on Jellyfin Web's home.
  * Jellyfin regularly replaces the home DOM, including after a refresh and
  * client-side navigation. Reattach the same widget rather than waiting for the
  * next API poll, and keep a short session-scoped cache for hard refreshes.
@@ -344,8 +356,9 @@
   window.__franchiseTimelineHomeLoaded = true;
   const WIDGET_ID = 'franchise-timeline-resume';
   const STYLE_ID = 'franchise-timeline-resume-style';
-  const CACHE_PREFIX = 'fe-franchise-home-v0893:';
+  const CACHE_PREFIX = 'fe-franchise-home-v0894:';
   const MAX_CARDS = 8;
+  const phonePortrait = () => window.matchMedia('(orientation: portrait) and (max-width: 700px)').matches;
   const GUID = /^[a-f0-9]{32}$|^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
   const serverPrefix = () => ((location.pathname || '').match(/^(.*?)\/web(?:\/|$)/i) || [,''])[1] || '';
   const serverPath = path => serverPrefix() + path;
@@ -427,6 +440,7 @@
       '#'+WIDGET_ID+' .fe-resume-card{display:flex;flex:1 1 445px;max-width:590px;min-width:0;min-height:164px;overflow:hidden;background:#202b37;border:1px solid #4b5b69;border-radius:11px;box-sizing:border-box}',
       '#'+WIDGET_ID+' .fe-resume-art{display:flex;align-items:center;justify-content:center;position:relative;flex:0 0 39%;min-width:0;background:linear-gradient(145deg,#143c4a,#10232d);color:#82b8c5;text-decoration:none}',
       '#'+WIDGET_ID+' .fe-resume-art img{width:100%;height:100%;position:absolute;inset:0;object-fit:cover}',
+      '#'+WIDGET_ID+' .fe-resume-art img.fe-resume-portrait{object-fit:contain;background:#10232d}',
       '#'+WIDGET_ID+' .fe-resume-art span{font-size:3rem;opacity:.55}',
       '#'+WIDGET_ID+' .fe-resume-content{flex:1;min-width:0;padding:15px 18px;display:flex;flex-direction:column;gap:5px}',
       '#'+WIDGET_ID+' .fe-resume-franchise{font-size:.71rem;letter-spacing:.08em;font-weight:700;text-transform:uppercase;color:#c5dce9;line-height:1.3}',
@@ -463,12 +477,13 @@
       widget.id = WIDGET_ID;
       widget.setAttribute('aria-label', 'Continue Your Franchises');
     }
-    widget.setAttribute('data-fe-version','0.8.9.3');
+    widget.setAttribute('data-fe-version','0.8.9.4');
     // Jellyfin's home view can destroy and recreate this entire parent.
     // Keep our rendered widget and reattach immediately after the native row.
     if (widget.parentElement !== anchor.parentElement || anchor.nextElementSibling !== widget)
       anchor.parentElement.insertBefore(widget, anchor.nextSibling);
-    const signature = JSON.stringify({cards,confirmedEmpty});
+    const portrait = phonePortrait();
+    const signature = JSON.stringify({cards,confirmedEmpty,portrait});
     if (signature === renderedSignature && widget.childElementCount) return;
     renderedSignature = signature;
     const heading = document.createElement('h2');
@@ -490,13 +505,28 @@
       cover.setAttribute('aria-label', 'Resume ' + card.franchise + ': ' + card.title);
       const icon = document.createElement('span'); icon.textContent = '▶'; icon.setAttribute('aria-hidden', 'true');
       cover.append(icon);
-      if (card.artwork && authForImages) {
+      if ((card.artwork || card.artworkPortrait) && authForImages) {
         const img = document.createElement('img'); img.alt = ''; img.loading = 'lazy';
         img.addEventListener('load', () => { icon.style.display = 'none'; });
         cover.append(img);
-        void authenticatedArtwork(card.artwork, authForImages).then(src => {
-          if (src && img.isConnected && scopeFor(authForImages) === authScope) img.src = src;
-        });
+        // Keep the existing horizontal Thumb/Backdrop image in landscape.
+        // On a phone held vertically, prefer the series/movie Primary poster.
+        // If there is no poster (or it fails to load), retain the horizontal art.
+        const candidates = portrait
+          ? [card.artworkPortrait, card.artwork] : [card.artwork];
+        void (async () => {
+          for (const route of [...new Set(candidates.filter(Boolean))]) {
+            const src = await authenticatedArtwork(route, authForImages);
+            if (!img.isConnected || scopeFor(authForImages) !== authScope) return;
+            if (src) {
+              const usesPoster = portrait && route === card.artworkPortrait;
+              img.classList.toggle('fe-resume-portrait', usesPoster);
+              img.dataset.feArtworkKind = usesPoster ? 'poster' : 'landscape';
+              img.src = src;
+              return;
+            }
+          }
+        })();
       }
       const info = document.createElement('div'); info.className = 'fe-resume-content';
       const franchise = document.createElement('div'); franchise.className = 'fe-resume-franchise';
@@ -579,6 +609,10 @@
     if (item.ImageTags?.Primary) return '/Items/' + item.Id + '/Images/Primary?maxWidth=800';
     return '';
   }
+  function posterRoute(item) {
+    if (!item || !GUID.test(item.Id || '') || !item.ImageTags?.Primary) return '';
+    return '/Items/' + item.Id + '/Images/Primary?maxWidth=600';
+  }
   function franchiseFor(state, catalog) {
     const nodes = new Map((catalog.nodes || catalog.Nodes || []).map(n => {
       const value = normalize(n);
@@ -618,6 +652,8 @@
       franchise: franchiseFor(state, catalog),
       title, detail,
       artwork: artworkRoute(series) || artworkRoute(item),
+      artworkPortrait: item?.Type === 'Episode'
+        ? posterRoute(series) : (posterRoute(item) || posterRoute(series)),
       percent: state.total > 0 ? 100 * completed / state.total : 0,
       position: Math.min(state.total, Math.max(1, state.index + 1)),
       total: state.total
@@ -647,7 +683,7 @@
     } catch (error) {
       // Transient errors must not erase the user's most recent cards. Log only
       // the status/error class (never an auth header, token or user ID).
-      console.warn('[Franchise Explorer 0.8.9.3] Home tracker refresh failed:', error?.message || 'unknown error');
+      console.warn('[Franchise Explorer 0.8.9.4] Home tracker refresh failed:', error?.message || 'unknown error');
     }
     finally { busy = false; }
   }
@@ -664,6 +700,8 @@
   setInterval(() => void tick(), 12000);
   window.addEventListener('hashchange', scheduleMount);
   window.addEventListener('popstate', scheduleMount);
+  window.addEventListener('resize', scheduleMount);
+  window.addEventListener('orientationchange', scheduleMount);
   window.addEventListener('pageshow', () => { scheduleMount(); void tick(true); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { scheduleMount(); void tick(true); } });
 })();

@@ -92,6 +92,7 @@ def respond(route):
     elif path.endswith("/Items/" + SERIES):
         route.fulfill(status=200, content_type="application/json", body=json.dumps({
             "Id": SERIES, "Name": "Agent Carter", "Type": "Series",
+            "ImageTags": {"Primary": "poster-tag"},
             "BackdropImageTags": ["some-image-tag"],
         }))
     elif path.endswith("/Items/" + MOVIE):
@@ -131,11 +132,22 @@ with sync_playwright() as p:
         assert second.locator(".fe-resume-title").text_content().strip() == "The Phantom Menace", second.inner_text()
         assert "/FranchiseExplorer/Browse?timeline=" in page.locator(".fe-resume-play").first.get_attribute("href")
         page.wait_for_function("document.querySelector('.fe-resume-art img')?.src.startsWith('blob:')")
+        expected_art = "poster" if width == 390 else "landscape"
+        page.wait_for_function("expected => document.querySelector('.fe-resume-art img')?.dataset.feArtworkKind === expected", arg=expected_art)
+        assert page.locator('.fe-resume-art img').first.get_attribute('data-fe-artwork-kind') == expected_art
+        # A movie without Primary poster art keeps the existing horizontal image.
+        if width == 390:
+            page.wait_for_function("document.querySelectorAll('.fe-resume-art img')[1]?.dataset.feArtworkKind === 'landscape'")
+            # Portrait -> landscape -> portrait without a full page refresh.
+            page.set_viewport_size({"width": 950, "height": 430})
+            page.wait_for_function("document.querySelector('.fe-resume-art img')?.dataset.feArtworkKind === 'landscape'")
+            page.set_viewport_size({"width": 390, "height": 900})
+            page.wait_for_function("document.querySelector('.fe-resume-art img')?.dataset.feArtworkKind === 'poster'")
         tile = page.locator("#franchise-explorer-my-media-tile")
         assert tile.count() == 1
-        assert page.evaluate("window.__franchiseExplorerUiVersion") == "0.8.9.3"
-        assert tile.get_attribute("data-fe-version") == "0.8.9.3"
-        assert page.locator("#franchise-timeline-resume").get_attribute("data-fe-version") == "0.8.9.3"
+        assert page.evaluate("window.__franchiseExplorerUiVersion") == "0.8.9.4"
+        assert tile.get_attribute("data-fe-version") == "0.8.9.4"
+        assert page.locator("#franchise-timeline-resume").get_attribute("data-fe-version") == "0.8.9.4"
         before_menu = page.url
         tile.locator(".fe-settings-toggle").click()
         assert tile.locator(".fe-settings-menu").is_visible()
@@ -163,6 +175,7 @@ with sync_playwright() as p:
         page.add_script_tag(content=SCRIPT)
         page.wait_for_selector(".fe-resume-card", timeout=10000)
         assert page.locator(".fe-resume-card").count() == 2
+        page.wait_for_function("expected => document.querySelector('.fe-resume-art img')?.dataset.feArtworkKind === expected", arg=expected_art)
         # The mock Jellyfin My Media rail intentionally has native fixed-width
         # cards in a horizontally scrolling row. Its scrollWidth can exceed the
         # viewport at 390 px even with the plugin disabled. Test the franchise

@@ -1,4 +1,4 @@
-/* Franchise Explorer v0.8.9.3 local Jellyfin Web playback handoff.
+/* Franchise Explorer v0.8.9.4 local Jellyfin Web playback handoff.
  * A Jellyfin PlayNow queue is built from item IDs, never from filenames.
  * Timeline state is separate from Jellyfin watched flags and user-specific.
  */

@@ -49,6 +49,22 @@ with sync_playwright() as p:
         assert page.evaluate('document.documentElement.scrollWidth <= innerWidth'), 'horizontal overflow at '+str(width)
         tile_width=page.locator('#franchise-explorer-my-media-tile').bounding_box()['width']
         assert abs(tile_width-page.locator('#home-my-media .card').first.bounding_box()['width']) <= 2, (width,tile_width)
+        # The image and card caption have different bottoms. The menu must
+        # live INSIDE the artwork, matching the native Jellyfin three dots.
+        menu_geometry = page.evaluate('''() => {
+          const tile=document.getElementById('franchise-explorer-my-media-tile');
+          const image=tile.querySelector('.cardImageContainer,.poster,.cardImage,.cardScalable');
+          const holder=tile.querySelector('.fe-settings-holder');
+          const button=tile.querySelector('.fe-settings-toggle');
+          const a=image.getBoundingClientRect(),b=button.getBoundingClientRect();
+          return {imageHost:holder.parentElement===image,
+            right:b.right<=a.right+1,left:b.left>=a.left-1,
+            top:b.top>=a.top-1,bottom:b.bottom<=a.bottom+1,
+            bottomGap:a.bottom-b.bottom};
+        }''')
+        assert menu_geometry['imageHost'],menu_geometry
+        assert all(menu_geometry[k] for k in ('left','right','top','bottom')), (width,menu_geometry)
+        assert 0 <= menu_geometry['bottomGap'] <= 12, (width,menu_geometry)
         # Jellyfin replaces the My Media row after a client-side refresh:
         page.evaluate("document.querySelector('#home-my-media .itemsContainer').innerHTML='<div class=\"card\"><div class=\"poster\"></div><span>Music</span></div>'")
         page.wait_for_timeout(130)

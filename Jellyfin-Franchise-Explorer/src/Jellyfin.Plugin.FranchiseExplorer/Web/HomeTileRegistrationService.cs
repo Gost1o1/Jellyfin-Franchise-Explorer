@@ -27,8 +27,12 @@ public sealed class HomeTileRegistrationService : IHostedService, IDisposable
     // Script IDs are stable within a UI generation, not forever. Injector and
     // Jellyfin Web can cache the previous script despite a DLL replacement.
     // A new ID lets this release load the updated home and menu integration.
-    private const string CurrentScriptId = "jellyfin-franchise-explorer-my-media-v0893";
-    private const string LegacyScriptId = "jellyfin-franchise-explorer-my-media-v1";
+    private const string CurrentScriptId = "jellyfin-franchise-explorer-my-media-v0894";
+    private static readonly string[] LegacyScriptIds =
+    {
+        "jellyfin-franchise-explorer-my-media-v0893",
+        "jellyfin-franchise-explorer-my-media-v1"
+    };
     private readonly ILogger<HomeTileRegistrationService> _logger;
     private readonly CancellationTokenSource _stopping = new();
     private Task? _registrationTask;
@@ -136,7 +140,7 @@ public sealed class HomeTileRegistrationService : IHostedService, IDisposable
             ["requiresAuthentication"] = false,
             ["pluginId"] = global::Jellyfin.Plugin.FranchiseExplorer.Plugin.PluginId.ToString(),
             ["pluginName"] = "Franchise Explorer",
-            ["pluginVersion"] = "0.8.9.3"
+            ["pluginVersion"] = "0.8.9.4"
         });
 
         object? payload = parse.Invoke(null, new object[] { json });
@@ -151,13 +155,16 @@ public sealed class HomeTileRegistrationService : IHostedService, IDisposable
         if (unregister is not null && unregister.GetParameters().Length == 1 &&
             unregister.GetParameters()[0].ParameterType == typeof(string))
         {
-            try
+            foreach (string legacyId in LegacyScriptIds)
             {
-                unregister.Invoke(null, new object[] { LegacyScriptId });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Franchise Explorer: previous My Media Injector script could not be retired; check for duplicate plugin scripts.");
+                try
+                {
+                    unregister.Invoke(null, new object[] { legacyId });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Franchise Explorer: previous My Media Injector script {LegacyScriptId} could not be retired; check for duplicate plugin scripts.", legacyId);
+                }
             }
         }
         return true;
