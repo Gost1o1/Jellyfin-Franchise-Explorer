@@ -1,3 +1,24 @@
+## v0.8.9.3 — Injector script migration and refresh diagnostics (experimental)
+
+- Give the My Media integration a new script ID to avoid reusing a cached
+  legacy registration. Retire the exact old plugin-owned script ID only after
+  the new registration succeeds, leaving manually added scripts alone.
+- Add a distinct v0.8.9.3 version marker to the loaded browser JavaScript,
+  My Media card and home tracker, with README troubleshooting steps for
+  verifying that the installed server is serving the new code.
+- Keep the franchise tracker visible with a loading placeholder while initial
+  session data is pending, and preserve cached cards across intermittent API
+  failures. Show per-franchise names, next episode/movie and artwork as in
+  v0.8.9.2 once the timeline and catalog resolve.
+- Make the tile's three-dot options explicit: Open Franchises and Franchise
+  Explorer Settings. Retain the dedicated browser-header Settings control.
+- Document both Jellyfin repository manifest URLs, Injector setup, and the
+  manual experimental-release procedure. Preserve playback/session guards.
+
+**Still needs live verification:** The v0.8.9.2 screenshot showed an older
+card despite the Injector page identifying a newer script. The new script ID
+and diagnostics address likely stale registration, not a proven root cause.
+
 ## v0.8.9.2 — Persistent homepage franchise cards and settings shortcuts (experimental)
 
 - Replace the generic home 'Chronological Order' tile with separate,
@@ -210,4 +231,3 @@ Test with a new short movie-to-episode timeline on actual Jellyfin.
 **Warning:** Untested on a running Jellyfin 12.2 server; back up configurations before installing. Runtime validation remains required.
 
 See Git history for earlier releases.
-

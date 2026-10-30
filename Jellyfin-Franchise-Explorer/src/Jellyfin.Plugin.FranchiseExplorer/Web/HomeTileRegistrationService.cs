@@ -24,6 +24,11 @@ public sealed class HomeTileRegistrationService : IHostedService, IDisposable
 {
     private const string InjectorAssemblyName = "Jellyfin.Plugin.JavaScriptInjector";
     private const string ScriptResourceName = "Jellyfin.Plugin.FranchiseExplorer.Web.franchise-my-media.js";
+    // Script IDs are stable within a UI generation, not forever. Injector and
+    // Jellyfin Web can cache the previous script despite a DLL replacement.
+    // A new ID lets this release load the updated home and menu integration.
+    private const string CurrentScriptId = "jellyfin-franchise-explorer-my-media-v0893";
+    private const string LegacyScriptId = "jellyfin-franchise-explorer-my-media-v1";
     private readonly ILogger<HomeTileRegistrationService> _logger;
     private readonly CancellationTokenSource _stopping = new();
     private Task? _registrationTask;
@@ -95,7 +100,7 @@ public sealed class HomeTileRegistrationService : IHostedService, IDisposable
             "Install JavaScript Injector and restart Jellyfin to add the web-only My Media card.");
     }
 
-    private static bool TryRegister()
+    private bool TryRegister()
     {
         Assembly? injectorAssembly = AssemblyLoadContext.All
             .SelectMany(context => context.Assemblies)
@@ -123,7 +128,7 @@ public sealed class HomeTileRegistrationService : IHostedService, IDisposable
 
         string json = JsonSerializer.Serialize(new Dictionary<string, object>
         {
-            ["id"] = "jellyfin-franchise-explorer-my-media-v1",
+            ["id"] = CurrentScriptId,
             ["name"] = "Franchise Explorer - My Media tile",
             ["script"] = script,
             ["module"] = false,
@@ -131,13 +136,31 @@ public sealed class HomeTileRegistrationService : IHostedService, IDisposable
             ["requiresAuthentication"] = false,
             ["pluginId"] = global::Jellyfin.Plugin.FranchiseExplorer.Plugin.PluginId.ToString(),
             ["pluginName"] = "Franchise Explorer",
-            ["pluginVersion"] = "0.8.9.2"
+            ["pluginVersion"] = "0.8.9.3"
         });
 
         object? payload = parse.Invoke(null, new object[] { json });
         if (payload is null) return false;
         object? result = register.Invoke(null, new[] { payload });
-        return result is bool success && success;
+        if (result is not bool success || !success) return false;
+
+        // Only retire our own exact older script, and only AFTER the new
+        // registration succeeds. Never erase user-created Injector scripts.
+        // An older Injector without this optional API keeps working.
+        MethodInfo? unregister = interfaceType?.GetMethod("UnregisterScript", BindingFlags.Public | BindingFlags.Static);
+        if (unregister is not null && unregister.GetParameters().Length == 1 &&
+            unregister.GetParameters()[0].ParameterType == typeof(string))
+        {
+            try
+            {
+                unregister.Invoke(null, new object[] { LegacyScriptId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Franchise Explorer: previous My Media Injector script could not be retired; check for duplicate plugin scripts.");
+            }
+        }
+        return true;
     }
 }
 

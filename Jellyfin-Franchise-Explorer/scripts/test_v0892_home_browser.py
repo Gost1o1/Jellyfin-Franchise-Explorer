@@ -133,9 +133,15 @@ with sync_playwright() as p:
         page.wait_for_function("document.querySelector('.fe-resume-art img')?.src.startsWith('blob:')")
         tile = page.locator("#franchise-explorer-my-media-tile")
         assert tile.count() == 1
+        assert page.evaluate("window.__franchiseExplorerUiVersion") == "0.8.9.3"
+        assert tile.get_attribute("data-fe-version") == "0.8.9.3"
+        assert page.locator("#franchise-timeline-resume").get_attribute("data-fe-version") == "0.8.9.3"
+        before_menu = page.url
         tile.locator(".fe-settings-toggle").click()
         assert tile.locator(".fe-settings-menu").is_visible()
-        assert "configurationpage?name=Franchise%20Explorer" in tile.locator(".fe-settings-link").get_attribute("href")
+        assert page.url == before_menu, "Clicking the three dots must not open browsing"
+        assert "Open Franchises" in tile.locator(".fe-settings-menu").inner_text()
+        assert "configurationpage?name=Franchise%20Explorer" in tile.locator(".fe-settings-link").last.get_attribute("href")
         page.locator("#next").click()
         assert not tile.locator(".fe-settings-menu").is_visible()
 

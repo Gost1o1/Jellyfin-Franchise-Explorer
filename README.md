@@ -30,19 +30,42 @@
 
 ## Install or update
 
-1. **Back up** your Jellyfin server and Franchise Explorer configuration/artwork. The plugin's JSON export includes franchise metadata, **not the image files**.
-2. In Jellyfin, open **Dashboard → Plugins → Repositories → Add** and enter the catalog URL below. If already added, keep the existing entry.
-3. Open the Jellyfin plugin **Catalog**, find **Franchise Explorer**, install the available version, and **restart Jellyfin** (on Windows, restart the Jellyfin service).
-4. Open the plugin's settings to create and manage franchises, then launch the **Franchises browser**.
-5. **Optional:** To show a Franchises tile under **My Media** and enable supported browser-side enhancements, configure [Jellyfin JavaScript Injector](https://github.com/n00bcodr/Jellyfin-JavaScript-Injector). Support varies by client and Jellyfin Web version.
+Franchise Explorer has a standalone Franchises browser, but its **My Media tile, Continue Your Franchises homepage tracker, and tile settings menu require the separate [JavaScript Injector plugin](https://github.com/n00bcodr/Jellyfin-JavaScript-Injector)**. Install both plugins for the complete Jellyfin Web experience. JavaScript Injector is not bundled with Franchise Explorer.
 
-**Plugin catalog URL** — copy into Jellyfin's repository settings:
+### Step 1 — Add both plugin repositories
+
+1. Open **Jellyfin Dashboard → Plugins → Repositories**.
+2. Select **Add** (or the **+** button).
+3. Give the first repository the name **Gost1o1 — Franchise Explorer** and paste this URL:
 
 ```text
 https://raw.githubusercontent.com/Gost1o1/Jellyfin-Franchise-Explorer/main/manifest.json
 ```
 
+4. Save, select **Add** again, name the second repository **n00bcodr — JavaScript Injector**, and paste the repository URL from the [JavaScript Injector project's installation instructions](https://github.com/n00bcodr/Jellyfin-JavaScript-Injector#installation). The maintainer states the same catalog URL supports Jellyfin 10.11 and 12:
+
+```text
+https://raw.githubusercontent.com/n00bcodr/jellyfin-plugins/main/manifest.json
+```
+
+5. Save. If either repository is already present, keep its existing entry rather than creating a duplicate.
+
+### Step 2 — Install the plugins
+
+1. **Back up** Jellyfin and your Franchise Explorer configuration and artwork. The plugin's JSON export includes franchise metadata, **not uploaded image files**.
+2. Open **Dashboard → Plugins → Catalog**. Install the Jellyfin 12-compatible **JavaScript Injector** plugin and **Franchise Explorer** from their respective repositories.
+3. **Restart Jellyfin** after installing or updating either plugin (on Windows, restart the Jellyfin service).
+4. Open **Dashboard → Plugins → JavaScript Injector** (or **JS Injector** in the dashboard sidebar). Under **Plugin Scripts**, you should see **one enabled Franchise Explorer - My Media tile** entry registered by Franchise Explorer itself. In **v0.8.9.3**, its Script ID is `jellyfin-franchise-explorer-my-media-v0893` and Plugin Version is `0.8.9.3`. You do **not** need to click **Add Script** or paste JavaScript manually when this entry is present.
+5. Hard-refresh Jellyfin Web with **Ctrl+Shift+R**, then check **Home → My Media → Franchises**, **Continue Your Franchises**, and the separate **Franchises browser**. The My Media tile's three-dot button should open the settings shortcut; clicking the rest of the tile opens browsing.
+6. Open Franchise Explorer settings to create or manage franchises and chronological watch orders.
+
+**Already installed JavaScript Injector?** Keep the one registered Franchise Explorer plugin script enabled. Avoid creating a second, manually pasted copy; conflicting older scripts can interfere with the homepage integration. Version **0.8.9.3** registers a new script ID and attempts to retire only the old plugin-owned `jellyfin-franchise-explorer-my-media-v1` entry. If both IDs remain, confirm the new script is installed before disabling the old entry. If the browser still displays an older tracker, verify the installed DLL version, restart Jellyfin, and try a private browsing window to rule out cached web assets.
+
+**Still seeing the small “Chronological Order” card?** v0.8.9.3 should display the root franchise name, the current series or movie, the next episode (where applicable), thumbnail artwork, and progress. In Jellyfin Web's browser DevTools Console, run `window.__franchiseExplorerUiVersion` to check the actual script; it should return `0.8.9.3`. You can also inspect `document.querySelector('#franchise-timeline-resume')?.dataset.feVersion` for the tracker and `document.querySelector('#franchise-explorer-my-media-tile')?.dataset.feVersion` for the tile. Missing/old values indicate the new web script did not take effect. For detailed troubleshooting see [v0.8.9.3 upgrade notes](Jellyfin-Franchise-Explorer/docs/UPGRADE_V0893.md).
+
 **Using a GitHub download instead?** See [Releases](https://github.com/Gost1o1/Jellyfin-Franchise-Explorer/releases) for compiled plugin packages when a release is published. **Do not install GitHub's “Source code” ZIP as a Jellyfin plugin.** The Actions **Preview — Test Builds** link is for development artifacts, not a verified stable release.
+
+**Developer note:** Pushing updated source files or passing GitHub Actions does **not** update the plugin already installed on your Jellyfin server. Publish and install the compiled release (or explicitly deploy a compatible test DLL), restart Jellyfin, then refresh the browser. A newer source version may not appear in the Jellyfin catalog until that version is actually released and added to the repository manifest.
 
 ## What it does
 
