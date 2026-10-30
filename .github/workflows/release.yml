@@ -5,7 +5,7 @@ on:
       version:
         description: 'Release version; must equal csproj Version'
         required: true
-        default: '0.8.9.4'
+        default: '0.8.9.5'
         type: string
       confirm:
         description: 'Type RELEASE_EXPERIMENTAL to publish'
@@ -52,6 +52,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: true
+      - name: Refuse duplicate GitHub releases before compiling
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          if gh release view "v${RELEASE_VERSION}" --json tagName --jq .tagName >/dev/null 2>&1; then
+            echo "::error::Release v${RELEASE_VERSION} already exists. Increase the project version and rerun with the new version. Existing releases are never overwritten."
+            exit 1
+          fi
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
@@ -86,6 +95,7 @@ jobs:
           python3 scripts/test_v0893_upgrade_contract.py
           python3 scripts/test_v0894_tile_position_contract.py
           python3 scripts/test_v0894_poster_orientation_contract.py
+          python3 scripts/test_v0895_release_contract.py
           python3 scripts/check_version.py "$RELEASE_VERSION"
       - name: Build release assembly
         working-directory: Jellyfin-Franchise-Explorer
