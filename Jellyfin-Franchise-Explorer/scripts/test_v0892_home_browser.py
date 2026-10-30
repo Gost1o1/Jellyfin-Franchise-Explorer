@@ -157,7 +157,29 @@ with sync_playwright() as p:
         page.add_script_tag(content=SCRIPT)
         page.wait_for_selector(".fe-resume-card", timeout=10000)
         assert page.locator(".fe-resume-card").count() == 2
-        assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+        # The mock Jellyfin My Media rail intentionally has native fixed-width
+        # cards in a horizontally scrolling row. Its scrollWidth can exceed the
+        # viewport at 390 px even with the plugin disabled. Test the franchise
+        # section itself instead of incorrectly rejecting that native carousel.
+        layout = page.evaluate("""() => {
+          const section = document.querySelector('#franchise-timeline-resume');
+          const grid = section?.querySelector('.fe-resume-grid');
+          const rect = element => {
+            const {left, right, width} = element.getBoundingClientRect();
+            return {left, right, width, clientWidth:element.clientWidth,
+              scrollWidth:element.scrollWidth};
+          };
+          return {viewport:window.innerWidth,
+            nativePageScrollWidth:document.documentElement.scrollWidth,
+            section:rect(section), grid:rect(grid),
+            cards:[...grid.querySelectorAll('.fe-resume-card')].map(rect)};
+        }""")
+        assert layout["section"]["left"] >= -1, layout
+        assert layout["section"]["right"] <= layout["viewport"] + 1, layout
+        assert layout["grid"]["scrollWidth"] <= layout["grid"]["clientWidth"] + 1, layout
+        assert all(card["left"] >= layout["grid"]["left"] - 1 and
+                   card["right"] <= layout["grid"]["right"] + 1
+                   for card in layout["cards"]), layout
         print("PASS v0.8.9.2 homepage / menu / hard refresh at", width, "px")
         page.close()
     browser.close()
