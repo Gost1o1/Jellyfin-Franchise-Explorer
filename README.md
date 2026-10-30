@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="https://www.Gost1o1.pro">
-    <img src="https://raw.githubusercontent.com/Gost1o1/YouTube-Music-Takeout-To-Lidarr/main/AppUI/Gost1o1-logo.jpg" alt="Gost1o1" width="112" />
+    <img src="docs/Gost1o1-logo.png" alt="Gost1o1" width="220" />
   </a>
 </p>
 
@@ -21,27 +21,12 @@
   <a href="https://github.com/Gost1o1/Jellyfin-Franchise-Explorer/actions/workflows/build.yml"><img alt="Development builds" src="https://img.shields.io/badge/Preview-Test%20Builds-325A82?logo=githubactions&logoColor=white" /></a>
 </p>
 
-## Preview
-
-Explore your favorite franchises, browse phases and collections,
-and follow custom chronological watch orders.
-
-![Jellyfin Franchise Explorer showing the Marvel Cinematic Universe](Jellyfin-Franchise-Explorer/docs/franchise-explorer-preview.png)
-
 > [!IMPORTANT]
 > **Experimental project for Jellyfin 12.2.** Franchise Explorer is unfinished and is being tested on a personal Jellyfin server. Features and client compatibility can change. **Back up Jellyfin and your plugin data before installing or updating.** Chronological playback and automatic next-item playback are still experimental; do not assume they work in every client.
 
-## Watch the walkthrough
+## Preview
 
-Want to see the process before starting? Watch the step-by-step walkthrough by **Gost1o1**:
-
-<p align="center">
-  <a href="https://www.youtube.com/watch?v=n81hzCCk8M0" title="Watch the YouTube Music Takeout to Lidarr walkthrough on YouTube">
-    <img src="https://img.youtube.com/vi/n81hzCCk8M0/hqdefault.jpg" alt="Watch Gost1o1's YouTube Music Takeout to Lidarr walkthrough" width="560" />
-  </a>
-</p>
-
-<p align="center"><a href="https://www.youtube.com/watch?v=n81hzCCk8M0"><strong>▶ Watch the setup and usage video on YouTube</strong></a></p>
+![Franchise Explorer showing the Marvel Cinematic Universe, phases, collections, and chronological watch order](docs/franchise-explorer-preview.png)
 
 ## Install or update
 
@@ -66,6 +51,8 @@ https://raw.githubusercontent.com/Gost1o1/Jellyfin-Franchise-Explorer/main/manif
 - Reuse Jellyfin artwork or apply plugin-specific poster, backdrop, logo, and banner overrides.
 - Track per-user progress in an experimental chronological player, with resume options and watched indicators.
 - Add an optional **Franchises** entry to Jellyfin Web's **My Media** section.
+- Resume different franchise watch orders from persistent homepage cards showing the next title, artwork, and individual progress (on supported Jellyfin Web installations).
+- Open Franchise Explorer's administrator settings from the My Media Franchises tile or the browser header.
 
 **Your existing movies, shows, files, and native Jellyfin Collections remain in place.** Normal franchise browsing does not rename, move, or duplicate library media. Plugin watch-order progress is separate from Jellyfin's native watched state.
 
