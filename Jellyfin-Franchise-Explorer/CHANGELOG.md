@@ -1,3 +1,18 @@
+## v0.8.9.5 — Release-tag collision and Injector refresh (experimental)
+
+- Publish the latest v0.8.9.4 bug fixes under a unique version rather than
+  attempting to recreate the already-published `v0.8.9.4` GitHub release.
+- Register an updated, version-specific JavaScript Injector script ID, then
+  retire only previous Franchise Explorer owned scripts (v0.8.9.4/v0.8.9.3/v1).
+- Keep the hover-only desktop three-dot menu and its revised browser test,
+  which reveals the menu before clicking it. Touch and keyboard remain usable.
+- The visibility preference now reads **Hide active franchise titles from
+  Continue Watching and Next Up**: **on hides**, **off shows** (default off).
+- The manual release workflow now checks whether the tag is already a GitHub
+  release before doing the expensive compile-and-package work; it preserves
+  existing published release assets rather than overwriting them.
+- No changes to watched history, artwork overrides, or existing media files.
+
 ## v0.8.9.4 — My Media three-dot artwork alignment (experimental)
 
 - Fix the confirmed screenshot bug: the three-dot Franchises options control

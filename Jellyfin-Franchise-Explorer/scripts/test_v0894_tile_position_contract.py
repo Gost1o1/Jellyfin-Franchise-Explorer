@@ -34,7 +34,8 @@ assert "card.classList.toggle(NATIVE_HIDE_CLASS" in script
 assert "const image=tile.querySelector(" in browser
 assert "holder.parentElement===image" in browser
 assert "menu_geometry['bottomGap']" in browser
-assert 'CurrentScriptId = "jellyfin-franchise-explorer-my-media-v0894"' in service
+assert 'CurrentScriptId = "jellyfin-franchise-explorer-my-media-v0895"' in service
+assert '"jellyfin-franchise-explorer-my-media-v0894"' in service
 assert '"jellyfin-franchise-explorer-my-media-v0893"' in service
 assert '"jellyfin-franchise-explorer-my-media-v1"' in service
 print('v0.8.9.4 image-anchored menu placement contract passed; browser tests still required.')
