@@ -42,6 +42,7 @@ jobs:
           python3 scripts/test_v0891_json_contract.py
           python3 scripts/test_local_web_handoff_contract.py
           python3 scripts/test_v0892_home_contract.py
+          python3 scripts/test_v0893_upgrade_contract.py
       - name: Restore and build Jellyfin 12.2 plugin
         working-directory: Jellyfin-Franchise-Explorer
         run: |
