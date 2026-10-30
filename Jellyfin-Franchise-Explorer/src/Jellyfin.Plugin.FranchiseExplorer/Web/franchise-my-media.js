@@ -62,12 +62,22 @@
       }
       #${TILE_ID} .fe-settings-holder {
         position:absolute;right:6px;bottom:3px;z-index:999;line-height:1;
-        pointer-events:auto!important;isolation:isolate;
+        pointer-events:none!important;isolation:isolate;
       }
+      #${TILE_ID}:hover .fe-settings-holder,
+      #${TILE_ID}:focus-within .fe-settings-holder {pointer-events:auto!important;}
       #${TILE_ID} .fe-settings-toggle {
         display:flex;align-items:center;justify-content:center;width:28px;height:28px;
         border:0;border-radius:50%;background:transparent;color:white;cursor:pointer;
         font:bold 20px/1 Arial,sans-serif;text-shadow:0 1px 4px #001b25;
+        opacity:0;pointer-events:none;transition:opacity .15s ease;
+      }
+      #${TILE_ID}:hover .fe-settings-toggle,
+      #${TILE_ID}:focus-within .fe-settings-toggle,
+      #${TILE_ID} .fe-settings-toggle[aria-expanded="true"] {opacity:1;pointer-events:auto;}
+      @media(hover:none), (pointer:coarse) {
+        #${TILE_ID} .fe-settings-holder {pointer-events:auto!important;}
+        #${TILE_ID} .fe-settings-toggle {opacity:1;pointer-events:auto;}
       }
       #${TILE_ID} .fe-settings-toggle:hover,
       #${TILE_ID} .fe-settings-toggle:focus-visible {background:#075a71;outline:2px solid #74dcec;}
@@ -356,6 +366,8 @@
   window.__franchiseTimelineHomeLoaded = true;
   const WIDGET_ID = 'franchise-timeline-resume';
   const STYLE_ID = 'franchise-timeline-resume-style';
+  const NATIVE_HIDE_STYLE_ID = 'fe-native-franchise-row-filter-style';
+  const NATIVE_HIDE_CLASS = 'fe-native-franchise-row-hidden';
   const CACHE_PREFIX = 'fe-franchise-home-v0894:';
   const MAX_CARDS = 8;
   const phonePortrait = () => window.matchMedia('(orientation: portrait) and (max-width: 700px)').matches;
@@ -367,7 +379,9 @@
   let widget = null;
   const images = new Map();
   const itemCache = new Map();
+  const nativeItemCache = new Map();
   let catalogCache = null, catalogFetched = 0;
+  let nativeFilterSerial = 0;
 
   function credential() {
     let servers = [];
@@ -408,7 +422,7 @@
     if (widget) { widget.remove(); widget = null; }
     for (const url of images.values()) if (typeof url === 'string') URL.revokeObjectURL(url);
     images.clear();
-    itemCache.clear(); catalogCache = null; catalogFetched = 0;
+    itemCache.clear(); nativeItemCache.clear(); catalogCache = null; catalogFetched = 0;
     if (!next) return;
     try {
       const cached = JSON.parse(sessionStorage.getItem(next) || '{}');
@@ -428,6 +442,78 @@
     const heading = headings.find(h => (h.textContent || '').trim() === 'Continue Watching')
       || headings.find(h => (h.textContent || '').trim() === 'My Media');
     return heading?.closest('.verticalSection,.homeSection,section') || heading?.parentElement?.parentElement || null;
+  }
+  function nativeRowSettingKey(auth) {
+    return 'fe-show-active-native-rows:' + location.origin + ':' + String(auth.UserId || '').toLowerCase();
+  }
+  function nativeRowSections() {
+    const headings = [...document.querySelectorAll('h1,h2,h3,h4,.sectionTitle')];
+    return headings.filter(h => /^(Continue Watching|Next Up)(?:\s*[›»>→])?$/.test((h.textContent || '').replace(/\s+/g,' ').trim()))
+      .map(h => h.closest('.verticalSection,.homeSection,section') || h.parentElement?.parentElement)
+      .filter(Boolean);
+  }
+  function nativeCardId(card) {
+    const candidates = [card, card.querySelector('[data-id],[data-item-id],[data-itemid]')].filter(Boolean);
+    for (const node of candidates) {
+      for (const attribute of ['data-id','data-item-id','data-itemid']) {
+        const id = node.getAttribute(attribute);
+        if (GUID.test(id || '')) return id.toLowerCase();
+      }
+    }
+    const links = [...card.querySelectorAll('a[href]')];
+    if (card.matches('a[href]')) links.unshift(card);
+    for (const link of links) {
+      try {
+        const url = new URL(link.getAttribute('href'), location.href);
+        const id = url.searchParams.get('id') || new URLSearchParams(url.hash.split('?')[1] || '').get('id');
+        if (GUID.test(id || '')) return id.toLowerCase();
+      } catch (_) { /* Invalid native link. */ }
+    }
+    return '';
+  }
+  async function nativeSeriesId(id, auth) {
+    const stored = nativeItemCache.get(id);
+    if (stored && Date.now() - stored.time < 120000) return stored.value;
+    let value = '';
+    try {
+      const item = await cachedItem(id, auth);
+      value = String(item?.SeriesId || (item?.Type === 'Series' ? item.Id : '') || '').toLowerCase();
+    } catch (_) { /* A missing item must remain visible. */ }
+    nativeItemCache.set(id, {time:Date.now(),value});
+    return value;
+  }
+  async function filterNativeRows(auth) {
+    const serial = ++nativeFilterSerial;
+    const sections = nativeRowSections();
+    if (!sections.length) return;
+    if (!document.getElementById(NATIVE_HIDE_STYLE_ID)) {
+      const style = document.createElement('style');
+      style.id = NATIVE_HIDE_STYLE_ID;
+      style.textContent = '.' + NATIVE_HIDE_CLASS + '{display:none!important}';
+      document.head.append(style);
+    }
+    const hide = auth && localStorage.getItem(nativeRowSettingKey(auth)) === '0';
+    const targets = new Set();
+    for (const card of cards) {
+      if (GUID.test(card.itemId || '')) targets.add(card.itemId.toLowerCase());
+      if (GUID.test(card.seriesId || '')) targets.add(card.seriesId.toLowerCase());
+    }
+    const nativeCards = [...new Set(sections.flatMap(section =>
+      [...section.querySelectorAll('.card,.libraryCard')].filter(card => !card.closest('#'+WIDGET_ID))))];
+    for (const card of nativeCards) {
+      const id = nativeCardId(card);
+      if (!hide || !targets.size || !id) {
+        card.classList.remove(NATIVE_HIDE_CLASS);
+        continue;
+      }
+      if (targets.has(id)) {
+        card.classList.add(NATIVE_HIDE_CLASS);
+        continue;
+      }
+      const seriesId = await nativeSeriesId(id, auth);
+      if (serial !== nativeFilterSerial || !card.isConnected) return;
+      card.classList.toggle(NATIVE_HIDE_CLASS, Boolean(seriesId && targets.has(seriesId)));
+    }
   }
   function ensureStyle() {
     if (document.getElementById(STYLE_ID)) return;
@@ -466,6 +552,9 @@
   function mount() {
     const auth = credential();
     restore(auth);
+    // Hide only the current watch-order show/movie, never an entire franchise.
+    // Existing Jellyfin rows remain intact; this is client-side presentation only.
+    void filterNativeRows(auth);
     const anchor = homeAnchor();
     if (!anchor?.parentElement || (!cards.length && confirmedEmpty)) {
       if (widget?.isConnected) widget.remove();
@@ -649,6 +738,8 @@
     const completed = Array.isArray(state.completedKeys) ? state.completedKeys.length : 0;
     return {
       rowId: state.rowId,
+      itemId: id,
+      seriesId: item?.Type === 'Episode' ? String(item.SeriesId || '').toLowerCase() : '',
       franchise: franchiseFor(state, catalog),
       title, detail,
       artwork: artworkRoute(series) || artworkRoute(item),

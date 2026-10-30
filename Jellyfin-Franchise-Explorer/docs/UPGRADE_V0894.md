@@ -34,6 +34,15 @@ installable plugin. Save a backup of your plugin and configuration first.
 - Re-select artwork after phone rotation without changing watch progress or
   losing the resume control. Images still use authenticated Jellyfin requests;
   authentication tokens are never placed in image URLs.
+- Show the My Media three-dot button only while hovered/focused with a mouse
+  or keyboard, while leaving it available on touch screens and when its menu
+  is expanded.
+- Add **Show active franchise titles in Continue Watching and Next Up** beside
+  the Franchise Explorer browser's subtitle checkbox. It defaults to on.
+  Turning it off hides only the active watch-order movie or series from the
+  two native Jellyfin Web rows (including other episodes of the same series).
+  It never changes watched flags or Jellyfin server recommendations. This
+  setting is stored per Jellyfin user and per browser, not server-synchronized.
 
 ## Upload and verify
 
@@ -42,13 +51,17 @@ installable plugin. Save a backup of your plugin and configuration first.
 2. Wait for both `build` and `ui-browser` GitHub Actions jobs to pass. The
    browser suite now checks the menu button's geometry against the native
    card **image**, rather than its outer caption-inclusive height. It also
-   checks portrait poster selection and landscape fallback on rotation.
+   checks portrait poster selection and landscape fallback on rotation,
+   as well as the optional active-title row filtering and hover behavior.
 3. Publish/install the experimental v0.8.9.4 plugin using the workflow and
    restart your Jellyfin service. Open **Dashboard → Plugins → JS Injector**
    and verify **one** enabled My Media script shows version `0.8.9.4`.
-4. Hard-refresh Jellyfin Web. Check that the dots appear **inside** the lower
-   right of the turquoise Franchises artwork, and that the new tracker below
-   Continue Watching is still present and functional.
+4. Hard-refresh Jellyfin Web. Hover over the turquoise Franchises artwork and
+   check that the dots appear **inside** its lower-right corner (not at rest).
+   Check that the tracker below Continue Watching still works. Open
+   **Franchises** to try the new native-row visibility checkbox; verify that
+   only the active franchise's series/movie disappears from **Continue
+   Watching** and **Next Up** when unchecked.
 
 If you still see the older position, check the current browser script version:
 

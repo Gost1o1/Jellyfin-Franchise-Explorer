@@ -27,6 +27,8 @@ ROOT_SW = "cccccccc-cccc-cccc-cccc-cccccccccccc"
 ROW_MCU = "11111111-1111-1111-1111-111111111111"
 ROW_SW = "22222222-2222-2222-2222-222222222222"
 EPISODE = "33333333-3333-3333-3333-333333333333"
+EPISODE_NEXT = "66666666-6666-6666-6666-666666666666"
+OTHER_EPISODE = "77777777-7777-7777-7777-777777777777"
 SERIES = "44444444-4444-4444-4444-444444444444"
 MOVIE = "55555555-5555-5555-5555-555555555555"
 
@@ -45,6 +47,13 @@ body{margin:0;background:#101114;color:white;font-family:Arial}
 <div class="itemsContainer"><div class="card">Agent Carter</div></div></section>
 <section id="next" class="verticalSection"><h2>Next Up</h2></section>
 </body></html>"""
+HTML = HTML.replace('<div class="card">Agent Carter</div>',
+    f'<div class="card" data-id="{EPISODE}">Agent Carter</div>'
+    f'<div class="card" data-id="{OTHER_EPISODE}">Firefly</div>')
+HTML = HTML.replace('<section id="next" class="verticalSection"><h2>Next Up</h2></section>',
+    f'<section id="next" class="verticalSection"><h2>Next Up</h2><div class="itemsContainer">'
+    f'<div class="card" data-id="{EPISODE_NEXT}">Agent Carter S1E2</div>'
+    f'<div class="card" data-id="{OTHER_EPISODE}">Firefly S1E2</div></div></section>')
 
 STATE_MCU = {
     "RowId": ROW_MCU, "ParentNodeId": ROOT_MCU, "Name": "Chronological Order",
@@ -83,11 +92,17 @@ def respond(route):
         route.fulfill(status=200, content_type="application/json", body=json.dumps(CATALOG), headers=headers)
     elif "/Images/" in path:
         route.fulfill(status=200, content_type="image/png", body=PNG)
-    elif path.endswith("/Items/" + EPISODE):
+    elif path.endswith("/Items/" + EPISODE) or path.endswith("/Items/" + EPISODE_NEXT):
         route.fulfill(status=200, content_type="application/json", body=json.dumps({
-            "Id": EPISODE, "Name": "Bridge and Tunnel", "Type": "Episode",
+            "Id": EPISODE if path.endswith(EPISODE) else EPISODE_NEXT,
+            "Name": "Bridge and Tunnel", "Type": "Episode",
             "SeriesName": "Agent Carter", "SeriesId": SERIES,
             "ParentIndexNumber": 1, "IndexNumber": 2,
+        }))
+    elif path.endswith("/Items/" + OTHER_EPISODE):
+        route.fulfill(status=200, content_type="application/json", body=json.dumps({
+            "Id": OTHER_EPISODE, "Type": "Episode", "SeriesName": "Firefly",
+            "SeriesId": "88888888-8888-8888-8888-888888888888",
         }))
     elif path.endswith("/Items/" + SERIES):
         route.fulfill(status=200, content_type="application/json", body=json.dumps({
@@ -156,6 +171,26 @@ with sync_playwright() as p:
         assert "configurationpage?name=Franchise%20Explorer" in tile.locator(".fe-settings-link").last.get_attribute("href")
         page.locator("#next").click()
         assert not tile.locator(".fe-settings-menu").is_visible()
+
+        preference_key = f"fe-show-active-native-rows:{ORIGIN}:{USER.lower()}"
+        page.evaluate("([key]) => {localStorage.setItem(key,'0'); window.dispatchEvent(new Event('pageshow'));}", [preference_key])
+        page.wait_for_function("document.querySelector('#continue .card[data-id=\"" + EPISODE + "\"]')?.classList.contains('fe-native-franchise-row-hidden')")
+        page.wait_for_function("document.querySelector('#next .card[data-id=\"" + EPISODE_NEXT + "\"]')?.classList.contains('fe-native-franchise-row-hidden')")
+        assert not page.locator(f'#continue .card[data-id="{OTHER_EPISODE}"]').evaluate('(el) => el.classList.contains("fe-native-franchise-row-hidden")')
+        assert not page.locator(f'#next .card[data-id="{OTHER_EPISODE}"]').evaluate('(el) => el.classList.contains("fe-native-franchise-row-hidden")')
+        assert page.locator('.fe-resume-card').count() == 2
+        page.evaluate("([key]) => {localStorage.setItem(key,'1'); window.dispatchEvent(new Event('pageshow'));}", [preference_key])
+        page.wait_for_function("!document.querySelector('#continue .card[data-id=\"" + EPISODE + "\"]')?.classList.contains('fe-native-franchise-row-hidden')")
+        page.wait_for_function("!document.querySelector('#next .card[data-id=\"" + EPISODE_NEXT + "\"]')?.classList.contains('fe-native-franchise-row-hidden')")
+
+        # Desktop hover reveals the button; touch-capable devices must not lose access.
+        if width == 1280:
+            page.evaluate('document.activeElement?.blur()')
+            page.mouse.move(0, 0)
+            page.wait_for_timeout(200)
+            assert tile.locator('.fe-settings-toggle').evaluate('(el) => getComputedStyle(el).opacity') == '0'
+            tile.hover()
+            page.wait_for_function("getComputedStyle(document.querySelector('#franchise-explorer-my-media-tile .fe-settings-toggle')).opacity === '1'")
 
         # Jellyfin destroys both the custom section and its native anchor.
         # The observer must recreate/reparent the existing card immediately.

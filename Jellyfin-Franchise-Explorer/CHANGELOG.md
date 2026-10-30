@@ -4,7 +4,12 @@
   was attached to the caption-inclusive outer native card and consequently
   appeared **below** the artwork. Place it in the actual image container.
 - Align the control with the native bottom-right three dots, using a neutral
-  white icon instead of a permanently filled turquoise circle.
+  white icon instead of a permanently filled turquoise circle. Reveal it on
+  desktop hover/keyboard focus; keep it accessible on touch screens.
+- Add a per-user, per-browser **Show active franchise titles in Continue
+  Watching and Next Up** option, enabled by default. When off, hide the
+  currently active franchise movie/series from those two native Jellyfin Web
+  homepage rows without modifying library data or watched state.
 - On phone portrait orientation, prefer the film/series Primary vertical poster
   on homepage resume cards; keep Thumb/Backdrop art in landscape and on desktop.
   Re-render on rotation, and fall back gracefully when no poster exists.

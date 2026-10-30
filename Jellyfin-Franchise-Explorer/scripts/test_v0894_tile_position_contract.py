@@ -6,6 +6,7 @@ root = Path(__file__).resolve().parents[1]
 script = (root / "src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-my-media.js").read_text(encoding="utf-8")
 service = (root / "src/Jellyfin.Plugin.FranchiseExplorer/Web/HomeTileRegistrationService.cs").read_text(encoding="utf-8")
 browser = (root / "scripts/test_my_media_tile_browser.py").read_text(encoding="utf-8")
+browse = (root / "src/Jellyfin.Plugin.FranchiseExplorer/Configuration/browsePage.html").read_text(encoding="utf-8")
 
 assert "const controlsHost = imageHost || art;" in script
 assert "controlsHost.append(controls)" in script
@@ -15,6 +16,16 @@ assert script.index("syncNativeInlineStyles(tile, ref);") < script.index("window
 assert "if (!imageHost) controlsHost.style.pointerEvents = 'auto'" in script
 assert "bottom:3px" in script and "right:6px" in script
 assert "background:transparent;color:white" in script
+assert "opacity:0;pointer-events:none;transition:opacity" in script
+assert ":hover .fe-settings-toggle" in script
+assert ":focus-within .fe-settings-toggle" in script
+assert "@media(hover:none), (pointer:coarse)" in script
+assert '.fe-settings-toggle[aria-expanded="true"]' in script
+assert 'id="fe-native-rows"' in browse
+assert "$('fe-native-rows').checked=localStorage.getItem(nativeRowPreferenceKey())!=='0'" in browse
+assert "'fe-show-active-native-rows:'" in script and "'fe-show-active-native-rows:'" in browse
+assert "itemId: id" in script and "seriesId: item?.Type === 'Episode'" in script
+assert "card.classList.toggle(NATIVE_HIDE_CLASS" in script
 assert "const image=tile.querySelector(" in browser
 assert "holder.parentElement===image" in browser
 assert "menu_geometry['bottomGap']" in browser
