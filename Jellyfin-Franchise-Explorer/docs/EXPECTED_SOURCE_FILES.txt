@@ -2,6 +2,8 @@
 .github/workflows/build.yml
 .github/workflows/release.yml
 .gitignore
+docs/Gost1o1-logo.png
+docs/franchise-explorer-preview.png
 Jellyfin-Franchise-Explorer/CHANGELOG.md
 Jellyfin-Franchise-Explorer/README.md
 Jellyfin-Franchise-Explorer/docs/FRANCHISES_NAVIGATION.md
@@ -31,6 +33,7 @@ Jellyfin-Franchise-Explorer/docs/UPGRADE_V084.md
 Jellyfin-Franchise-Explorer/docs/UPGRADE_V085.md
 Jellyfin-Franchise-Explorer/docs/UPGRADE_V089.md
 Jellyfin-Franchise-Explorer/docs/UPGRADE_V0891.md
+Jellyfin-Franchise-Explorer/docs/UPGRADE_V0892.md
 Jellyfin-Franchise-Explorer/examples/virtual-franchises-demo.json
 Jellyfin-Franchise-Explorer/scripts/Apply-Repository-Upgrade.ps1
 Jellyfin-Franchise-Explorer/scripts/check_repo.py
@@ -73,6 +76,8 @@ Jellyfin-Franchise-Explorer/scripts/test_v089_arming.js
 Jellyfin-Franchise-Explorer/scripts/test_v0891_json_contract.py
 Jellyfin-Franchise-Explorer/scripts/test_v0891_response_casing_browser.py
 Jellyfin-Franchise-Explorer/scripts/test_v0891_timeline_json.js
+Jellyfin-Franchise-Explorer/scripts/test_v0892_home_browser.py
+Jellyfin-Franchise-Explorer/scripts/test_v0892_home_contract.py
 Jellyfin-Franchise-Explorer/scripts/ui_contract_tests.js
 Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Api/FranchiseArtworkController.cs
 Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Api/FranchiseBrowseController.cs

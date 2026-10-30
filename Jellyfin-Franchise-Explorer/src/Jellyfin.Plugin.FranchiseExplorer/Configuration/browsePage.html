@@ -159,7 +159,7 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
 <body>
 <header class="top">
   <div class="brand"><span class="brand-mark" aria-hidden="true">F</span><div><div id="brand-title" class="brand-title">Franchises</div><div class="brand-sub">Jellyfin · Franchise Explorer</div></div></div>
-  <nav class="actions" aria-label="Navigation"><a id="return-jellyfin" class="btn btn-lite" href="#">← <span class="desktop-word">Jellyfin</span></a><button class="btn btn-lite" id="browse-back" title="Back to parent" type="button">↑ <span class="desktop-word">Back</span></button></nav>
+  <nav class="actions" aria-label="Navigation"><a id="fe-config-settings" class="btn btn-lite" href="#" title="Franchise Explorer Settings (Jellyfin administrator required)" aria-label="Franchise Explorer Settings">⚙ <span class="desktop-word">Settings</span></a><a id="return-jellyfin" class="btn btn-lite" href="#">← <span class="desktop-word">Jellyfin</span></a><button class="btn btn-lite" id="browse-back" title="Back to parent" type="button">↑ <span class="desktop-word">Back</span></button></nav>
 </header>
 <main>
   <nav id="breadcrumbs" class="crumbs" aria-label="Breadcrumbs"></nav>
@@ -171,7 +171,7 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
   <section id="media-section" class="section hidden"><div class="section-header"><h2>Movies and TV shows</h2><span class="counter" id="media-count"></span></div><div class="gallery" id="media-grid"></div></section>
   <div id="rows-container" class="rows-container"></div>
   <div id="empty" class="empty hidden">No items to display in this group.</div>
-  <div class="footer">Franchise Explorer v0.8.9.1 · Experimental chronological playback. Per-user timeline progress is separate from Jellyfin watched history; native client support varies.</div>
+  <div class="footer">Franchise Explorer v0.8.9.2 · Experimental chronological playback. Per-user timeline progress is separate from Jellyfin watched history; native client support varies.</div>
 </main>
 <script src="TimelineClient.js"></script>
 <script>
@@ -181,6 +181,7 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
   const prefix = location.pathname.split('/FranchiseExplorer/')[0].replace(/\/$/,'');
   const serverPath = path => prefix + (path.startsWith('/') ? path : '/' + path);
   $('return-jellyfin').href = serverPath('/web/index.html');
+  $('fe-config-settings').href = serverPath('/web/index.html#/configurationpage?name=Franchise%20Explorer');
   let token = '', userId = '', serverId = '', catalog = {nodes:[],links:[],rows:[]}, current = '', view = 'grid', shownCards = [], renderSerial = 0, timeline = null;
   const itemCache = new Map(), blobCache = new Map();
   const imageKeys = {Primary:'primaryUrl',Backdrop:'backdropUrl',Logo:'logoUrl',Thumb:'thumbUrl',Banner:'bannerUrl'};

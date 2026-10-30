@@ -1,5 +1,5 @@
 /*
- * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.1).
+ * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.2).
  * Adds ONE visual link in the existing "My Media" row. It does not create a
  * Jellyfin library, alter user preferences, or modify the server's media.
  * Requires a compatible JavaScript injector to run in jellyfin-web.
@@ -17,6 +17,7 @@
   let queued = false;
   let observedCard = null;
   let observedResize = null;
+  let activeSettingsMenu = null;
 
   function browseUrl() {
     // Keep Jellyfin base-path prefixes (e.g. /jellyfin/web/index.html).
@@ -24,6 +25,12 @@
     const match = pathname.match(/^(.*?)\/web(?:\/|$)/i);
     const base = match ? match[1] : '';
     return `${base}/FranchiseExplorer/Browse`;
+  }
+
+  function settingsUrl() {
+    const match = (window.location.pathname || '').match(/^(.*?)\/web(?:\/|$)/i);
+    const base = match ? match[1] : '';
+    return base + '/web/index.html#/configurationpage?name=Franchise%20Explorer';
   }
 
   function ensureStyle() {
@@ -52,6 +59,28 @@
         font:bold clamp(14px,1.25vw,21px)/1.2 Arial,sans-serif;
         text-shadow:0 2px 5px #001a22;
       }
+      #${TILE_ID} .fe-settings-holder {
+        position:absolute;right:9px;bottom:9px;z-index:12;line-height:1;
+      }
+      #${TILE_ID} .fe-settings-toggle {
+        display:flex;align-items:center;justify-content:center;width:30px;height:30px;
+        border:0;border-radius:50%;background:#0a596c;color:white;cursor:pointer;
+        font:bold 20px/1 Arial,sans-serif;box-shadow:0 1px 5px #001b25bb;
+      }
+      #${TILE_ID} .fe-settings-toggle:hover,
+      #${TILE_ID} .fe-settings-toggle:focus-visible {background:#087f95;outline:2px solid #74dcec;}
+      #${TILE_ID} .fe-settings-menu {
+        position:absolute;right:0;bottom:37px;min-width:224px;padding:5px;
+        background:#182430;color:#fff;border:1px solid #4b6878;border-radius:9px;
+        box-shadow:0 8px 24px #000a;box-sizing:border-box;
+      }
+      #${TILE_ID} .fe-settings-menu[hidden] {display:none!important;}
+      #${TILE_ID} .fe-settings-link {
+        display:block;padding:11px 10px;color:#fff;text-decoration:none;
+        font:600 13px/1.3 Arial,sans-serif;border-radius:6px;white-space:nowrap;
+      }
+      #${TILE_ID} .fe-settings-link:hover,
+      #${TILE_ID} .fe-settings-link:focus-visible {background:#244a5a;outline:1px solid #53c9df;}
       #${TILE_ID}:focus-visible { outline:3px solid var(--theme-primary-color,#08bdd0);outline-offset:2px; }
       @media(max-width:540px){
         #${TILE_ID} .fe-tile-icon{font-size:36px}
@@ -163,6 +192,9 @@
     tile.id = TILE_ID;
     tile.setAttribute('aria-label','Open Franchises');
     tile.setAttribute('href',browseUrl());
+    // Native actions from a cloned Collections card cannot operate on the
+    // virtual Franchises tile; supply a dedicated options menu instead.
+    tile.querySelectorAll('.cardMenuButton,.cardOverlayButton,button').forEach(el=>el.remove());
     const imageHost=(tile.querySelector('.cardImageContainer')||tile.querySelector('.poster')||tile.querySelector('.cardImage')||tile.querySelector('.cardScalable'));
     const art=document.createElement('span');art.className='fe-tile-art';
     art.innerHTML='<span class="fe-tile-icon" aria-hidden="true">F</span><span class="fe-tile-art-title">Franchises</span>';
@@ -192,10 +224,41 @@
       text.textContent='Franchises';text.style.cssText='display:block;text-align:center;';
       tile.append(text);
     }
+    tile.style.position='relative';
+    const controls=document.createElement('div');controls.className='fe-settings-holder';
+    const trigger=document.createElement('button');trigger.type='button';trigger.className='fe-settings-toggle';
+    trigger.textContent='⋮';trigger.title='Franchises options';trigger.setAttribute('aria-label','Franchises options');
+    trigger.setAttribute('aria-haspopup','menu');trigger.setAttribute('aria-expanded','false');
+    const menu=document.createElement('div');menu.className='fe-settings-menu';menu.hidden=true;
+    menu.setAttribute('role','menu');
+    const settings=document.createElement('a');settings.className='fe-settings-link';settings.href=settingsUrl();
+    settings.setAttribute('role','menuitem');settings.textContent='⚙  Franchise Explorer Settings';
+    menu.append(settings);controls.append(trigger,menu);tile.append(controls);
+    const setOpen=open=>{
+      if(open && activeSettingsMenu && activeSettingsMenu.controls!==controls)activeSettingsMenu.close();
+      menu.hidden=!open;trigger.setAttribute('aria-expanded',open?'true':'false');
+      if(open)activeSettingsMenu={controls,close:()=>setOpen(false)};
+      else if(activeSettingsMenu?.controls===controls)activeSettingsMenu=null;
+    };
+    trigger.addEventListener('click',event=>{
+      event.preventDefault();event.stopPropagation();setOpen(menu.hidden);
+    });
+    trigger.addEventListener('keydown',event=>{
+      if(event.key==='Escape'){setOpen(false);trigger.focus();}
+      if(event.key==='ArrowUp'||event.key==='ArrowDown'){event.preventDefault();setOpen(true);settings.focus();}
+    });
+    settings.addEventListener('click',event=>event.stopPropagation());
+    settings.addEventListener('keydown',event=>event.stopPropagation());
+    menu.addEventListener('keydown',event=>{
+      if(event.key==='Escape'){event.preventDefault();setOpen(false);trigger.focus();}
+    });
     // Native Jellyfin delegates card activation on the container, so intercept
     // BEFORE the library's handler receives the cloned card click.
     const navigate=()=>window.location.assign(browseUrl());
-    tile.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();navigate();},true);
+    tile.addEventListener('click',e=>{
+      if(e.target.closest?.('.fe-settings-holder'))return;
+      e.preventDefault();e.stopImmediatePropagation();navigate();
+    },true);
     tile.addEventListener('keydown',e=>{
       if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopImmediatePropagation();navigate();}
     },true);
@@ -241,6 +304,11 @@
   }
 
   const observer = new MutationObserver(schedule);
+  document.addEventListener('click',event=>{
+    if(activeSettingsMenu &&
+       (!activeSettingsMenu.controls.isConnected || !activeSettingsMenu.controls.contains(event.target)))
+      activeSettingsMenu.close();
+  },true);
   const start = () => {
     if (!document.body) return;
     observer.observe(document.body, { childList: true, subtree: true });
@@ -256,94 +324,320 @@
   window.addEventListener('resize', schedule);
 })();
 
-/* v0.8 — Optional home-screen timeline resume and playback progress bridge.
- * This script runs only in an authenticated Jellyfin Web client. It cannot
- * intercept native client playback; supported clients should be tested before
- * relying on seamless unattended progress persistence.
+/* v0.8.9.2 — Read-only, per-user franchise resume cards on Jellyfin Web's home.
+ * Jellyfin regularly replaces the home DOM, including after a refresh and
+ * client-side navigation. Reattach the same widget rather than waiting for the
+ * next API poll, and keep a short session-scoped cache for hard refreshes.
+ * Neither this dashboard nor artwork loading changes playback/watched state.
  */
 (function () {
   'use strict';
   if (window.__franchiseTimelineHomeLoaded) return;
   window.__franchiseTimelineHomeLoaded = true;
-  const WIDGET_ID='franchise-timeline-resume';
-  const serverPrefix=()=>{
-    const match=(location.pathname||'').match(/^(.*?)\/web(?:\/|$)/i);
-    return match?match[1]:'';
-  };
-  let lastFetch=0,busy=false;
-  function timelineResponse(raw){
-    const record=value=>{
-      if(!value||typeof value!=='object'||Array.isArray(value))return value;
-      const result={};for(const [key,item] of Object.entries(value))result[key[0].toLowerCase()+key.slice(1)]=item;
-      return result;
+  const WIDGET_ID = 'franchise-timeline-resume';
+  const STYLE_ID = 'franchise-timeline-resume-style';
+  const CACHE_PREFIX = 'fe-franchise-home-v0892:';
+  const MAX_CARDS = 8;
+  const GUID = /^[a-f0-9]{32}$|^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
+  const serverPrefix = () => ((location.pathname || '').match(/^(.*?)\/web(?:\/|$)/i) || [,''])[1] || '';
+  const serverPath = path => serverPrefix() + path;
+  let lastFetch = 0, busy = false, queuedMount = false, cards = [], authScope = '', renderedSignature = '';
+  let widget = null;
+  const images = new Map();
+  const itemCache = new Map();
+  let catalogCache = null, catalogFetched = 0;
+
+  function credential() {
+    let servers = [];
+    try { servers = JSON.parse(localStorage.getItem('jellyfin_credentials') || '{}').Servers || []; } catch (_) {}
+    const available = servers.filter(s => s.AccessToken && s.UserId);
+    return available.find(s => [s.ManualAddress, s.LocalAddress, s.RemoteAddress, s.LastConnectionAddress].some(a => {
+      try { return new URL(a).origin === location.origin; } catch (_) { return false; }
+    })) || (available.length === 1 ? available[0] : null);
+  }
+
+  function normalize(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+    const result = {};
+    for (const [key, item] of Object.entries(value)) result[key[0].toLowerCase() + key.slice(1)] = item;
+    return result;
+  }
+  async function request(path, auth) {
+    const response = await fetch(serverPath(path), {
+      cache: 'no-store',
+      headers: { Authorization: 'MediaBrowser Token="' + auth.AccessToken + '"' }
+    });
+    if (!response.ok) throw Error('HTTP ' + response.status);
+    const json = await response.json();
+    return path.startsWith('/FranchiseExplorer/TimelineState')
+      ? (Array.isArray(json) ? json.map(normalize) : normalize(json)) : json;
+  }
+
+  function scopeFor(auth) {
+    return CACHE_PREFIX + location.origin + ':' + String(auth.UserId || '').toLowerCase();
+  }
+  function restore(auth) {
+    const next = auth ? scopeFor(auth) : '';
+    if (authScope === next) return;
+    authScope = next;
+    cards = [];
+    renderedSignature = '';
+    if (widget) { widget.remove(); widget = null; }
+    for (const url of images.values()) if (typeof url === 'string') URL.revokeObjectURL(url);
+    images.clear();
+    itemCache.clear(); catalogCache = null; catalogFetched = 0;
+    if (!next) return;
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(next) || '{}');
+      // Cache has display metadata only (no auth tokens) and is tied to the
+      // Jellyfin origin and active user. Live server state replaces it shortly.
+      if (Date.now() - cached.time < 2 * 60 * 60 * 1000 && Array.isArray(cached.cards))
+        cards = cached.cards.filter(x => x && GUID.test(x.rowId || '')).slice(0, MAX_CARDS);
+    } catch (_) {}
+  }
+  function saveCache() {
+    if (!authScope) return;
+    try { sessionStorage.setItem(authScope, JSON.stringify({time: Date.now(), cards})); } catch (_) {}
+  }
+
+  function homeAnchor() {
+    const headings = [...document.querySelectorAll('h1,h2,h3,h4,.sectionTitle')];
+    const heading = headings.find(h => (h.textContent || '').trim() === 'Continue Watching')
+      || headings.find(h => (h.textContent || '').trim() === 'My Media');
+    return heading?.closest('.verticalSection,.homeSection,section') || heading?.parentElement?.parentElement || null;
+  }
+  function ensureStyle() {
+    if (document.getElementById(STYLE_ID)) return;
+    const style = document.createElement('style');
+    style.id = STYLE_ID;
+    style.textContent = [
+      '#'+WIDGET_ID+'{box-sizing:border-box;width:100%;min-width:0;padding:10px max(16px,2.5vw) 16px;color:#fff}',
+      '#'+WIDGET_ID+' h2{font-size:1.32rem;margin:8px 0 15px;font-weight:600}',
+      '#'+WIDGET_ID+' .fe-resume-grid{display:flex;gap:16px;flex-wrap:wrap;align-items:stretch}',
+      '#'+WIDGET_ID+' .fe-resume-card{display:flex;flex:1 1 445px;max-width:590px;min-width:0;min-height:164px;overflow:hidden;background:#202b37;border:1px solid #4b5b69;border-radius:11px;box-sizing:border-box}',
+      '#'+WIDGET_ID+' .fe-resume-art{display:flex;align-items:center;justify-content:center;position:relative;flex:0 0 39%;min-width:0;background:linear-gradient(145deg,#143c4a,#10232d);color:#82b8c5;text-decoration:none}',
+      '#'+WIDGET_ID+' .fe-resume-art img{width:100%;height:100%;position:absolute;inset:0;object-fit:cover}',
+      '#'+WIDGET_ID+' .fe-resume-art span{font-size:3rem;opacity:.55}',
+      '#'+WIDGET_ID+' .fe-resume-content{flex:1;min-width:0;padding:15px 18px;display:flex;flex-direction:column;gap:5px}',
+      '#'+WIDGET_ID+' .fe-resume-franchise{font-size:.71rem;letter-spacing:.08em;font-weight:700;text-transform:uppercase;color:#c5dce9;line-height:1.3}',
+      '#'+WIDGET_ID+' .fe-resume-title{font-size:1.38rem;line-height:1.22;font-weight:700;overflow-wrap:anywhere}',
+      '#'+WIDGET_ID+' .fe-resume-next{font-size:.9rem;color:#f1f5f8;overflow-wrap:anywhere}',
+      '#'+WIDGET_ID+' .fe-resume-status{font-size:.78rem;color:#ccd5e1;margin-top:1px}',
+      '#'+WIDGET_ID+' .fe-resume-progress{height:6px;border-radius:8px;background:#3b4a59;overflow:hidden;margin:4px 0 6px}',
+      '#'+WIDGET_ID+' .fe-resume-progress span{display:block;height:100%;background:#12a9c4;min-width:0}',
+      '#'+WIDGET_ID+' .fe-resume-play{align-self:flex-start;background:#008ca5;color:#fff!important;padding:7px 13px;border-radius:7px;font-size:.84rem;font-weight:600;text-decoration:none;line-height:1.4}',
+      '#'+WIDGET_ID+' .fe-resume-play:hover{background:#00a6bf}',
+      '#'+WIDGET_ID+' a:focus-visible{outline:3px solid #38c5d9;outline-offset:2px}',
+      '@media(max-width:650px){#'+WIDGET_ID+' .fe-resume-card{flex-basis:100%;min-height:140px}#'+WIDGET_ID+' .fe-resume-content{padding:12px;gap:4px}#'+WIDGET_ID+' .fe-resume-title{font-size:1.06rem}#'+WIDGET_ID+' .fe-resume-art{flex-basis:36%}#'+WIDGET_ID+' .fe-resume-next{font-size:.8rem}}'
+    ].join('\n');
+    document.head.appendChild(style);
+  }
+
+  function scheduleMount() {
+    if (queuedMount) return;
+    queuedMount = true;
+    requestAnimationFrame(() => { queuedMount = false; mount(); });
+  }
+  function mount() {
+    const auth = credential();
+    restore(auth);
+    const anchor = homeAnchor();
+    if (!anchor?.parentElement || !cards.length) {
+      if (widget?.isConnected) widget.remove();
+      return;
+    }
+    ensureStyle();
+    if (!widget) {
+      widget = document.createElement('section');
+      widget.id = WIDGET_ID;
+      widget.setAttribute('aria-label', 'Continue Your Franchises');
+    }
+    // Jellyfin's home view can destroy and recreate this entire parent.
+    // Keep our rendered widget and reattach immediately after the native row.
+    if (widget.parentElement !== anchor.parentElement || anchor.nextElementSibling !== widget)
+      anchor.parentElement.insertBefore(widget, anchor.nextSibling);
+    const signature = JSON.stringify(cards);
+    if (signature === renderedSignature && widget.childElementCount) return;
+    renderedSignature = signature;
+    const heading = document.createElement('h2');
+    heading.textContent = 'Continue Your Franchises';
+    const grid = document.createElement('div');
+    grid.className = 'fe-resume-grid';
+    const authForImages = auth;
+    for (const card of cards) {
+      const url = serverPath('/FranchiseExplorer/Browse?timeline=' + encodeURIComponent(card.rowId) + '&resume=1');
+      const panel = document.createElement('article'); panel.className = 'fe-resume-card';
+      const cover = document.createElement('a'); cover.className = 'fe-resume-art'; cover.href = url;
+      cover.setAttribute('aria-label', 'Resume ' + card.franchise + ': ' + card.title);
+      const icon = document.createElement('span'); icon.textContent = '▶'; icon.setAttribute('aria-hidden', 'true');
+      cover.append(icon);
+      if (card.artwork && authForImages) {
+        const img = document.createElement('img'); img.alt = ''; img.loading = 'lazy';
+        img.addEventListener('load', () => { icon.style.display = 'none'; });
+        cover.append(img);
+        void authenticatedArtwork(card.artwork, authForImages).then(src => {
+          if (src && img.isConnected && scopeFor(authForImages) === authScope) img.src = src;
+        });
+      }
+      const info = document.createElement('div'); info.className = 'fe-resume-content';
+      const franchise = document.createElement('div'); franchise.className = 'fe-resume-franchise';
+      franchise.textContent = card.franchise || 'Franchise';
+      const title = document.createElement('strong'); title.className = 'fe-resume-title';
+      title.textContent = card.title || 'Next in watch order';
+      const next = document.createElement('div'); next.className = 'fe-resume-next';
+      next.textContent = card.detail || 'Next in chronological order';
+      const status = document.createElement('div'); status.className = 'fe-resume-status';
+      const percent = Math.max(0, Math.min(100, Number(card.percent) || 0));
+      const shown = percent > 0 && percent < 1 ? percent.toFixed(2) : percent.toFixed(1).replace(/\.0$/, '');
+      status.textContent = shown + '% complete · ' + card.position + ' of ' + card.total + ' in chronological order';
+      const track = document.createElement('div'); track.className = 'fe-resume-progress';
+      track.setAttribute('role', 'progressbar'); track.setAttribute('aria-label', 'Watch order completed');
+      track.setAttribute('aria-valuemin', '0'); track.setAttribute('aria-valuemax', '100');
+      track.setAttribute('aria-valuenow', String(percent.toFixed(2)));
+      const fill = document.createElement('span'); fill.style.width = percent + '%'; track.append(fill);
+      const resume = document.createElement('a'); resume.className = 'fe-resume-play'; resume.href = url;
+      resume.textContent = '▶  Resume Watch Order';
+      info.append(franchise, title, next, status, track, resume);
+      panel.append(cover, info); grid.append(panel);
+    }
+    widget.replaceChildren(heading, grid);
+  }
+
+  async function authenticatedArtwork(route, auth) {
+    if (!/^\/Items\/[a-f\d-]{32,36}\/Images\/(?:Thumb|Backdrop\/0|Primary)\?maxWidth=\d+$/i.test(route))
+      return '';
+    if (images.has(route)) return images.get(route);
+    const pending = fetch(serverPath(route), {
+      headers: {Authorization: 'MediaBrowser Token="' + auth.AccessToken + '"'}
+    }).then(r => r.ok ? r.blob() : null)
+      .then(blob => blob?.type.startsWith('image/') ? URL.createObjectURL(blob) : '')
+      .catch(() => '');
+    images.set(route, pending);
+    const value = await pending;
+    if (scopeFor(auth) !== authScope) { if (value) URL.revokeObjectURL(value); return ''; }
+    images.set(route, value);
+    if (images.size > 40) {
+      const oldest = images.keys().next().value;
+      if (oldest && oldest !== route) {
+        const stale = images.get(oldest);
+        if (typeof stale === 'string' && stale) URL.revokeObjectURL(stale);
+        images.delete(oldest);
+      }
+    }
+    return value;
+  }
+  async function cachedItem(id, auth) {
+    if (!GUID.test(id || '')) return null;
+    const startedScope = scopeFor(auth);
+    const key = id.toLowerCase();
+    const stored = itemCache.get(key);
+    if (stored && Date.now() - stored.time < 2 * 60 * 1000) return stored.value;
+    const value = await request('/Items/' + encodeURIComponent(id) + '?userId=' + encodeURIComponent(auth.UserId), auth);
+    if (startedScope !== authScope) return null;
+    itemCache.set(key, {time:Date.now(), value});
+    if (itemCache.size > 100) itemCache.delete(itemCache.keys().next().value);
+    return value;
+  }
+  async function cachedCatalog(auth) {
+    if (catalogCache && Date.now() - catalogFetched < 2 * 60 * 1000) return catalogCache;
+    const startedScope = scopeFor(auth);
+    const value = await request('/FranchiseExplorer/Catalog', auth);
+    if (startedScope !== authScope) return {nodes:[],rows:[]};
+    catalogCache = value;
+    catalogFetched = Date.now();
+    return catalogCache;
+  }
+
+  function itemKey(state) {
+    const value = String((state.queueKeys || [])[state.index] || '');
+    const result = value.slice(value.lastIndexOf(':') + 1);
+    return GUID.test(result) ? result : '';
+  }
+  function artworkRoute(item) {
+    if (!item || !GUID.test(item.Id || '')) return '';
+    if (item.ImageTags?.Thumb) return '/Items/' + item.Id + '/Images/Thumb?maxWidth=800';
+    if (item.BackdropImageTags?.length) return '/Items/' + item.Id + '/Images/Backdrop/0?maxWidth=800';
+    if (item.ImageTags?.Primary) return '/Items/' + item.Id + '/Images/Primary?maxWidth=800';
+    return '';
+  }
+  function franchiseFor(state, catalog) {
+    const nodes = new Map((catalog.nodes || []).map(n => [String(n.id).toLowerCase(), n]));
+    const row = (catalog.rows || []).find(r => String(r.id).toLowerCase() === String(state.rowId).toLowerCase());
+    let current = String(row?.parentNodeId || state.parentNodeId || '').toLowerCase();
+    let root = null;
+    const seen = new Set();
+    while (current && !seen.has(current)) {
+      seen.add(current);
+      const node = nodes.get(current);
+      if (!node) break;
+      root = node;
+      current = String(node.parentId || '').toLowerCase();
+    }
+    return root?.name || row?.name || state.name || 'Franchise';
+  }
+  async function cardFor(state, catalog, auth) {
+    const id = itemKey(state);
+    let item = null, series = null;
+    if (id) try { item = await cachedItem(id, auth); } catch (_) {}
+    if (item && GUID.test(item.SeriesId || '')) {
+      try { series = await cachedItem(item.SeriesId, auth); } catch (_) {}
+    }
+    const title = item?.SeriesName || series?.Name || item?.Name || 'Next in watch order';
+    let detail = 'Next in chronological order';
+    if (item?.Type === 'Episode') {
+      const season = Number.isInteger(item.ParentIndexNumber) ? item.ParentIndexNumber : '?';
+      const episode = Number.isInteger(item.IndexNumber) ? item.IndexNumber : '?';
+      detail = 'Up next: S' + season + ':E' + episode + (item.Name ? ' – ' + item.Name : '');
+    } else if (item?.Type === 'Movie') detail = 'Up next: Movie' + (item.ProductionYear ? ' · ' + item.ProductionYear : '');
+    const completed = Array.isArray(state.completedKeys) ? state.completedKeys.length : 0;
+    return {
+      rowId: state.rowId,
+      franchise: franchiseFor(state, catalog),
+      title, detail,
+      artwork: artworkRoute(series) || artworkRoute(item),
+      percent: state.total > 0 ? 100 * completed / state.total : 0,
+      position: Math.min(state.total, Math.max(1, state.index + 1)),
+      total: state.total
     };
-    return Array.isArray(raw)?raw.map(record):record(raw);
   }
-  function credential(){
-    let servers=[];
-    try{servers=JSON.parse(localStorage.getItem('jellyfin_credentials')||'{}').Servers||[];}catch(_){}
-    const matching=servers.filter(s=>s.AccessToken&&s.UserId);
-    return matching.find(s=>[s.ManualAddress,s.LocalAddress,s.RemoteAddress].some(a=>{
-      try{return new URL(a).origin===location.origin;}catch(_){return false;}
-    }))||(matching.length===1?matching[0]:null);
+  async function tick(force = false) {
+    const auth = credential();
+    restore(auth);
+    scheduleMount();
+    if (!auth || busy || document.hidden || (!force && Date.now() - lastFetch < 10000)) return;
+    busy = true; lastFetch = Date.now();
+    const startedScope = authScope;
+    try {
+      const states = await request('/FranchiseExplorer/TimelineState', auth);
+      if (!Array.isArray(states)) return;
+      const active = states.filter(s => s && GUID.test(s.rowId || '') && s.total > 0
+        && s.index >= 0 && s.index < s.total && s.playbackMode !== 'complete').slice(0, MAX_CARDS);
+      let catalog = { nodes: [], rows: [] };
+      if (active.length) try { catalog = await cachedCatalog(auth); } catch (_) {}
+      const resolved = await Promise.all(active.map(state => cardFor(state, catalog, auth)));
+      if (startedScope !== authScope) return;
+      cards = resolved;
+      saveCache();
+      scheduleMount();
+      // Read only: never change user playback state or Jellyfin watched flags.
+    } catch (_) { /* Keep the last known good cards during transient API failures. */ }
+    finally { busy = false; }
   }
-  async function request(path,auth,options={}){
-    const prefix=((location.pathname||'').match(/^(.*?)\/web(?:\/|$)/i)||[])[1]||'';
-    const r=await fetch(prefix+path,{cache:'no-store',...options,
-      headers:{Authorization:'MediaBrowser Token="'+auth.AccessToken+'"',...(options.headers||{})}});
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    if(r.status===204)return null;
-    const value=await r.json();
-    return path.startsWith('/FranchiseExplorer/TimelineState')?timelineResponse(value):value;
+  const observer = new MutationObserver(() => { if (cards.length) scheduleMount(); });
+  function start() {
+    if (!document.body) return;
+    restore(credential());
+    observer.observe(document.body, {childList:true, subtree:true});
+    scheduleMount();
+    void tick(true);
   }
-  function findHomeAnchor(){
-    const headers=[...document.querySelectorAll('h1,h2,h3,h4,.sectionTitle')];
-    const anchor=headers.find(h=>(h.textContent||'').trim()==='Continue Watching');
-    if(anchor)return anchor.closest('.verticalSection, .homeSection, section')||anchor.parentElement?.parentElement;
-    const myMedia=headers.find(h=>(h.textContent||'').trim()==='My Media');
-    return myMedia?.closest('.verticalSection, .homeSection, section')||null;
-  }
-  function makeHomeSection(states){
-    let widget=document.getElementById(WIDGET_ID);
-    const home=findHomeAnchor();if(!home?.parentNode)return;
-    if(!widget){
-      widget=document.createElement('section');widget.id=WIDGET_ID;
-      widget.style.cssText='box-sizing:border-box;width:100%;padding:12px max(16px,3vw);min-width:0;color:#fff;';
-      home.parentNode.insertBefore(widget,home.nextSibling);
-    }
-    const heading=document.createElement('h2');heading.textContent='Continue Your Franchises';heading.style.cssText='font-size:1.3rem;margin:8px 0 14px';
-    const list=document.createElement('div');list.style.cssText='display:flex;gap:13px;flex-wrap:wrap;';
-    for(const state of states.slice(0,8)){
-      const link=document.createElement('a');link.href=serverPrefix()+'/FranchiseExplorer/Browse?timeline='+encodeURIComponent(state.rowId)+'&resume=1';
-      link.style.cssText='display:block;flex:1 1 210px;max-width:320px;color:#fff;text-decoration:none;min-width:170px;border:1px solid #536270;border-radius:11px;background:#232c37;padding:14px';
-      const name=document.createElement('strong');name.textContent=state.name||'Chronological Timeline';
-      const sub=document.createElement('div');sub.style.cssText='color:#c9d2de;font-size:.82rem;margin:9px 0';
-      const percent=state.total?100*(state.completedKeys||[]).length/state.total:0;
-      const shown=percent>0&&percent<1?percent.toFixed(2):Math.round(percent);
-      sub.textContent=shown+'% complete · '+(state.index+1)+' of '+state.total+' · Resume timeline';
-      const bar=document.createElement('div');bar.style.cssText='height:6px;background:#3b4855;border-radius:8px;overflow:hidden';
-      const fill=document.createElement('span');fill.style.cssText='display:block;background:#16b2c6;height:100%;width:'+Math.max(0,Math.min(100,percent))+'%';bar.append(fill);
-      link.append(name,sub,bar);list.append(link);
-    }
-    widget.replaceChildren(heading,list);
-  }
-  async function tick(){
-    if(busy||document.hidden||Date.now()-lastFetch<10000)return;
-    busy=true;lastFetch=Date.now();
-    try{
-      const auth=credential();if(!auth)return;
-      const states=await request('/FranchiseExplorer/TimelineState',auth);
-      if(!Array.isArray(states))return;
-      const active=states.filter(s=>s.total>0&&s.playbackMode!=='complete');
-      if(findHomeAnchor()&&active.length)makeHomeSection(active);
-      // Read-only dashboard: neither a stale browser session nor a queue skip
-      // may overwrite a server-confirmed completion or mark skipped titles.
-    }catch(e){/* The optional home integration must never break Jellyfin itself. */}
-    finally{busy=false;}
-  }
-  setInterval(()=>void tick(),12000);
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>void tick(),{once:true});
-  else void tick();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once:true});
+  else start();
+  setInterval(() => void tick(), 12000);
+  window.addEventListener('hashchange', scheduleMount);
+  window.addEventListener('popstate', scheduleMount);
+  window.addEventListener('pageshow', () => { scheduleMount(); void tick(true); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { scheduleMount(); void tick(true); } });
 })();
 
 

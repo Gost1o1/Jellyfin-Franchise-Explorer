@@ -16,5 +16,8 @@ assert 'return TimelineJson(record)' in controller
 assert controller.count('return TimelineJson(state)') >= 5
 assert 'return Ok(' not in controller
 assert "path.startsWith('/FranchiseExplorer/TimelineState')?timelineResponse(value):value" in timeline
-assert bridge.count("path.startsWith('/FranchiseExplorer/TimelineState')?timelineResponse(value):value") == 2
+assert bridge.count("path.startsWith('/FranchiseExplorer/TimelineState')?timelineResponse(value):value") == 1
+# The v0.8.9.2 home viewer uses its own equivalent defensive normalization.
+assert "path.startsWith('/FranchiseExplorer/TimelineState')" in bridge
+assert "Array.isArray(json) ? json.map(normalize) : normalize(json)" in bridge
 print('v0.8.9.1 deterministic API/consumer casing contracts passed.')

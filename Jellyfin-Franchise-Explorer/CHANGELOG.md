@@ -1,3 +1,24 @@
+## v0.8.9.2 — Persistent homepage franchise cards and settings shortcuts (experimental)
+
+- Replace the generic home 'Chronological Order' tile with separate,
+  per-user franchise resume cards including the root franchise name, current
+  film/series title, next episode (where available), Jellyfin artwork,
+  completion percentage, queue position, and a resume link.
+- Restore cards after Jellyfin Web redraws its home sections; use a short-lived,
+  per-user session cache for fast rehydration on hard refresh without sending
+  or storing authentication tokens in image URLs.
+- Add a dedicated three-dot 'Franchise Explorer Settings' menu to the virtual
+  My Media tile, and a settings shortcut in the Franchises browser header.
+  Jellyfin's administrator permissions still govern plugin configuration.
+- Bundle the supplied Gost1o1 logo and UI preview inside this repository so
+  the root README does not depend on an image path in another project.
+- Preserve v0.8.9.1 timeline JSON/playback state, server event processing,
+  original Jellyfin cards, file locations, collections, and artwork overrides.
+
+**Validation needed:** Browser mocks exercise homepage rehydration and
+navigation; test on Jellyfin 12.2 with repeated refreshes and more than one
+active franchise before treating home integration as stable.
+
 ## v0.8.9.1 — Timeline JSON response contract and local auto-next (experimental)
 
 - Fix a confirmed Jellyfin 12.2 mismatch: `TimelineState` API responses were
@@ -189,3 +210,4 @@ Test with a new short movie-to-episode timeline on actual Jellyfin.
 **Warning:** Untested on a running Jellyfin 12.2 server; back up configurations before installing. Runtime validation remains required.
 
 See Git history for earlier releases.
+
