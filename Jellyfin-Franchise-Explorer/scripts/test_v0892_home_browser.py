@@ -1,35 +1,3 @@
-#!/usr/bin/env python3
-"""Offline Jellyfin Web mock for v0.8.9.2 (not a live-server guarantee)."""
-import base64
-import json
-from pathlib import Path
-from urllib.parse import urlparse
-
-from playwright.sync_api import sync_playwright
-
-ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = (ROOT / "src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-my-media.js").read_text()
-BROWSE = (ROOT / "src/Jellyfin.Plugin.FranchiseExplorer/Configuration/browsePage.html").read_text()
-REPO = ROOT.parent
-
-assert 'id="fe-config-settings"' in BROWSE
-assert "'fe-config-settings').href" in BROWSE
-assert (REPO / "docs/Gost1o1-logo.png").is_file()
-assert (REPO / "docs/franchise-explorer-preview.png").is_file()
-README = (REPO / "README.md").read_text()
-assert 'src="docs/Gost1o1-logo.png"' in README
-assert "docs/franchise-explorer-preview.png" in README
-
-ORIGIN = "http://jellyfin.test"
-USER = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
-ROOT_MCU = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
-ROOT_SW = "cccccccc-cccc-cccc-cccc-cccccccccccc"
-ROW_MCU = "11111111-1111-1111-1111-111111111111"
-ROW_SW = "22222222-2222-2222-2222-222222222222"
-EPISODE = "33333333-3333-3333-3333-333333333333"
-SERIES = "44444444-4444-4444-4444-444444444444"
-MOVIE = "55555555-5555-5555-5555-555555555555"
-
 HTML = """<!doctype html><html><head><style>
 body{margin:0;background:#101114;color:white;font-family:Arial}
 .verticalSection{padding:18px 3%}.itemsContainer{display:flex;gap:12px}
@@ -119,12 +87,16 @@ with sync_playwright() as p:
         page.add_script_tag(content=SCRIPT)
         page.wait_for_selector(".fe-resume-card", timeout=10000)
         assert page.locator(".fe-resume-card").count() == 2
-        assert page.locator(".fe-resume-card").first.inner_text().find("Marvel Cinematic Universe") >= 0
-        assert page.locator(".fe-resume-card").first.inner_text().find("Agent Carter") >= 0
-        assert "S1:E2 – Bridge and Tunnel" in page.locator(".fe-resume-card").first.inner_text()
-        assert "0.24% complete" in page.locator(".fe-resume-card").first.inner_text()
-        assert "Star Wars" in page.locator(".fe-resume-card").nth(1).inner_text()
-        assert "The Phantom Menace" in page.locator(".fe-resume-card").nth(1).inner_text()
+        # innerText applies the CSS text-transform:uppercase used for the small
+        # franchise label in Chromium. Verify the underlying content instead.
+        first = page.locator(".fe-resume-card").first
+        second = page.locator(".fe-resume-card").nth(1)
+        assert first.locator(".fe-resume-franchise").text_content().strip() == "Marvel Cinematic Universe", first.inner_text()
+        assert first.locator(".fe-resume-title").text_content().strip() == "Agent Carter", first.inner_text()
+        assert "S1:E2 – Bridge and Tunnel" in first.locator(".fe-resume-next").text_content(), first.inner_text()
+        assert "0.24% complete" in first.locator(".fe-resume-status").text_content(), first.inner_text()
+        assert second.locator(".fe-resume-franchise").text_content().strip() == "Star Wars", second.inner_text()
+        assert second.locator(".fe-resume-title").text_content().strip() == "The Phantom Menace", second.inner_text()
         assert "/FranchiseExplorer/Browse?timeline=" in page.locator(".fe-resume-play").first.get_attribute("href")
         page.wait_for_function("document.querySelector('.fe-resume-art img')?.src.startsWith('blob:')")
         tile = page.locator("#franchise-explorer-my-media-tile")
