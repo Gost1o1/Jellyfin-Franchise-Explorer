@@ -1,3 +1,35 @@
+#!/usr/bin/env python3
+"""Offline Jellyfin Web mock for v0.8.9.2 (not a live-server guarantee)."""
+import base64
+import json
+from pathlib import Path
+from urllib.parse import urlparse
+
+from playwright.sync_api import sync_playwright
+
+ROOT = Path(__file__).resolve().parents[1]
+SCRIPT = (ROOT / "src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-my-media.js").read_text()
+BROWSE = (ROOT / "src/Jellyfin.Plugin.FranchiseExplorer/Configuration/browsePage.html").read_text()
+REPO = ROOT.parent
+
+assert 'id="fe-config-settings"' in BROWSE
+assert "'fe-config-settings').href" in BROWSE
+assert (REPO / "docs/Gost1o1-logo.png").is_file()
+assert (REPO / "docs/franchise-explorer-preview.png").is_file()
+README = (REPO / "README.md").read_text()
+assert 'src="docs/Gost1o1-logo.png"' in README
+assert "docs/franchise-explorer-preview.png" in README
+
+ORIGIN = "http://jellyfin.test"
+USER = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+ROOT_MCU = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+ROOT_SW = "cccccccc-cccc-cccc-cccc-cccccccccccc"
+ROW_MCU = "11111111-1111-1111-1111-111111111111"
+ROW_SW = "22222222-2222-2222-2222-222222222222"
+EPISODE = "33333333-3333-3333-3333-333333333333"
+SERIES = "44444444-4444-4444-4444-444444444444"
+MOVIE = "55555555-5555-5555-5555-555555555555"
+
 HTML = """<!doctype html><html><head><style>
 body{margin:0;background:#101114;color:white;font-family:Arial}
 .verticalSection{padding:18px 3%}.itemsContainer{display:flex;gap:12px}
