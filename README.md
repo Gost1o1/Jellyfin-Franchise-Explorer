@@ -28,6 +28,10 @@
 
 ![Franchise Explorer showing the Marvel Cinematic Universe, phases, collections, and chronological watch order](docs/franchise-explorer-preview.png)
 
+See the [Marvel Cinematic Universe example walkthrough](#example-setup-marvel-cinematic-universe) for screenshots of the editor, browsing pages, watch order, and Jellyfin homepage integration.
+
+**New to Franchise Explorer?** Start with the [complete user guide](docs/USER_GUIDE.md). It explains every editor field and button, how to set up franchises and subgroups, link Jellyfin media, create chronological rows, manage artwork, and use the viewer preferences—with screenshots.
+
 ## Install or update
 
 Franchise Explorer has a standalone Franchises browser, but its **My Media tile, Continue Your Franchises homepage tracker, and tile settings menu require the separate [JavaScript Injector plugin](https://github.com/n00bcodr/Jellyfin-JavaScript-Injector)**. Install both plugins for the complete Jellyfin Web experience. JavaScript Injector is not bundled with Franchise Explorer.
@@ -69,6 +73,44 @@ https://raw.githubusercontent.com/n00bcodr/jellyfin-plugins/main/manifest.json
 
 **Developer note:** Pushing updated source files or passing GitHub Actions does **not** update the plugin already installed on your Jellyfin server. Publish and install the compiled release (or explicitly deploy a compatible test DLL), restart Jellyfin, then refresh the browser. A newer source version may not appear in the Jellyfin catalog until that version is actually released and added to the repository manifest.
 
+## Example setup: Marvel Cinematic Universe
+
+The screenshots below show an **example configuration**, not franchises or media included with the plugin. They use an existing Jellyfin library with artwork already available. Your titles, posters, phases, and watch order will depend on the media and groups you add.
+
+For explanations of **all** available settings and controls, see [How to use Franchise Explorer](docs/USER_GUIDE.md).
+
+### 1. Create a franchise and organize its groups
+
+Open **Dashboard → Plugins → Franchise Explorer**. Create a top-level franchise (for example, **Marvel Cinematic Universe**), then add subgroups for its phases. Select a group to set its name, description, order, artwork, and optional **Browse rows**. Use the rows to decide how subgroups, collections, and watch-order entries appear to viewers. Changes to these virtual groups do not move your Jellyfin media files.
+
+![Franchise Explorer editor showing a Marvel Cinematic Universe franchise, Phase One through Phase Six subgroups, and the Browse rows configuration](docs/screenshots/01-franchise-editor.png)
+
+### 2. Open the Franchises browser
+
+Select **Open Franchises browser** from the editor, or open **Franchises** from Jellyfin Web's **My Media** row. The top level displays your franchises as a separate virtual library, alongside their artwork. The **Hide active franchise titles from Continue Watching and Next Up** checkbox lives here, next to the subtitle preference: **checked hides** the active franchise movie/series from those two native homepage rows; **unchecked shows** it (the default). This setting is for the current Jellyfin Web user and browser, and does not change watched history.
+
+![Franchises browser showing the main franchise posters and the checkbox for hiding active titles from Continue Watching and Next Up](docs/screenshots/02-franchises-library.png)
+
+### 3. Browse a franchise's phases and collections
+
+Open **Marvel Cinematic Universe** (or another franchise you created). Its page can show a backdrop, a poster, descriptive text, and separate horizontal rows such as **Phases** and **Collections**. These are references to your existing media and virtual groups, not duplicate Jellyfin libraries.
+
+![Marvel Cinematic Universe franchise page with franchise artwork, six phase posters, and a collections row](docs/screenshots/03-marvel-franchise.png)
+
+### 4. Arrange and play a chronological watch order
+
+Add movies, shows, seasons, or episode ranges to a chronological row in the editor. In the browser, scroll to **Chronological Order** to review the sequence, track progress, or choose **Play chronological order**. The progress indicators show Franchise Explorer's watch-order state; they are not a replacement for Jellyfin's native watched status. Playback and automatic handoff between items remain experimental.
+
+![Marvel Cinematic Universe chronological watch order showing films, Agent Carter episode ranges, watched indicators, and playback progress](docs/screenshots/04-chronological-watch-order.png)
+
+### 5. Resume from the Jellyfin homepage
+
+With **JavaScript Injector** and the registered Franchise Explorer script enabled, Jellyfin Web shows a **Franchises** tile under **My Media** and a **Continue Your Franchises** card for a started watch order. The card shows the current title, next episode, completion progress, and **Resume Watch Order**. This example also shows the hide-active-title setting **on**, so **Agent Carter** remains in the franchise resume card but is absent from the regular **Continue Watching** and **Next Up** rows. Other, unrelated titles remain visible.
+
+![Jellyfin homepage with the Franchises My Media tile, a Marvel Cinematic Universe Agent Carter resume card, and the native rows with the active franchise title hidden](docs/screenshots/05-jellyfin-home-integration.png)
+
+All five screenshots are stored in [`docs/screenshots/`](docs/screenshots/) so you can view them individually or reuse them when documenting your own setup.
+
 ## What it does
 
 - Build virtual franchise hierarchies, such as Marvel phases or Star Wars eras.
@@ -86,6 +128,7 @@ https://raw.githubusercontent.com/n00bcodr/jellyfin-plugins/main/manifest.json
 
 ## Need help?
 
+- [Step-by-step setup and complete settings reference](docs/USER_GUIDE.md)
 - [Report a bug or request a feature](https://github.com/Gost1o1/Jellyfin-Franchise-Explorer/issues)
 - [Source code and developer notes](Jellyfin-Franchise-Explorer/)
 - [Development history](Jellyfin-Franchise-Explorer/CHANGELOG.md)

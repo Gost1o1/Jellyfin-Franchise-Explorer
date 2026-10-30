@@ -4,6 +4,12 @@
 .gitignore
 docs/Gost1o1-logo.png
 docs/franchise-explorer-preview.png
+docs/USER_GUIDE.md
+docs/screenshots/01-franchise-editor.png
+docs/screenshots/02-franchises-library.png
+docs/screenshots/03-marvel-franchise.png
+docs/screenshots/04-chronological-watch-order.png
+docs/screenshots/05-jellyfin-home-integration.png
 Jellyfin-Franchise-Explorer/CHANGELOG.md
 Jellyfin-Franchise-Explorer/README.md
 Jellyfin-Franchise-Explorer/docs/FRANCHISES_NAVIGATION.md
