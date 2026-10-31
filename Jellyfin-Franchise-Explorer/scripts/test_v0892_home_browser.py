@@ -160,9 +160,9 @@ with sync_playwright() as p:
             page.wait_for_function("document.querySelector('.fe-resume-art img')?.dataset.feArtworkKind === 'poster'")
         tile = page.locator("#franchise-explorer-my-media-tile")
         assert tile.count() == 1
-        assert page.evaluate("window.__franchiseExplorerUiVersion") == "0.8.9.11"
-        assert tile.get_attribute("data-fe-version") == "0.8.9.11"
-        assert page.locator("#franchise-timeline-resume").get_attribute("data-fe-version") == "0.8.9.11"
+        assert page.evaluate("window.__franchiseExplorerUiVersion") == "0.8.9.12"
+        assert tile.get_attribute("data-fe-version") == "0.8.9.12"
+        assert page.locator("#franchise-timeline-resume").get_attribute("data-fe-version") == "0.8.9.12"
         before_menu = page.url
         # The options button is hidden until the tile is hovered or focused.
         # Playwright's button.click() does not reliably establish hover when the

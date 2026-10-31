@@ -14,10 +14,10 @@ assert(!home.includes("option.href=serverPath('/FranchiseExplorer/Browse?timelin
 assert(home.includes("player.openDialog(row,false,'select')"));
 assert(home.includes("ensureHomeTimelineStyle()"));
 assert(home.includes("enforceStartOver(id)"));
-assert(home.includes("window.__franchiseTimelineHomeVersion === '0.8.9.11'"));
+assert(home.includes("window.__franchiseTimelineHomeVersion === '0.8.9.12'"));
 assert(home.includes('fe-home-chronological-modal'));
-assert(home.includes("STYLE_ID = 'franchise-timeline-resume-style-v08911'"));
-assert(home.includes('fe-home-timeline-dialog-style-v08911'));
+assert(home.includes("STYLE_ID = 'franchise-timeline-resume-style-v08912'"));
+assert(home.includes('fe-home-timeline-dialog-style-v08912'));
 assert(!home.includes("confirm('Reset all chronological progress"));
 
 const idA='11111111-1111-1111-1111-111111111111';
@@ -160,11 +160,14 @@ async function resetPopup(accept) {
   nativeEnv.window.FranchiseExplorerNativePlayback={play:(id,options)=>{
     directCall={id,options};return true;
   }};
+  let modalRemoved=false;
+  manager.activeDialog={parentElement:{remove:()=>{modalRemoved=true;}}};
   await manager.playHere(row,queue,1,0,false,false,true);
   assert.equal(directCall.id,idB);
   assert.equal(directCall.options.positionTicks,0);
   assert.equal(directCall.options.startOver,true);
   assert.equal(directUrl,'','A supported native shortcut must not visit /details');
+  assert.equal(modalRemoved,true,'Successful native playback handoff must close the blocking chronological dialog');
   // Standalone Browse cannot use the Web DOM directly: it must hand off to
   // /web Home via same-tab storage instead of displaying the details page.
   nativeEnv.window.FranchiseExplorerNativePlayback=null;
@@ -176,5 +179,6 @@ async function resetPopup(accept) {
   const quick=JSON.parse(nativeStorage.get('session:fe-quickplay-v1'));
   assert.equal(quick.id,idB);
   assert.equal(quick.startOver,true);
-  console.log('v0.8.9.11 centered reset, native restart, stale-menu recovery, and in-place chronological list tests passed.');
+  assert.equal(quick.type,'Movie');
+  console.log('v0.8.9.12 centered reset, native restart, stale-menu recovery, and in-place chronological list tests passed.');
 })().catch(error=>{console.error(error);process.exitCode=1;});
