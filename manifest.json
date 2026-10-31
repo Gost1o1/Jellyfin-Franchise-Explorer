@@ -8,46 +8,6 @@
     "category": "General",
     "versions": [
       {
-        "version": "0.8.9.5",
-        "changelog": "https://github.com/Gost1o1/Jellyfin-Franchise-Explorer/releases/tag/v0.8.9.5",
-        "targetAbi": "12.0.0.0",
-        "sourceUrl": "https://github.com/Gost1o1/Jellyfin-Franchise-Explorer/releases/download/v0.8.9.5/franchise-explorer_0.8.9.5.zip",
-        "checksum": "7fa6413d5a2cc48315bcbc960a5a6601",
-        "timestamp": "2026-10-30T03:14:57Z"
-      },
-      {
-        "version": "0.8.9.4",
-        "changelog": "https://github.com/Gost1o1/Jellyfin-Franchise-Explorer/releases/tag/v0.8.9.4",
-        "targetAbi": "12.0.0.0",
-        "sourceUrl": "https://github.com/Gost1o1/Jellyfin-Franchise-Explorer/releases/download/v0.8.9.4/franchise-explorer_0.8.9.4.zip",
-        "checksum": "eef65bd016e9b8650a99293d409081a8",
-        "timestamp": "2026-10-30T02:00:50Z"
-      },
-      {
-        "version": "0.8.9.3",
-        "changelog": "https://github.com/Gost1o1/Jellyfin-Franchise-Explorer/releases/tag/v0.8.9.3",
-        "targetAbi": "12.0.0.0",
-        "sourceUrl": "https://github.com/Gost1o1/Jellyfin-Franchise-Explorer/releases/download/v0.8.9.3/franchise-explorer_0.8.9.3.zip",
-        "checksum": "1dcaf884184a028260375482178cb50b",
-        "timestamp": "2026-10-30T01:33:51Z"
-      },
-      {
-        "version": "0.8.9.2",
-        "changelog": "https://github.com/Gost1o1/Jellyfin-Franchise-Explorer/releases/tag/v0.8.9.2",
-        "targetAbi": "12.0.0.0",
-        "sourceUrl": "https://github.com/Gost1o1/Jellyfin-Franchise-Explorer/releases/download/v0.8.9.2/franchise-explorer_0.8.9.2.zip",
-        "checksum": "cb034ca8543eee9962b5e26c1a71ddb7",
-        "timestamp": "2026-10-30T00:50:21Z"
-      },
-      {
-        "version": "0.8.9.1",
-        "changelog": "https://github.com/Gost1o1/Jellyfin-Franchise-Explorer/releases/tag/v0.8.9.1",
-        "targetAbi": "12.0.0.0",
-        "sourceUrl": "https://github.com/Gost1o1/Jellyfin-Franchise-Explorer/releases/download/v0.8.9.1/franchise-explorer_0.8.9.1.zip",
-        "checksum": "d623f8e2f0d2179851e50b47fc075f14",
-        "timestamp": "2026-10-28T23:01:38Z"
-      },
-      {
         "version": "0.8.9.0",
         "changelog": "https://github.com/Gost1o1/Jellyfin-Franchise-Explorer/releases/tag/v0.8.9.0",
         "targetAbi": "12.0.0.0",

@@ -70,9 +70,9 @@ You can use a completely different universe; the screenshots below show one pers
 ### Step 2 — Add existing titles
 
 1. Select the appropriate phase or other group in **Your franchises**.
-2. Scroll to **Linked Jellyfin media**. Search your Jellyfin library by title (at least two characters).
-3. Choose a movie directly, or select a TV show and use **Choose TV Show range** if only some seasons/episodes belong in that group.
-4. Use **Add selected media** to link multiple selected results. These links are virtual and can be assigned in different groups without copying files.
+2. Open **Browse rows**, add a row with **Movies / TV shows** or **Chronological / custom viewing order**, and expand its media selector.
+3. Search your Jellyfin library by title (at least two characters), then select the movies or TV shows for the row.
+4. For TV shows, use **Choose TV Show range** if only certain seasons/episodes belong in that group. These links are virtual and do not copy files.
 
 You can also connect an existing Jellyfin collection under **Existing Jellyfin collection**, then optionally **Import collection members** as a one-time snapshot. See [collection controls](#connect-an-existing-jellyfin-collection) below.
 
@@ -88,13 +88,13 @@ Select the franchise or phase, then scroll to **Edit Images**. Upload a **Primar
    - **Collections** → **Subgroups**; tick any collection-like subgroups you've created.
    - **Chronological Order** → **Chronological / custom viewing order**; add titles from your full Jellyfin library in the exact order you want to watch them.
 3. Use each row's **⠿ drag handle** or **↑ / ↓** controls to set its position. Use the included items' own reorder controls to arrange their sequence.
-4. Click **Save plugin configuration** at the **bottom of the editor**. Most changes are only drafts until this button is clicked.
+4. Click **Save plugin configuration** at the **top of the editor**. Most changes are only drafts until this button is clicked.
 
 ### Step 5 — See the browsing result
 
 Click **Open Franchises browser** near the editor's top toolbar. Your new franchise should appear on the main Franchises page, with a poster if artwork is available.
 
-![Franchises root with available posters and the viewing preferences](screenshots/02-franchises-library.png)
+![Example Franchises root with available posters (older screenshot includes preferences that have since moved to the editor)](screenshots/02-franchises-library.png)
 
 Click the franchise to see its banner and configured rows.
 
@@ -120,12 +120,11 @@ Open **Dashboard → Plugins → Franchise Explorer**. This is the **editor**; i
 | --- | --- |
 | **+ New franchise** | Adds a new top-level group. Rename it in **Group details** and save. |
 | **+ Subgroup** | Adds a child under the currently selected group. Useful for an era, phase, saga, or character grouping. |
-| **+ Same-level group** | Creates a sibling alongside the selected group, under the same parent. |
-| **Insert example groups** | Adds sample Star Wars and Marvel groups to the current draft. They are **examples**, not linked media. If groups already exist you may be asked for confirmation. Save only if you want to keep them. |
 | **Open Franchises browser ↗** | Opens the separate browsing page, where you can inspect the saved structure and start supported watch orders. |
 | **Export backup** | Downloads a JSON snapshot of the virtual configuration to your device. It can contain item IDs; **it does not include uploaded artwork files**. |
 | **Import backup** | Loads a compatible JSON backup into the *unsaved* editor workspace. Confirm, review, then **Save plugin configuration** to persist. It replaces your current unsaved workspace, not Jellyfin media. |
 | **Discard edits** | Reloads the saved configuration, abandoning unsaved changes after confirmation. |
+| **Save plugin configuration** | The primary **top-right** action. Persists virtual groups, row definitions, existing references, and artwork settings. |
 
 ### Your franchises (left panel)
 
@@ -147,12 +146,12 @@ Open **Dashboard → Plugins → Franchise Explorer**. This is the **editor**; i
 | **Sort position** | Numeric ordering among sibling groups. Moving or dragging groups can also update order. |
 | **Artwork scope message** | Reminds you that uploaded images affect **only the selected group**. |
 
-### Footer
+### Status and preferences (top of editor)
 
 | Control | What it does |
 | --- | --- |
-| **Future navigation label** | Stores the intended label for optional web navigation, normally **Franchises**. It does **not** create a native media-library category in TV or mobile apps. |
-| **Save plugin configuration** | Persists changes to virtual groups, row definitions, media references, and navigation label. Watch for the save status message. |
+| **Playback & Home preferences** | The subtitle and native-row visibility switches are located here, rather than on the franchise browsing page. These changes save immediately in the current browser. |
+| **Save plugin configuration** | Persists changes to virtual groups, row definitions, media references, and artwork settings. Watch for the status message near the top of the editor. |
 | **No unsaved edits / unsaved indicator** | Helps you tell whether the editor contains uncommitted changes. |
 
 ## Artwork and inherited images
@@ -191,15 +190,13 @@ In **Existing Jellyfin collection**:
 
 ## Add existing Jellyfin media and episode ranges
 
-The **Linked Jellyfin media** section associates titles with whichever franchise or subgroup is selected on the left.
+The **Browse rows** section associates titles with the selected franchise or subgroup. The older separate **Linked Jellyfin media** search/manual-GUID section is hidden from the editor; existing saved references are preserved.
 
 | Control | What it does |
 | --- | --- |
-| **Search movies, TV shows and episodes** | Finds existing titles using at least two characters. |
-| **Select all results** | Selects the current matching results for bulk linking. |
-| **Clear selection** | Unchecks the selected search results. |
-| **Add selected media** | Adds the chosen existing media as virtual references to this group. |
-| **Current virtual links** | Lists already linked entries; use the available editing/removal actions as needed. |
+| **Media selector inside a browse row** | Searches the full existing Jellyfin library by title. |
+| **Select titles for a row** | Adds existing movies and TV shows as virtual references in that row. |
+| **Reorder/remove a row item** | Changes what that row displays, without touching media files. |
 
 For a TV show, the **Choose TV Show range** dialog offers:
 
@@ -211,7 +208,7 @@ For a TV show, the **Choose TV Show range** dialog offers:
 
 Use season/episode numbers **as Jellyfin lists them**. Specials use **Season 0**. Click **Add to franchise** in the range dialog and then **Save plugin configuration**. Range support in automatic playback is experimental; verify the resulting order before relying on it.
 
-**Advanced: manually add an item ID** is for an existing Jellyfin item you can identify by GUID. Fields include **Jellyfin item ID**, **Display label**, **Item kind** (Movie, TV Show, Season, Episode, Collection), **Timeline name**, and **Timeline position**. Prefer searching the library for ordinary use; incorrect GUIDs will not magically create playable media.
+Manual GUID entry is no longer displayed in the main editor. Existing linked GUID references remain stored; the usual workflow is to search Jellyfin titles from a row.
 
 ## Set up browse rows and chronological viewing order
 
@@ -256,7 +253,7 @@ Click **Open Franchises browser** in the editor, or open the **Franchises** tile
 
 ### Two per-browser viewer preferences
 
-These checkboxes are located **inside the Franchises browser, below the franchise heading**—**not** on the main administrator editor screen.
+These checkboxes are now located at the top of **Dashboard → Plugins → Franchise Explorer**, under **Playback & Home preferences**. They are no longer displayed on the viewer-facing browsing page.
 
 | Setting | OFF (unchecked) | ON (checked) |
 | --- | --- | --- |
@@ -271,7 +268,7 @@ When JavaScript Injector is running the current Franchise Explorer script:
 
 - **My Media → Franchises** opens the standalone browser. On desktop, the tile's three-dot menu appears when you **hover** over or keyboard-focus the tile; on touch screens, the control remains available. Clicking the menu should not itself open the browser.
 - **Continue Your Franchises** appears for active supported watch orders and shows the franchise, current title, next episode where available, completion progress, and a resume action.
-- On a phone held **vertically**, the resume card prefers the title's **Primary poster** artwork; **landscape** and desktop keep a wide image. If no poster exists, the image can fall back to wide art. Rotating the phone updates the chosen image without losing the current resume card.
+- On a phone held **vertically**, the resume card prefers the title's **Primary poster** artwork. **Landscape** and desktop display the full wide image without cropping, with a blurred background fill where the image aspect ratio differs from its card. Rotating the phone updates the chosen image without losing the current resume card.
 - If you enable the **Hide active franchise titles** viewer preference, the native **Continue Watching** and **Next Up** rows may no longer show the active title, while the franchise resume card remains available.
 
 These features are injected into **Jellyfin Web**. Native Jellyfin Android TV, Roku, Apple TV, and other clients do not necessarily load or support them.
@@ -291,18 +288,18 @@ These features are injected into **Jellyfin Web**. Native Jellyfin Android TV, R
 | **No Franchises tile on Home** | Install/enable JavaScript Injector; confirm one current plugin-owned My Media script, restart Jellyfin, hard-refresh the browser. |
 | **No homepage resume card** | Start a supported chronological watch order and check that the injected script loaded; not all clients support it. |
 | **The three dots are not visible on desktop** | Hover or keyboard-focus the Franchises tile. The control is intentionally hidden at rest. |
-| **Cannot find the Hide active titles switch** | Open the **Franchises browser**, not the editor; look below the hero header near the subtitles checkbox. |
-| **An active show disappeared from Continue Watching or Next Up** | Uncheck **Hide active franchise titles from Continue Watching and Next Up** in that browser. |
+| **Cannot find the Hide active titles switch** | Open **Dashboard → Plugins → Franchise Explorer** and look near the top for **Playback & Home preferences**. |
+| **An active show disappeared from Continue Watching or Next Up** | Uncheck **Hide active franchise titles from Continue Watching and Next Up** in plugin settings. |
 | **The franchise page has an empty row** | Select the correct group in the editor, check that the row includes matching groups/media, then save. An empty row does not imply missing Jellyfin files. |
 | **Art is missing or wrong** | Verify the relevant group/slot, inheritance source, and any custom upload. **Restore inherited** affects only that slot. |
 | **A backup import did not apply** | Import loads an unsaved workspace; click **Save plugin configuration** after reviewing it. |
-| **A web page still shows an old UI** | After deploying a compiled plugin update, restart Jellyfin and hard-refresh the browser. In a developer console, `window.__franchiseExplorerUiVersion` should display `0.8.9.5` for this release. |
+| **A web page still shows an old UI** | After deploying a compiled plugin update, restart Jellyfin and hard-refresh the browser. In a developer console, `window.__franchiseExplorerUiVersion` should display `0.8.9.6` for this release. |
 
 ### Limitations and safety
 
 - This is unfinished software. Playback chaining, progress and navigation can vary by Jellyfin Web version/client.
 - The plugin organizes **references**. It does not import films, download missing media, build a canonical chronological order automatically, or relocate files.
 - The JSON backup and the plugin's uploaded images are **separate**. Retain both before upgrading or removing the plugin.
-- All group/row/media edits require a final **Save plugin configuration**. Viewer preferences in the Franchises browser are stored separately in that user's browser.
+- All group/row/media edits require a final **Save plugin configuration**. Viewer preferences in plugin settings are stored separately in that user's browser.
 
-For release-specific notes, see [v0.8.9.5 upgrade instructions](../Jellyfin-Franchise-Explorer/docs/UPGRADE_V0895.md).
+For release-specific notes, see [v0.8.9.6 upgrade instructions](../Jellyfin-Franchise-Explorer/docs/UPGRADE_V0896.md).
