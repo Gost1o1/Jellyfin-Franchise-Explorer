@@ -8,6 +8,7 @@ service = (root / "src/Jellyfin.Plugin.FranchiseExplorer/Web/HomeTileRegistratio
 browser = (root / "scripts/test_my_media_tile_browser.py").read_text(encoding="utf-8")
 home_browser = (root / "scripts/test_v0892_home_browser.py").read_text(encoding="utf-8")
 browse = (root / "src/Jellyfin.Plugin.FranchiseExplorer/Configuration/browsePage.html").read_text(encoding="utf-8")
+config = (root / "src/Jellyfin.Plugin.FranchiseExplorer/Configuration/configPage.html").read_text(encoding="utf-8")
 
 assert "const controlsHost = imageHost || art;" in script
 assert "controlsHost.append(controls)" in script
@@ -24,17 +25,17 @@ assert "@media(hover:none), (pointer:coarse)" in script
 assert "tile.hover()" in home_browser
 assert home_browser.index("tile.hover()") < home_browser.index('tile.locator(".fe-settings-toggle").click()')
 assert '.fe-settings-toggle[aria-expanded="true"]' in script
-assert 'id="fe-native-rows"' in browse
-assert "$('fe-native-rows').checked=localStorage.getItem(nativeRowPreferenceKey())==='0'" in browse
-assert "$('fe-native-rows').checked?'0':'1'" in browse
-assert "Hide active franchise titles from Continue Watching and Next Up" in browse
-assert "'fe-show-active-native-rows:'" in script and "'fe-show-active-native-rows:'" in browse
+assert 'id="fe-native-rows"' not in browse
+assert 'id="fx-hide-native-pref"' in config
+assert "hide.checked?'0':'1'" in config
+assert "Hide active franchise titles from Continue Watching and Next Up" in config
+assert "'fe-show-active-native-rows:'" in script and "'fe-show-active-native-rows:'" in config
 assert "itemId: id" in script and "seriesId: item?.Type === 'Episode'" in script
 assert "card.classList.toggle(NATIVE_HIDE_CLASS" in script
 assert "const image=tile.querySelector(" in browser
 assert "holder.parentElement===image" in browser
 assert "menu_geometry['bottomGap']" in browser
-assert 'CurrentScriptId = "jellyfin-franchise-explorer-my-media-v0895"' in service
+assert 'CurrentScriptId = "jellyfin-franchise-explorer-my-media-v0896"' in service
 assert '"jellyfin-franchise-explorer-my-media-v0894"' in service
 assert '"jellyfin-franchise-explorer-my-media-v0893"' in service
 assert '"jellyfin-franchise-explorer-my-media-v1"' in service

@@ -43,6 +43,7 @@ Jellyfin-Franchise-Explorer/docs/UPGRADE_V0892.md
 Jellyfin-Franchise-Explorer/docs/UPGRADE_V0893.md
 Jellyfin-Franchise-Explorer/docs/UPGRADE_V0894.md
 Jellyfin-Franchise-Explorer/docs/UPGRADE_V0895.md
+Jellyfin-Franchise-Explorer/docs/UPGRADE_V0896.md
 Jellyfin-Franchise-Explorer/examples/virtual-franchises-demo.json
 Jellyfin-Franchise-Explorer/scripts/Apply-Repository-Upgrade.ps1
 Jellyfin-Franchise-Explorer/scripts/check_repo.py
@@ -109,6 +110,7 @@ Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Plugin.cs
 Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Web/HomeTileRegistrationService.cs
 Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Web/TimelinePlaybackMonitorService.cs
 Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-my-media.js
+Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-tile-backdrop.webp
 Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-timeline.js
 LICENSE
 README.md

@@ -271,3 +271,12 @@ Test with a new short movie-to-episode timeline on actual Jellyfin.
 **Warning:** Untested on a running Jellyfin 12.2 server; back up configurations before installing. Runtime validation remains required.
 
 See Git history for earlier releases.
+## v0.8.9.6 — Homepage artwork and streamlined plugin settings (experimental)
+
+- Bundle cinematic artwork for the Franchises My Media tile; show full landscape resume images with blurred letterbox fill.
+- Move subtitle and native-row display preferences to the admin plugin editor; keep the existing per-browser user keys.
+- Remove the large root library hero, simplify the browser branding, and keep franchise-specific hero artwork.
+- Put Save and the dirty indicator at the top; show six editor toolbar actions in the requested order.
+- Hide the legacy linked-media search/manual-ID area, same-level and demo controls, and future-navigation label without deleting saved group, collection, or reference data.
+- Rotate the JavaScript Injector script identity to v0896 and retain legacy ID cleanup behavior.
+
