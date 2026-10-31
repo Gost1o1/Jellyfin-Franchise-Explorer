@@ -1,4 +1,4 @@
-/* v0.8.9.7 homepage and franchise browsing quality-of-life regressions. */
+/* v0.8.9.8 homepage and franchise browsing quality-of-life regressions. */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
@@ -110,5 +110,5 @@ manager.save=async state=>{manager.states.set(state.rowId,state);return state;};
   manager.play=async()=>({started:true});
   await manager.replay(row,queue,1,'remote-session',false);
   assert.equal(manager.getState(row.id),null);
-  console.log('v0.8.9.7 tile, list collapse, chronological reset and untracked one-off playback contracts passed.');
+  console.log('v0.8.9.8 tile, list collapse, chronological reset and untracked one-off playback contracts passed.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

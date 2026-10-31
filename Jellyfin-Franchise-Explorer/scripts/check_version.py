@@ -6,6 +6,7 @@ if not re.fullmatch(r'\d+\.\d+\.\d+\.\d+',version):
     sys.exit('Expected a 4-component numerical release version.')
 p=pathlib.Path('src/Jellyfin.Plugin.FranchiseExplorer/Jellyfin.Plugin.FranchiseExplorer.csproj')
 s=p.read_text()
-if '<Version>'+version+'</Version>' not in s:
-    sys.exit('Release version differs from the project Version. Refusing to publish.')
+for field in ('Version', 'AssemblyVersion', 'FileVersion'):
+    if f'<{field}>{version}</{field}>' not in s:
+        sys.exit(f'Release version differs from the project {field}. Refusing to publish.')
 print('Version matches:', version)

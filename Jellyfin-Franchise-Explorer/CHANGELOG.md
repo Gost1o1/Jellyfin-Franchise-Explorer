@@ -292,3 +292,10 @@ See Git history for earlier releases.
 - Add three-dot actions to each Continue Your Franchises card: reset per-user chronological history, restart the current title without clearing earlier history, or choose a title from the full viewing list. One-off playback explicitly skips franchise timeline tracking and clears any stale local auto-next handoff.
 - Add a native show/hide arrow for each editor row's included-items list. Lists longer than eight items start collapsed; their ordering, selection, and data are unchanged. Expanded/collapsed state is remembered during editing.
 - Refresh GitHub Actions to Node 24-compatible action majors and pin Ubuntu 24.04 to remove deprecation and runner migration warnings.
+
+## v0.8.9.8 — Release version alignment (experimental)
+
+- Set the project, assembly, file, GitHub Actions release default, browser version markers, and optional Injector registration to `0.8.9.8` so manual dispatch with that version passes the release gate.
+- Register a new `jellyfin-franchise-explorer-my-media-v0898` script ID and retire the plugin-owned v0897 registration after the new one succeeds; other plugins' Injector scripts remain untouched.
+- Fail fast on mismatched versions before installing Playwright and running the browser suite. Validate all three assembly-version fields during the release check.
+- Preserve the v0.8.9.7 UI improvements, one-off chronological playback menu, collapsible editor lists, and upgraded GitHub Actions.
