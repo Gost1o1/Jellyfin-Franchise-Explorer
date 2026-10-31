@@ -19,12 +19,12 @@ concurrency:
 jobs:
   ui-browser:
     if: github.ref == 'refs/heads/main' && inputs.confirm == 'RELEASE_EXPERIMENTAL'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - name: Install Playwright and Chromium
@@ -47,9 +47,9 @@ jobs:
   publish:
     needs: ui-browser
     if: github.ref == 'refs/heads/main' && inputs.confirm == 'RELEASE_EXPERIMENTAL'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: true
       - name: Refuse duplicate GitHub releases before compiling
@@ -61,7 +61,7 @@ jobs:
             echo "::error::Release v${RELEASE_VERSION} already exists. Increase the project version and rerun with the new version. Existing releases are never overwritten."
             exit 1
           fi
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
       - name: Check source, tests and version
