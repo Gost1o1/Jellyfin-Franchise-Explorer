@@ -46,7 +46,7 @@ The **Group type** label helps organize browsing; naming a group **Collection** 
    ```
 
 3. Under **Plugins → Catalog**, install **Franchise Explorer** and a **Jellyfin 12-compatible JavaScript Injector**. Restart the Jellyfin service after installing or updating.
-4. In **Dashboard → Plugins → JS Injector**, expand **Plugin Scripts**. Confirm an enabled **Franchise Explorer - My Media tile** script. For v0.8.9.5, its script ID is `jellyfin-franchise-explorer-my-media-v0895`.
+4. In **Dashboard → Plugins → JS Injector**, expand **Plugin Scripts**. Confirm an enabled **Franchise Explorer - My Media tile** script. For v0.8.9.7, its script ID is `jellyfin-franchise-explorer-my-media-v0897`.
 5. **Do not manually add a duplicate script** if the plugin-owned one is present. Hard-refresh Jellyfin Web (**Ctrl+Shift+R** on a desktop) after the restart.
 
 The JavaScript Injector companion is required for the **My Media** tile, homepage resume card, and tile menu in Jellyfin Web. The standalone Franchises browser and administrator editor are provided by Franchise Explorer itself. The companion does not add a Franchises category to native TV/mobile applications.
@@ -239,6 +239,8 @@ Rows are configured **per selected franchise or subgroup** under **Browse rows**
 
 Click **Open Franchises browser** in the editor, or open the **Franchises** tile in Jellyfin Web's **My Media** section. The browser uses the Jellyfin login already active **on that same server and browser origin**.
 
+To return to **Your franchises** from any franchise or subgroup, click the top-left **F logo** or the **Franchise Explorer** title. Both are one large, keyboard-accessible home link.
+
 | Browser control | Behavior |
 | --- | --- |
 | **⚙ Settings** | Opens the administrator editor; administration permission is required. |
@@ -246,7 +248,7 @@ Click **Open Franchises browser** in the editor, or open the **Franchises** tile
 | **↑ Back** / breadcrumbs | Goes up to the parent franchise/group. |
 | **Search this level...** | Filters visible entries at the current hierarchy level. It is not a full server search. |
 | **Your order** | Uses the custom order saved in the editor. |
-| **A to Z** | Alphabetical display order. |
+| **A to Z** | Alphabetical display order. Opening a franchise resets the selector to **Your order**; you can switch to alphabetical for that browsing session. |
 | **☷ List** | Changes how cards are displayed at that level. |
 | **Play chronological order** | Starts an experimental sequential watch order for that row. |
 | **Episodes & progress** | Opens the timeline entry/progress view when available. |
@@ -266,7 +268,8 @@ The second switch is **ON = hide, OFF = show**, exactly as labeled. It is a **di
 
 When JavaScript Injector is running the current Franchise Explorer script:
 
-- **My Media → Franchises** opens the standalone browser. On desktop, the tile's three-dot menu appears when you **hover** over or keyboard-focus the tile; on touch screens, the control remains available. Clicking the menu should not itself open the browser.
+- **My Media → Franchises** opens the standalone browser. The text is centered over dimmed cinematic artwork. On desktop, the tile's three-dot menu appears when you **hover** over or keyboard-focus the tile; on touch screens, the control remains available. Clicking the menu should not itself open the browser.
+- Franchise posters show **TV Shows X · Movies Y** counts rather than a generic linked-item total. They count distinct titles, including nested groups and media added to custom rows; collection containers are excluded. The small **Franchise** badge is omitted, while era/phase badges remain.
 - **Continue Your Franchises** appears for active supported watch orders and shows the franchise, current title, next episode where available, completion progress, and a resume action.
 - On a phone held **vertically**, the resume card prefers the title's **Primary poster** artwork. **Landscape** and desktop display the full wide image without cropping, with a blurred background fill where the image aspect ratio differs from its card. Rotating the phone updates the chosen image without losing the current resume card.
 - If you enable the **Hide active franchise titles** viewer preference, the native **Continue Watching** and **Next Up** rows may no longer show the active title, while the franchise resume card remains available.
@@ -293,7 +296,7 @@ These features are injected into **Jellyfin Web**. Native Jellyfin Android TV, R
 | **The franchise page has an empty row** | Select the correct group in the editor, check that the row includes matching groups/media, then save. An empty row does not imply missing Jellyfin files. |
 | **Art is missing or wrong** | Verify the relevant group/slot, inheritance source, and any custom upload. **Restore inherited** affects only that slot. |
 | **A backup import did not apply** | Import loads an unsaved workspace; click **Save plugin configuration** after reviewing it. |
-| **A web page still shows an old UI** | After deploying a compiled plugin update, restart Jellyfin and hard-refresh the browser. In a developer console, `window.__franchiseExplorerUiVersion` should display `0.8.9.6` for this release. |
+| **A web page still shows an old UI** | After deploying a compiled plugin update, restart Jellyfin and hard-refresh the browser. In a developer console, `window.__franchiseExplorerUiVersion` should display `0.8.9.7` for this release. |
 
 ### Limitations and safety
 
@@ -302,4 +305,4 @@ These features are injected into **Jellyfin Web**. Native Jellyfin Android TV, R
 - The JSON backup and the plugin's uploaded images are **separate**. Retain both before upgrading or removing the plugin.
 - All group/row/media edits require a final **Save plugin configuration**. Viewer preferences in plugin settings are stored separately in that user's browser.
 
-For release-specific notes, see [v0.8.9.6 upgrade instructions](../Jellyfin-Franchise-Explorer/docs/UPGRADE_V0896.md).
+For release-specific notes, see [v0.8.9.7 upgrade instructions](../Jellyfin-Franchise-Explorer/docs/UPGRADE_V0897.md).

@@ -280,3 +280,13 @@ See Git history for earlier releases.
 - Hide the legacy linked-media search/manual-ID area, same-level and demo controls, and future-navigation label without deleting saved group, collection, or reference data.
 - Rotate the JavaScript Injector script identity to v0896 and retain legacy ID cleanup behavior.
 
+## v0.8.9.7 — Clearer franchise browser and centered My Media artwork (experimental)
+
+- Center the "Franchises" title on My Media artwork, increasing contrast with a subtle blurred/dimmed overlay.
+- Remove the redundant root "Groups and subgroups" heading, the browser's experimental-version footer, and the tiny "Franchise" badges on franchise posters (other subgroup labels remain).
+- Replace generic "Franchise · X linked items" captions with "TV Shows X · Movies Y" counts, including nested franchise links and explicit row media, without counting the same Jellyfin item twice.
+- Add media item types to the read-only catalog response to support accurate counts; do not mutate existing links or groups.
+- Default navigation to "Your order" when opening a franchise, while retaining manual A–Z selection.
+- Make the top-left "F" logo and "Franchise Explorer" title a single, padded home link back to "Your franchises" (also accessible with keyboard navigation).
+- Update installer script identity and release version to 0.8.9.7.
+

@@ -9,7 +9,7 @@ BROWSE = (PROJECT / "Configuration/browsePage.html").read_text(encoding="utf-8")
 README = (ROOT.parent / "README.md").read_text(encoding="utf-8")
 CS = (PROJECT / "Jellyfin.Plugin.FranchiseExplorer.csproj").read_text(encoding="utf-8")
 
-assert "<Version>0.8.9.6</Version>" in CS
+assert "<Version>0.8.9.7</Version>" in CS
 assert "Continue Your Franchises" in JS
 for marker in (
     "sessionStorage.getItem", "sessionStorage.setItem", "MutationObserver",
