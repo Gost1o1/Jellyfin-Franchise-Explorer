@@ -50,6 +50,7 @@ jobs:
           node scripts/test_v0899_home_actions.js
           node scripts/test_v08911_direct_playback.js
           node scripts/test_v08912_player_and_dialog.js
+          node scripts/test_v08913_home_return_and_filter.js
       - name: Restore and build Jellyfin 12.2 plugin
         working-directory: Jellyfin-Franchise-Explorer
         run: |
