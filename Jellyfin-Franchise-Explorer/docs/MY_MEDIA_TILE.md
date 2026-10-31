@@ -13,7 +13,7 @@ This is a **Web-only visual tile**, not a native library. It does not appear in 
 1. From the installed Franchise Explorer v0.7 admin editor, **Export backup JSON** and back up the plugin's `franchise-artwork` directory as well as Jellyfin configuration.
 2. In **Dashboard → Plugins → Repositories**, add JavaScript Injector's catalog `https://raw.githubusercontent.com/n00bcodr/jellyfin-plugins/main/manifest.json` if not already present. This is third-party software under its own license, not bundled with Franchise Explorer.
 3. In **Plugins → Catalog**, install the JavaScript Injector version explicitly compatible with **Jellyfin 12**. Restart your Windows Jellyfin service.
-4. Install/update **Franchise Explorer v0.7.1.0** from your existing GitHub plugin repository and restart the Jellyfin service.
+4. Install/update **Franchise Explorer v0.8.9.9** from your existing GitHub plugin repository and restart the Jellyfin service.
 5. Hard-refresh Jellyfin Web using `Ctrl+Shift+R` or clear its cached assets; return to Home → **My Media**. A teal Franchises card should appear after the existing library cards.
 6. Click the card. It should open the same separate Franchises browser that worked from the plugin's settings page.
 
@@ -21,7 +21,7 @@ If it does not appear, verify Jellyfin logs for `My Media web tile registered` a
 
 ### Manual fallback
 
-If the companion is installed but the automatic plugin registration fails, open **JavaScript Injector → Add Script**, use name `Franchise Explorer — My Media`, paste the full contents of `src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-my-media.js`, enable it, save, and hard-refresh the browser. This script is included in the repository ZIP, not downloaded from any third-party CDN. Prefer the automatic method and **disable an unnecessary duplicate manual entry**.
+If the companion is installed but automatic registration fails, prefer fixing the plugin registration and restarting Jellyfin. If using **JavaScript Injector → Add Script** as an emergency manual fallback, paste the contents of `src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-timeline.js` **first**, followed by `src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-my-media.js` as **one script**, then enable it and hard-refresh. The combined script supports the Home chronological picker; only pasting `franchise-my-media.js` omits that dependency. The tile artwork normally comes from the plugin's own embedded Injector registration. **Disable an unnecessary duplicate manual entry** when automatic registration is restored.
 
 ## Responsive behavior
 

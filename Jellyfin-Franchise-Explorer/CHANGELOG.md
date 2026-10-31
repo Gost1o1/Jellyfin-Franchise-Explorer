@@ -1,3 +1,11 @@
+## v0.8.9.9 — Chronological controls directly on Jellyfin Home (experimental)
+
+- Reset this user's franchise chronological history in place, without navigating to Browse or opening the timeline dialog. The home tracker refreshes afterward.
+- Restart the current movie/episode directly via Jellyfin Web's native player, from 0:00, while preserving earlier franchise timeline entries. Add a scoped native-player seek safeguard for Jellyfin's Resume behavior.
+- Reuse the **full chronological entry list** as a modal over Jellyfin Home. A selected item retains the choice between tracked chronology and one-off untracked franchise playback.
+- Package the existing timeline engine with the single JavaScript Injector home script, including popup styling and error feedback. Add offline regression tests and a new unique script registration ID.
+- No media is moved, no artwork sources are edited, and franchise timeline resets never change native Jellyfin watched history.
+
 ## v0.8.9.5 — Release-tag collision and Injector refresh (experimental)
 
 - Publish the latest v0.8.9.4 bug fixes under a unique version rather than

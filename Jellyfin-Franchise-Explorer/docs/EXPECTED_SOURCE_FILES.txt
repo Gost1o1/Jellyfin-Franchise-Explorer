@@ -46,6 +46,7 @@ Jellyfin-Franchise-Explorer/docs/UPGRADE_V0895.md
 Jellyfin-Franchise-Explorer/docs/UPGRADE_V0896.md
 Jellyfin-Franchise-Explorer/docs/UPGRADE_V0897.md
 Jellyfin-Franchise-Explorer/docs/UPGRADE_V0898.md
+Jellyfin-Franchise-Explorer/docs/UPGRADE_V0899.md
 Jellyfin-Franchise-Explorer/examples/virtual-franchises-demo.json
 Jellyfin-Franchise-Explorer/scripts/Apply-Repository-Upgrade.ps1
 Jellyfin-Franchise-Explorer/scripts/check_repo.py
@@ -95,6 +96,7 @@ Jellyfin-Franchise-Explorer/scripts/test_v0894_tile_position_contract.py
 Jellyfin-Franchise-Explorer/scripts/test_v0894_poster_orientation_contract.py
 Jellyfin-Franchise-Explorer/scripts/test_v0895_release_contract.py
 Jellyfin-Franchise-Explorer/scripts/test_v0897_qol.js
+Jellyfin-Franchise-Explorer/scripts/test_v0899_home_actions.js
 Jellyfin-Franchise-Explorer/scripts/ui_contract_tests.js
 Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Api/FranchiseArtworkController.cs
 Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Api/FranchiseBrowseController.cs
