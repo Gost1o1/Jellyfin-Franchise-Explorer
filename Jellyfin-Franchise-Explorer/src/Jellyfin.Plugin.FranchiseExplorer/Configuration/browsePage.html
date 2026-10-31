@@ -14,7 +14,9 @@ a{color:inherit;text-decoration:none}button,input,select{font:inherit}
 button{cursor:pointer}button:disabled{opacity:.4;cursor:default}
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #5deafa;outline-offset:3px}
 .top{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#111317ee;backdrop-filter:blur(15px);border-bottom:1px solid #333946;padding:10px clamp(14px,3.4vw,46px);min-height:72px;max-width:100vw}
-.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand{display:flex;align-items:center;gap:12px;min-width:0;min-height:48px;padding:7px 10px;margin:-7px -10px;border-radius:10px;cursor:pointer}
+.brand:hover{background:#28333d88}
+.brand:focus-visible{outline:3px solid #5deafa;outline-offset:2px}
 .brand-mark{width:37px;height:37px;border-radius:12px;display:grid;place-items:center;background:#0aafc1;color:#041416;font-size:21px;font-weight:800;flex-shrink:0}
 .brand-title{font-size:clamp(1rem,1.8vw,1.26rem);font-weight:750;letter-spacing:-.025em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .brand-sub{font-size:.71rem;letter-spacing:.07em;color:#8abdc2;text-transform:uppercase}
@@ -158,7 +160,7 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
 </head>
 <body>
 <header class="top">
-  <div class="brand"><span class="brand-mark" aria-hidden="true">F</span><div id="brand-title" class="brand-title">Franchise Explorer</div></div>
+  <a id="brand-home" class="brand" href="/FranchiseExplorer/Browse" title="Return to Your franchises" aria-label="Franchise Explorer — return to Your franchises"><span class="brand-mark" aria-hidden="true">F</span><span id="brand-title" class="brand-title">Franchise Explorer</span></a>
   <nav class="actions" aria-label="Navigation"><a id="fe-config-settings" class="btn btn-lite" href="#" title="Franchise Explorer Settings (Jellyfin administrator required)" aria-label="Franchise Explorer Settings">⚙ <span class="desktop-word">Settings</span></a><a id="return-jellyfin" class="btn btn-lite" href="#">← <span class="desktop-word">Jellyfin</span></a><button class="btn btn-lite" id="browse-back" title="Back to parent" type="button">↑ <span class="desktop-word">Back</span></button></nav>
 </header>
 <main>
@@ -166,11 +168,10 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
   <div class="hero"><img id="hero-backdrop" class="hero-art hidden" alt=""><div class="hero-inner"><div id="hero-poster-wrap" class="hero-poster hidden"><img id="hero-poster" alt=""></div><div class="hero-info"><div id="hero-type" class="eyebrow">Virtual library</div><h1 id="hero-title">Franchises</h1><p id="hero-description">Browse the franchises and story universes in your Jellyfin collection.</p><div id="hero-count" class="counter"></div></div></div></div>
   <div class="tools"><div class="tools-left"><h2 id="items-heading">Your franchises</h2><input id="search" class="field search" type="search" placeholder="Search this level..." aria-label="Filter franchises and titles"></div><div class="tools-left"><label for="sort" class="hidden">Sort order</label><select id="sort" class="field" aria-label="Sort items"><option value="custom">Your order</option><option value="alpha">A to Z</option></select><button id="toggle-view" class="btn" type="button" aria-pressed="false">☷ List</button></div></div>
   <p class="status" id="status" role="status" aria-live="polite">Loading franchises...</p>
-  <section id="groups-section" class="section hidden"><div class="section-header"><h2>Groups and subgroups</h2><span class="counter" id="groups-count"></span></div><div class="gallery" id="group-grid"></div></section>
+  <section id="groups-section" class="section hidden" aria-label="Your franchise posters"><div class="gallery" id="group-grid"></div></section>
   <section id="media-section" class="section hidden"><div class="section-header"><h2>Movies and TV shows</h2><span class="counter" id="media-count"></span></div><div class="gallery" id="media-grid"></div></section>
   <div id="rows-container" class="rows-container"></div>
   <div id="empty" class="empty hidden">No items to display in this group.</div>
-  <div class="footer">Franchise Explorer v0.8.9.6 · Experimental chronological playback. Per-user timeline progress is separate from Jellyfin watched history; native client support varies.</div>
 </main>
 <script src="TimelineClient.js"></script>
 <script>
@@ -181,6 +182,7 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
   const serverPath = path => prefix + (path.startsWith('/') ? path : '/' + path);
   $('return-jellyfin').href = serverPath('/web/index.html');
   $('fe-config-settings').href = serverPath('/web/index.html#/configurationpage?name=Franchise%20Explorer');
+  $('brand-home').href = serverPath('/FranchiseExplorer/Browse');
   let token = '', userId = '', serverId = '', catalog = {nodes:[],links:[],rows:[]}, current = '', view = 'grid', shownCards = [], renderSerial = 0, timeline = null;
   const itemCache = new Map(), blobCache = new Map();
   const imageKeys = {Primary:'primaryUrl',Backdrop:'backdropUrl',Logo:'logoUrl',Thumb:'thumbUrl',Banner:'bannerUrl'};
@@ -250,7 +252,7 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
   function countDescendants(id,visited=new Set()){if(visited.has(id))return 0;visited.add(id);return links(id).length+children(id).reduce((t,n)=>t+countDescendants(n.id,visited),0);}
   function compare(a,b){if($('sort').value==='alpha')return String(a.name||a.title||'').localeCompare(String(b.name||b.title||''));return (+a.sortOrder||+a.position||0)-(+b.sortOrder||+b.position||0)||String(a.name||a.title||'').localeCompare(String(b.name||b.title||''));}
   function hashGroup(){const params=new URLSearchParams(location.hash.replace(/^#/,''));const id=params.get('group')||'';return safeGuid(id)&&nodeById(id)?id:'';}
-  function openGroup(id){location.hash=id?'group='+encodeURIComponent(id):'';if(!id && !location.hash){current='';void render();}}
+  function openGroup(id){$('sort').value='custom';location.hash=id?'group='+encodeURIComponent(id):'';if(!id && !location.hash){current='';void render();}}
   function fallbackCover(kind){const box=document.createElement('span');box.className='fallback';const icon=text(document.createElement('span'),kind==='TV Show'?'▣':kind==='Movie'?'▶':'✦');icon.className='fallback-icon';box.append(icon,text(document.createElement('span'),kind));return box;}
   function mediaRange(l){const mode=l.rangeMode||'Full';if(mode==='Seasons')return 'Seasons '+l.startSeason+'–'+l.endSeason;
     if(mode==='Episodes')return 'S'+l.startSeason+'E'+l.startEpisode+' – S'+l.endSeason+'E'+l.endEpisode;return '';
@@ -346,8 +348,9 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
     return tile;
   }
   async function showNode(n,grid,ticket){
-    const total=countDescendants(n.id);
-    const tile=makeTile(n.name||'Unnamed group',n.nodeType+' · '+total+' linked '+(total===1?'item':'items'),n.nodeType,()=>openGroup(n.id),'Group');
+    const counts=mediaCounts(n.id);
+    const subtitle='TV Shows '+counts.tvShows+' · Movies '+counts.movies;
+    const tile=makeTile(n.name||'Unnamed group',subtitle,n.nodeType==='Franchise'?'':n.nodeType,()=>openGroup(n.id),'Group');
     grid.append(tile.button);shownCards.push(tile.button);
     void nodeArtwork(n,'Primary').then(url=>{if(ticket===renderSerial)addImageToTile(tile,url);});
   }
@@ -361,6 +364,23 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
     const ids=new Set([root]);let changed=true;
     while(changed){changed=false;for(const n of catalog.nodes){if(ids.has(n.parentId)&&!ids.has(n.id)){ids.add(n.id);changed=true;}}}
     return catalog.links.filter(l=>ids.has(l.nodeId));
+  }
+  function mediaCounts(root){
+    const ids=new Set([root]);let changed=true;
+    while(changed){changed=false;for(const n of catalog.nodes){if(ids.has(n.parentId)&&!ids.has(n.id)){ids.add(n.id);changed=true;}}}
+    const items=[...catalog.links.filter(l=>ids.has(l.nodeId)),
+      ...(catalog.rows||[]).filter(r=>ids.has(r.parentNodeId)).flatMap(r=>r.items||[])];
+    // One title may appear in several rows or episode ranges. Count the
+    // distinct Jellyfin titles once, without counting collection containers.
+    const seen=new Set();let tvShows=0,movies=0;
+    for(const item of items){
+      const id=String(item.itemId||'').toLowerCase();
+      if(!id||seen.has(id))continue;
+      const kind=String(item.itemType||'').toLowerCase();
+      if(kind==='series'||kind==='tv show'){tvShows++;seen.add(id);}
+      else if(kind==='movie'){movies++;seen.add(id);}
+    }
+    return {tvShows,movies};
   }
   function defaultRows(id, groups, directMedia){
     // Backward compatible: v0.7.2 franchises appear in rows without changing
@@ -435,7 +455,8 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
     $('browse-back').disabled=!selected;$('browse-back').onclick=()=>openGroup(selected?selected.parentId:'');
     text($('hero-type'),selected?selected.nodeType:'Virtual library');text($('hero-title'),title);
     text($('hero-description'),selected?(selected.overview||'Browse the subgroups, movies, and TV shows linked to this virtual franchise.'):'Browse your franchise groups, eras, phases, and viewing references.');
-    text($('hero-count'),selected?(countDescendants(selected.id)+' linked items including nested groups'):(catalog.nodes.filter(x=>!x.parentId).length+' top-level franchises'));
+    if(selected){const counts=mediaCounts(selected.id);text($('hero-count'),'TV Shows '+counts.tvShows+' · Movies '+counts.movies);}
+    else text($('hero-count'),catalog.nodes.filter(x=>!x.parentId).length+' top-level franchises');
     $('hero-poster-wrap').classList.add('hidden');$('hero-backdrop').classList.add('hidden');
     if(selected){
       void nodeArtwork(selected,'Primary').then(url=>{if(ticket===renderSerial&&url){$('hero-poster').src=url;$('hero-poster-wrap').classList.remove('hidden');}});
@@ -463,7 +484,6 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
     }else{
       const visible=groupList.filter(n=>!filter||n.name.toLocaleLowerCase().includes(filter));
       $('groups-section').classList.toggle('hidden',!visible.length);
-      text($('groups-count'),visible.length+' groups');
       for(const n of visible)void showNode(n,$('group-grid'),ticket);
       shown=visible.length;
     }
@@ -479,10 +499,16 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
     }
   }
   $('browse-back').onclick=()=>{const n=nodeById(current);openGroup(n?n.parentId:'');};
+  $('brand-home').addEventListener('click',event=>{
+    event.preventDefault();
+    $('search').value='';$('sort').value='custom';
+    window.scrollTo({top:0,behavior:'instant'});
+    openGroup('');
+  });
   $('toggle-view').addEventListener('click',()=>{view=view==='grid'?'list':'grid';$('toggle-view').setAttribute('aria-pressed',String(view==='list'));text($('toggle-view'),view==='list'?'▦ Grid':'☷ List');void render();});
   $('sort').addEventListener('change',()=>void render());
   $('search').addEventListener('input',()=>void render());
-  window.addEventListener('hashchange',()=>{window.scrollTo({top:0,behavior:'instant'});$('search').value='';void render();});
+  window.addEventListener('hashchange',()=>{window.scrollTo({top:0,behavior:'instant'});$('search').value='';$('sort').value='custom';void render();});
   document.addEventListener('keydown',event=>{
     if(event.key==='Escape'&&current){event.preventDefault();const n=nodeById(current);openGroup(n?n.parentId:'');return;}
     if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)||/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))return;
@@ -494,6 +520,7 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
     const target=cards[focusIndex+delta];if(target){event.preventDefault();target.focus();}
   });
   async function init(){
+    $('sort').value='custom';
     if(!(await session())){status('Sign in to Jellyfin Web on this device first, then return to Franchises.');$('empty').classList.remove('hidden');text($('empty'),'No Jellyfin Web login session was found for this server.');return;}
     try{
       catalog=await api('/FranchiseExplorer/Catalog');

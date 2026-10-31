@@ -1,5 +1,5 @@
 /*
- * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.6).
+ * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.7).
  * Adds ONE visual link in the existing "My Media" row. It does not create a
  * Jellyfin library, alter user preferences, or modify the server's media.
  * Requires a compatible JavaScript injector to run in jellyfin-web.
@@ -11,7 +11,7 @@
   // Programmatic registration plus a manual fallback must not create two observers.
   if (window.__franchiseExplorerMyMediaTileLoaded) return;
   window.__franchiseExplorerMyMediaTileLoaded = true;
-  window.__franchiseExplorerUiVersion = '0.8.9.6';
+  window.__franchiseExplorerUiVersion = '0.8.9.7';
   // Replaced with a data URI when registered by the plugin host service.
   const TILE_ART_DATA = '__FE_TILE_ART_DATA_URL__';
 
@@ -57,11 +57,17 @@
         color:#cbf7fa;font:bold clamp(32px,4vw,58px)/1 Arial,sans-serif;
         text-align:center;text-shadow:0 2px 5px #001c24;
       }
+      #${TILE_ID} .fe-tile-art.fe-cinematic-art::before {
+        content:"";position:absolute;inset:0;z-index:0;
+        background:rgba(2,12,19,.27);backdrop-filter:blur(2px);
+        pointer-events:none;
+      }
       #${TILE_ID} .fe-tile-art-title {
-        display:block!important;position:absolute;left:7px;right:7px;bottom:12%;
+        display:block!important;position:absolute;z-index:1;
+        left:7px;right:7px;top:50%;bottom:auto;transform:translateY(-50%);
         margin:0!important;padding:0!important;text-align:center;color:white;
-        font:bold clamp(14px,1.25vw,21px)/1.2 Arial,sans-serif;
-        text-shadow:0 2px 5px #001a22;
+        font:bold clamp(18px,1.75vw,30px)/1.2 Arial,sans-serif;
+        text-shadow:0 2px 6px #000,0 4px 14px #000;
       }
       #${TILE_ID} .fe-settings-holder {
         position:absolute;right:6px;bottom:3px;z-index:999;line-height:1;
@@ -205,7 +211,7 @@
       }
     }
     tile.id = TILE_ID;
-    tile.setAttribute('data-fe-version','0.8.9.6');
+    tile.setAttribute('data-fe-version','0.8.9.7');
     tile.setAttribute('aria-label','Open Franchises');
     tile.setAttribute('href',browseUrl());
     // Native actions from a cloned Collections card cannot operate on the
@@ -332,7 +338,7 @@
       if (sourceScalable) observedResize.observe(sourceScalable);
     }
     tile.setAttribute('href',browseUrl());
-    tile.setAttribute('data-fe-version','0.8.9.6');
+    tile.setAttribute('data-fe-version','0.8.9.7');
   }
 
   function schedule() {
@@ -362,7 +368,7 @@
   window.addEventListener('resize', schedule);
 })();
 
-/* v0.8.9.6 — Read-only, per-user franchise resume cards on Jellyfin Web's home.
+/* v0.8.9.7 — Read-only, per-user franchise resume cards on Jellyfin Web's home.
  * Jellyfin regularly replaces the home DOM, including after a refresh and
  * client-side navigation. Reattach the same widget rather than waiting for the
  * next API poll, and keep a short session-scoped cache for hard refreshes.
@@ -376,7 +382,7 @@
   const STYLE_ID = 'franchise-timeline-resume-style';
   const NATIVE_HIDE_STYLE_ID = 'fe-native-franchise-row-filter-style';
   const NATIVE_HIDE_CLASS = 'fe-native-franchise-row-hidden';
-  const CACHE_PREFIX = 'fe-franchise-home-v0896:';
+  const CACHE_PREFIX = 'fe-franchise-home-v0897:';
   const MAX_CARDS = 8;
   const phonePortrait = () => window.matchMedia('(orientation: portrait) and (max-width: 700px)').matches;
   const GUID = /^[a-f0-9]{32}$|^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
@@ -575,7 +581,7 @@
       widget.id = WIDGET_ID;
       widget.setAttribute('aria-label', 'Continue Your Franchises');
     }
-    widget.setAttribute('data-fe-version','0.8.9.6');
+    widget.setAttribute('data-fe-version','0.8.9.7');
     // Jellyfin's home view can destroy and recreate this entire parent.
     // Keep our rendered widget and reattach immediately after the native row.
     if (widget.parentElement !== anchor.parentElement || anchor.nextElementSibling !== widget)
@@ -786,7 +792,7 @@
     } catch (error) {
       // Transient errors must not erase the user's most recent cards. Log only
       // the status/error class (never an auth header, token or user ID).
-      console.warn('[Franchise Explorer 0.8.9.6] Home tracker refresh failed:', error?.message || 'unknown error');
+      console.warn('[Franchise Explorer 0.8.9.7] Home tracker refresh failed:', error?.message || 'unknown error');
     }
     finally { busy = false; }
   }

@@ -111,6 +111,7 @@ public sealed class FranchiseBrowseController : ControllerBase
                 id = l.Id,
                 nodeId = l.NodeId,
                 itemId = l.JellyfinItemId,
+                itemType = l.ItemType,
                 rangeMode = l.RangeMode,
                 startSeason = l.StartSeason,
                 endSeason = l.EndSeason,
