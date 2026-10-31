@@ -26,9 +26,39 @@
 
 ## Preview
 
-![Franchise Explorer showing the Marvel Cinematic Universe, phases, collections, and chronological watch order](docs/franchise-explorer-preview.png)
+### Browse an entire franchise in one place
 
-See the [Marvel Cinematic Universe example walkthrough](#example-setup-marvel-cinematic-universe) for screenshots of the editor, browsing pages, watch order, and Jellyfin homepage integration.
+Virtual franchises have their own artwork, nested phases or eras, collections, and custom viewing orders. Everything points to media already in Jellyfin.
+
+![Franchise Explorer browsing the Marvel Cinematic Universe, its six phases, collections, and chronological watch order](docs/franchise-explorer-preview.png)
+
+### Continue watching directly from Jellyfin Home
+
+The **Franchises** tile sits beside your other libraries. **Continue Your Franchises** displays the current movie or series poster, upcoming episode, progress, and **Resume Watch Order**. The intent on a supported Jellyfin Web client is to start the video directly without navigating through the browsing or Details pages.
+
+![Jellyfin Home with the Franchises My Media tile and the Marvel Cinematic Universe Continue Your Franchises card](docs/screenshots/user-guide/01-jellyfin-home.png)
+
+### Organize franchises, phases, and watch orders
+
+The main **Franchise Explorer settings editor** lets you build virtual hierarchies, create custom rows, select movies and episode ranges from your Jellyfin library, and put entries in exactly the order you want.
+
+![Main Franchise Explorer settings editor with the Marvel Cinematic Universe selected, group hierarchy, and browse-row controls](docs/screenshots/user-guide/10-group-editor.png)
+
+### Pick where to start watching
+
+Open your chronological list from the homepage card's menu. Choose a particular movie or episode, then decide whether to **watch it once** or **count it toward your franchise timeline**. The menu also lets you restart the current item, reset chronological history, or open Details on purpose.
+
+![Chronological Order selection dialog with playback device, numbered movies and episodes, and Watch controls](docs/screenshots/user-guide/04-chronological-selection.png)
+
+### Make every franchise look the way you want
+
+Upload separate posters, backdrops, clearlogos, icons, and banners—or use inherited artwork from existing Jellyfin collections and linked titles. Restoring an inherited slot does not change the original media artwork.
+
+![Franchise Explorer artwork editor with poster, backdrop, clearlogo, thumb/icon, and banner slots](docs/screenshots/user-guide/13-artwork-slots.png)
+
+*Screenshots show one example library and configuration, not bundled content. Direct playback and automatic next-item handoff are experimental and can vary by Jellyfin client.*
+
+See the [Marvel Cinematic Universe example walkthrough](#example-setup-marvel-cinematic-universe) for more screenshots, or jump to the [illustrated user guide](docs/USER_GUIDE.md) for detailed instructions.
 
 **New to Franchise Explorer?** Start with the [complete illustrated user guide](docs/USER_GUIDE.md). It explains every editor field and button, how to resume directly from Jellyfin Home, use the card's three-dot menu, choose whether a selected episode counts toward chronological progress, set up franchises and subgroups, link Jellyfin media, create chronological rows, and manage artwork. The guide includes **20 new screenshots** of the v0.8.9.15 Home and scrolling settings interface, in addition to the original example images.
 
