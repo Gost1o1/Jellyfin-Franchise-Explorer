@@ -5,7 +5,7 @@ on:
       version:
         description: 'Release version; must equal csproj Version'
         required: true
-        default: '0.8.9.7'
+        default: '0.8.9.8'
         type: string
       confirm:
         description: 'Type RELEASE_EXPERIMENTAL to publish'
@@ -27,6 +27,11 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: '3.12'
+      - name: Verify requested release version before browser tests
+        working-directory: Jellyfin-Franchise-Explorer
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: python3 scripts/check_version.py "$RELEASE_VERSION"
       - name: Install Playwright and Chromium
         run: |
           python -m pip install playwright
