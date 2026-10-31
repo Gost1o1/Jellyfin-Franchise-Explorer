@@ -299,6 +299,19 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
     // The optional Jellyfin Web integration recognizes feAutoPlay=1 and
     // activates the native player's Play button. Without it this falls back
     // gracefully to the real item's detail page.
+    // Browse is a separate page from Jellyfin Web; its native shortcuts
+    // handler is available only after switching to the authenticated Web UI.
+    // Pass a short-lived, same-tab quick-play request for the injected bridge.
+    // Information buttons intentionally keep using the ordinary details page.
+    if(autoPlay && ['Movie','Episode'].includes(item.Type)){
+      try{
+        sessionStorage.setItem('fe-quickplay-v1',JSON.stringify({version:1,id:item.Id,
+          created:Date.now(),positionTicks:0,startOver:true,
+          subtitleEnabled:localStorage.getItem(playbackPreferenceKey())==='1'}));
+        location.href=serverPath('/web/#/home');
+        return;
+      }catch(error){console.warn('Franchise Explorer: quick-play handoff is unavailable',error);}
+    }
     const sid=serverId?'&serverId='+encodeURIComponent(serverId):'';
     const playable=autoPlay?'&feAutoPlay=1&feSubs='+(localStorage.getItem(playbackPreferenceKey())==='1'?'1':'0'):'';
     location.href=serverPath('/web/#/details?id='+encodeURIComponent(item.Id)+sid+playable);

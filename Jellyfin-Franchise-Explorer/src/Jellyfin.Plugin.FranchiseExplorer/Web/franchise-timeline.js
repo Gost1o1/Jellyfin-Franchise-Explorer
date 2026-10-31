@@ -237,7 +237,31 @@
       // The server records only an expiring intent until actual playback is
       // observed; the browser bridge separately verifies its local player.
       localStorage.setItem(this.handoffKey(),JSON.stringify(intent));
+      // On Jellyfin Web, use the native shortcuts/PlaybackManager path. The
+      // injected bridge creates the ordinary Jellyfin Play/Resume action and
+      // watches the real local player; it does not navigate through Details.
+      // A missing/unsupported bridge still uses the legacy details handoff.
+      const native=window.FranchiseExplorerNativePlayback;
+      if(native && typeof native.play==='function'){
+        try{
+          if(native.play(target.id,{positionTicks:Math.max(0,positionTicks),
+            startOver:!!forceStartOver,subtitleEnabled:!!intent.subtitleEnabled,
+            intentKey:this.handoffKey()}))return;
+        }catch(error){console.warn('Franchise Explorer: direct playback unavailable',error);}
+      }
       const prefix=this.context.prefix||'';
+      // The standalone Franchises browser does not host Jellyfin Web's
+      // shortcuts. Transfer into its Home view and let the injected native
+      // bridge consume this expiring request without showing /details.
+      if(!/\/web(?:\/|$)/i.test(location.pathname||'') && typeof sessionStorage!=='undefined'){
+        try{
+          sessionStorage.setItem('fe-quickplay-v1',JSON.stringify({version:1,id:target.id,
+            created:Date.now(),positionTicks:Math.max(0,positionTicks),startOver:!!forceStartOver,
+            subtitleEnabled:!!intent.subtitleEnabled}));
+          location.assign(prefix+'/web/#/home');
+          return;
+        }catch(error){console.warn('Franchise Explorer: cross-page native playback unavailable',error);}
+      }
       const sid=this.context.serverId?'&serverId='+encodeURIComponent(this.context.serverId):'';
       const sub=intent.subtitleEnabled?'1':'0';
       location.assign(prefix+'/web/#/details?id='+encodeURIComponent(target.id)+sid+

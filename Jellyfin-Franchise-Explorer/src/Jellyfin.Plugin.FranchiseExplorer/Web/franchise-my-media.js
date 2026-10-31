@@ -1,5 +1,5 @@
 /*
- * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.10).
+ * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.11).
  * Adds ONE visual link in the existing "My Media" row. It does not create a
  * Jellyfin library, alter user preferences, or modify the server's media.
  * Requires a compatible JavaScript injector to run in jellyfin-web.
@@ -9,7 +9,7 @@
   'use strict';
 
   // Programmatic registration plus a manual fallback must not create two observers.
-  window.__franchiseExplorerUiVersion = '0.8.9.10';
+  window.__franchiseExplorerUiVersion = '0.8.9.11';
   if (window.__franchiseExplorerMyMediaTileLoaded) return;
   window.__franchiseExplorerMyMediaTileLoaded = true;
   // Replaced with a data URI when registered by the plugin host service.
@@ -211,7 +211,7 @@
       }
     }
     tile.id = TILE_ID;
-    tile.setAttribute('data-fe-version','0.8.9.10');
+    tile.setAttribute('data-fe-version','0.8.9.11');
     tile.setAttribute('aria-label','Open Franchises');
     tile.setAttribute('href',browseUrl());
     // Native actions from a cloned Collections card cannot operate on the
@@ -338,7 +338,7 @@
       if (sourceScalable) observedResize.observe(sourceScalable);
     }
     tile.setAttribute('href',browseUrl());
-    tile.setAttribute('data-fe-version','0.8.9.10');
+    tile.setAttribute('data-fe-version','0.8.9.11');
   }
 
   function schedule() {
@@ -368,7 +368,7 @@
   window.addEventListener('resize', schedule);
 })();
 
-/* v0.8.9.10 — Per-user franchise resume cards and in-place playback shortcuts on Jellyfin Web's home.
+/* v0.8.9.11 — Per-user franchise resume cards and in-place playback shortcuts on Jellyfin Web's home.
  * Jellyfin regularly replaces the home DOM, including after a refresh and
  * client-side navigation. Reattach the same widget rather than waiting for the
  * next API poll, and keep a short session-scoped cache for hard refreshes.
@@ -378,16 +378,16 @@
   'use strict';
   // An older Injector script may still be running. Never let its shared v1
   // marker block the newer in-place playback actions from initializing.
-  if (window.__franchiseTimelineHomeVersion === '0.8.9.10') return;
-  window.__franchiseTimelineHomeVersion = '0.8.9.10';
+  if (window.__franchiseTimelineHomeVersion === '0.8.9.11') return;
+  window.__franchiseTimelineHomeVersion = '0.8.9.11';
   window.__franchiseTimelineHomeLoaded = true;
   const WIDGET_ID = 'franchise-timeline-resume';
   // Versioned styles take precedence if an earlier Injector script left its
   // stylesheet in the page before the new registration initialized.
-  const STYLE_ID = 'franchise-timeline-resume-style-v08910';
+  const STYLE_ID = 'franchise-timeline-resume-style-v08911';
   const NATIVE_HIDE_STYLE_ID = 'fe-native-franchise-row-filter-style';
   const NATIVE_HIDE_CLASS = 'fe-native-franchise-row-hidden';
-  const CACHE_PREFIX = 'fe-franchise-home-v08910:';
+  const CACHE_PREFIX = 'fe-franchise-home-v08911:';
   const MAX_CARDS = 8;
   const phonePortrait = () => window.matchMedia('(orientation: portrait) and (max-width: 700px)').matches;
   const GUID = /^[a-f0-9]{32}$|^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
@@ -540,6 +540,10 @@
     const style = document.createElement('style');
     style.id = STYLE_ID;
     style.textContent = [
+      // Legacy Injector registrations may leave a second tracker with the
+      // exact same DOM id. Hide it so its native confirm/resume menu cannot
+      // be clicked accidentally after the upgraded script becomes active.
+      '#'+WIDGET_ID+':not([data-fe-version="0.8.9.11"]){display:none!important}',
       '#'+WIDGET_ID+'{box-sizing:border-box;width:100%;min-width:0;padding:10px max(16px,2.5vw) 16px;color:#fff}',
       '#'+WIDGET_ID+' h2{font-size:1.32rem;margin:8px 0 15px;font-weight:600}',
       '#'+WIDGET_ID+' .fe-resume-grid{display:flex;gap:16px;flex-wrap:wrap;align-items:stretch}',
@@ -578,8 +582,8 @@
   // TimelineManager renders the SAME list as Browse, but Jellyfin Home does
   // not load Browse's stylesheet. The modal is appended to document.body.
   function ensureHomeTimelineStyle() {
-    if (document.getElementById('fe-home-timeline-dialog-style-v08910')) return;
-    const style=document.createElement('style');style.id='fe-home-timeline-dialog-style-v08910';
+    if (document.getElementById('fe-home-timeline-dialog-style-v08911')) return;
+    const style=document.createElement('style');style.id='fe-home-timeline-dialog-style-v08911';
     style.textContent=[
       '.timeline-dialog-mask{position:fixed;inset:0;z-index:2147483630;background:#050709e8;backdrop-filter:blur(2px);display:grid;place-items:center;padding:12px;overscroll-behavior:contain}',
       '.timeline-dialog-mask.fe-home-chronological-modal .timeline-dialog{width:min(830px,100%);max-height:min(88dvh,810px)}',
@@ -766,7 +770,7 @@
       widget.id = WIDGET_ID;
       widget.setAttribute('aria-label', 'Continue Your Franchises');
     }
-    widget.setAttribute('data-fe-version','0.8.9.10');
+    widget.setAttribute('data-fe-version','0.8.9.11');
     // Jellyfin's home view can destroy and recreate this entire parent.
     // Keep our rendered widget and reattach immediately after the native row.
     if (widget.parentElement !== anchor.parentElement || anchor.nextElementSibling !== widget)
@@ -1010,7 +1014,7 @@
     } catch (error) {
       // Transient errors must not erase the user's most recent cards. Log only
       // the status/error class (never an auth header, token or user ID).
-      console.warn('[Franchise Explorer 0.8.9.10] Home tracker refresh failed:', error?.message || 'unknown error');
+      console.warn('[Franchise Explorer 0.8.9.11] Home tracker refresh failed:', error?.message || 'unknown error');
     }
     finally { busy = false; }
   }
@@ -1042,7 +1046,10 @@
  */
 (function(){
   'use strict';
-  if(window.__franchiseAutoplayBridgeLoaded)return;
+  // Older Injector scripts can coexist after an upgrade. A boolean-only
+  // guard would silently retain their details-page/autoresume behavior.
+  if(window.__franchiseAutoplayBridgeVersion==='0.8.9.11')return;
+  window.__franchiseAutoplayBridgeVersion='0.8.9.11';
   window.__franchiseAutoplayBridgeLoaded=true;
   let currentKey='',attempts=0,scheduled=false,routeSettlingSince=0;
   const MAX_ATTEMPTS=36;
@@ -1380,6 +1387,94 @@
     document.addEventListener('timeupdate',onVideo,true);
     const expiry=setTimeout(stop,30000);
   }
+  // Jellyfin Web's own delegated shortcuts click handler understands
+  // data-action=play / resume on a card inside the active items container.
+  // This invokes the native PlaybackManager immediately: no /details route,
+  // direct stream URLs, or guessed server-side Session.Playing commands.
+  // Explicit `play` with position 0 is essential for restart-current: native
+  // Jellyfin's Resume action otherwise restores its separate watched offset.
+  window.FranchiseExplorerNativePlayback={
+    version:'0.8.9.11',
+    play(id,options={}){
+      if(!/^[a-f0-9-]{32,36}$/i.test(id))return false;
+      const container=document.querySelector('.homeTab:not(.hide) .itemsContainer, .homeTab:not(.hide) .itemsContainerWithBorders, .homeTab .itemsContainer, .itemsContainer:not(.hide)');
+      if(!container)return false;
+      const wrapper=document.createElement('div');
+      wrapper.className='card fe-direct-playback-shortcut';
+      wrapper.dataset.id=id;
+      wrapper.dataset.itemid=id;
+      wrapper.setAttribute('aria-hidden','true');
+      wrapper.style.cssText='position:absolute;left:-10000px;top:-10000px;width:1px;height:1px;overflow:hidden;pointer-events:none';
+      const button=document.createElement('button');
+      button.type='button';button.tabIndex=-1;
+      button.dataset.action=options.startOver||!Number(options.positionTicks)?'play':'resume';
+      button.dataset.id=id;
+      button.dataset.itemid=id;
+      button.dataset.positionticks=String(options.startOver?0:Math.max(0,Number(options.positionTicks)||0));
+      wrapper.appendChild(button);container.appendChild(wrapper);
+      const auth=localCredentials();
+      const intent=localIntent(auth);
+      if(intent&&itemMatch(intent.expectedId,id)){
+        intent.routePending=false;
+        localStorage.setItem(intent.key,JSON.stringify(intent));
+      }
+      if(options.startOver)enforceStartOver(id);
+      // Let Jellyfin's own delegated listener observe an inserted card before
+      // clicking; do not try to jump directly into a private Web module.
+      setTimeout(()=>{
+        if(!wrapper.isConnected)return;
+        button.click();
+        setTimeout(()=>wrapper.remove(),250);
+        void confirmLocalTimeline(id);
+      },0);
+      if(!options.subtitleEnabled)for(const delay of [800,2000,4500])setTimeout(disableBrowserTextTracks,delay);
+      // A theme or Jellyfin Web variant may not expose the delegated
+      // shortcut listener. Only then fall back to the details-page handoff.
+      const pathname=location.pathname,hash=location.hash;
+      setTimeout(()=>{
+        const latest=localIntent(localCredentials());
+        if(!latest||!itemMatch(latest.expectedId,id)||location.pathname!==pathname||location.hash!==hash)return;
+        const playing=[...document.querySelectorAll('video')].some(v=>!v.paused&&v.readyState>=2);
+        if(playing)return;
+        console.warn('Franchise Explorer: direct Jellyfin shortcut did not start a player; trying the compatibility handoff.');
+        const prefix=((location.pathname||'').match(/^(.*?)\/web(?:\/|$)/i)||[])[1]||'';
+        const sid=auth?.Id||auth?.ServerId;
+        location.assign(prefix+'/web/#/details?id='+encodeURIComponent(id)+(sid?'&serverId='+encodeURIComponent(sid):'')+
+          '&feAutoPlay=1&feLocalTimeline=1&feSubs='+(options.subtitleEnabled?'1':'0')+(options.startOver?'&feStartOver=1':''));
+      },12000);
+      return true;
+    }
+  };
+  // A click in the standalone Franchises browser starts on that browser's
+  // page, where Jellyfin Web's shortcuts handler is not mounted. The browser
+  // hands the request to this same-tab /web Home bridge through sessionStorage.
+  // Never treat the request as playback history; verification is still needed.
+  let queuedQuickPlay=null;
+  try{
+    const raw=sessionStorage.getItem('fe-quickplay-v1');
+    queuedQuickPlay=raw?JSON.parse(raw):null;
+  }catch(_){/* Storage may be blocked in a restricted browser. */}
+  if(queuedQuickPlay?.version===1 && /^[a-f0-9-]{32,36}$/i.test(queuedQuickPlay.id)){
+    let tries=0;
+    const timer=setInterval(()=>{
+      tries++;
+      const current=queuedQuickPlay;
+      if(Date.now()-current.created>60000){
+        clearInterval(timer);sessionStorage.removeItem('fe-quickplay-v1');return;
+      }
+      if(window.FranchiseExplorerNativePlayback.play(current.id,current)){
+        clearInterval(timer);sessionStorage.removeItem('fe-quickplay-v1');return;
+      }
+      if(tries>=50){
+        clearInterval(timer);sessionStorage.removeItem('fe-quickplay-v1');
+        console.warn('Franchise Explorer: native Home shortcut unavailable; opening the standard player compatibility route.');
+        const prefix=((location.pathname||'').match(/^(.*?)\/web(?:\/|$)/i)||[])[1]||'';
+        location.assign(prefix+'/web/#/details?id='+encodeURIComponent(current.id)+
+          '&feAutoPlay=1&feLocalTimeline=1&feSubs='+(current.subtitleEnabled?'1':'0')+
+          (current.startOver?'&feStartOver=1':''));
+      }
+    },300);
+  }
   function startIfReady(){
     scheduled=false;
     const p=params();if(!p){currentKey='';attempts=0;return;}
@@ -1394,7 +1489,9 @@
     // Play control; never click an element in a hidden/previous item page.
     const root=[...document.querySelectorAll('.page, .mainAnimatedPage, main')]
       .filter(isVisible).reverse().find(x=>x.querySelector('.btnPlay,button[data-action="play"],button[data-action="resume"]'));
-    const play=root?.querySelector('.btnPlay,button[data-action="play"],button[data-action="resume"]');
+    const play=root?.querySelector(p.get('feStartOver')==='1'
+      ? 'button[data-action="play"],.btnPlay,button[data-action="resume"]'
+      : '.btnPlay,button[data-action="play"],button[data-action="resume"]');
     if(play&&isVisible(play)){
       const subs=p.get('feSubs')==='1';
       const isTimeline=p.get('feLocalTimeline')==='1';
