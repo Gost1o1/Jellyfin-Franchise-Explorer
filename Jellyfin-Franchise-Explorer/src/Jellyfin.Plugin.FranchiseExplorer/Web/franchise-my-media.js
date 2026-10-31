@@ -1,5 +1,5 @@
 /*
- * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.9).
+ * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.10).
  * Adds ONE visual link in the existing "My Media" row. It does not create a
  * Jellyfin library, alter user preferences, or modify the server's media.
  * Requires a compatible JavaScript injector to run in jellyfin-web.
@@ -9,9 +9,9 @@
   'use strict';
 
   // Programmatic registration plus a manual fallback must not create two observers.
+  window.__franchiseExplorerUiVersion = '0.8.9.10';
   if (window.__franchiseExplorerMyMediaTileLoaded) return;
   window.__franchiseExplorerMyMediaTileLoaded = true;
-  window.__franchiseExplorerUiVersion = '0.8.9.9';
   // Replaced with a data URI when registered by the plugin host service.
   const TILE_ART_DATA = '__FE_TILE_ART_DATA_URL__';
 
@@ -211,7 +211,7 @@
       }
     }
     tile.id = TILE_ID;
-    tile.setAttribute('data-fe-version','0.8.9.9');
+    tile.setAttribute('data-fe-version','0.8.9.10');
     tile.setAttribute('aria-label','Open Franchises');
     tile.setAttribute('href',browseUrl());
     // Native actions from a cloned Collections card cannot operate on the
@@ -338,7 +338,7 @@
       if (sourceScalable) observedResize.observe(sourceScalable);
     }
     tile.setAttribute('href',browseUrl());
-    tile.setAttribute('data-fe-version','0.8.9.9');
+    tile.setAttribute('data-fe-version','0.8.9.10');
   }
 
   function schedule() {
@@ -368,7 +368,7 @@
   window.addEventListener('resize', schedule);
 })();
 
-/* v0.8.9.9 — Per-user franchise resume cards and in-place playback shortcuts on Jellyfin Web's home.
+/* v0.8.9.10 — Per-user franchise resume cards and in-place playback shortcuts on Jellyfin Web's home.
  * Jellyfin regularly replaces the home DOM, including after a refresh and
  * client-side navigation. Reattach the same widget rather than waiting for the
  * next API poll, and keep a short session-scoped cache for hard refreshes.
@@ -376,13 +376,18 @@
  */
 (function () {
   'use strict';
-  if (window.__franchiseTimelineHomeLoaded) return;
+  // An older Injector script may still be running. Never let its shared v1
+  // marker block the newer in-place playback actions from initializing.
+  if (window.__franchiseTimelineHomeVersion === '0.8.9.10') return;
+  window.__franchiseTimelineHomeVersion = '0.8.9.10';
   window.__franchiseTimelineHomeLoaded = true;
   const WIDGET_ID = 'franchise-timeline-resume';
-  const STYLE_ID = 'franchise-timeline-resume-style';
+  // Versioned styles take precedence if an earlier Injector script left its
+  // stylesheet in the page before the new registration initialized.
+  const STYLE_ID = 'franchise-timeline-resume-style-v08910';
   const NATIVE_HIDE_STYLE_ID = 'fe-native-franchise-row-filter-style';
   const NATIVE_HIDE_CLASS = 'fe-native-franchise-row-hidden';
-  const CACHE_PREFIX = 'fe-franchise-home-v0899:';
+  const CACHE_PREFIX = 'fe-franchise-home-v08910:';
   const MAX_CARDS = 8;
   const phonePortrait = () => window.matchMedia('(orientation: portrait) and (max-width: 700px)').matches;
   const GUID = /^[a-f0-9]{32}$|^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
@@ -573,10 +578,11 @@
   // TimelineManager renders the SAME list as Browse, but Jellyfin Home does
   // not load Browse's stylesheet. The modal is appended to document.body.
   function ensureHomeTimelineStyle() {
-    if (document.getElementById('fe-home-timeline-dialog-style')) return;
-    const style=document.createElement('style');style.id='fe-home-timeline-dialog-style';
+    if (document.getElementById('fe-home-timeline-dialog-style-v08910')) return;
+    const style=document.createElement('style');style.id='fe-home-timeline-dialog-style-v08910';
     style.textContent=[
-      '.timeline-dialog-mask{position:fixed;inset:0;z-index:2147483630;background:#050709e8;display:grid;place-items:center;padding:12px;overscroll-behavior:contain}',
+      '.timeline-dialog-mask{position:fixed;inset:0;z-index:2147483630;background:#050709e8;backdrop-filter:blur(2px);display:grid;place-items:center;padding:12px;overscroll-behavior:contain}',
+      '.timeline-dialog-mask.fe-home-chronological-modal .timeline-dialog{width:min(830px,100%);max-height:min(88dvh,810px)}',
       '.timeline-dialog{box-sizing:border-box;width:min(920px,100%);max-height:min(92dvh,900px);min-width:0;overflow-y:auto;background:#1b2027;color:#f2f7fb;border:1px solid #647180;border-radius:16px;padding:clamp(13px,2vw,26px);box-shadow:0 22px 70px #000b;font:16px/1.4 system-ui,sans-serif}',
       '.timeline-dialog *{box-sizing:border-box}',
       '.timeline-dialog-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}',
@@ -606,6 +612,40 @@
       '.timeline-dialog .shelf-empty{padding:14px;color:#b9c5d0}',
       '@media(max-width:650px){.timeline-entry{align-items:stretch;flex-direction:column}.timeline-entry-actions{display:grid;grid-template-columns:1fr 1fr}.timeline-chooser .btn{flex:1}.timeline-dialog{max-height:96dvh}}'
     ].join('\n');document.head.appendChild(style);
+  }
+
+  // Use an accessible, centered confirmation rather than window.confirm,
+  // whose native placement is controlled by the browser and often top-aligned.
+  function confirmResetChronology(franchise) {
+    if(document.getElementById('fe-reset-confirmation'))return Promise.resolve(false);
+    return new Promise(resolve=>{
+      const mask=document.createElement('div');mask.id='fe-reset-confirmation';
+      mask.style.cssText='position:fixed;inset:0;z-index:2147483640;display:grid;place-items:center;padding:16px;background:#050709d9;backdrop-filter:blur(3px)';
+      const dialog=document.createElement('section');dialog.setAttribute('role','dialog');
+      dialog.setAttribute('aria-modal','true');dialog.setAttribute('aria-labelledby','fe-reset-question');
+      dialog.style.cssText='width:min(440px,100%);box-sizing:border-box;background:#1d252f;color:#fff;border:1px solid #647180;border-radius:15px;padding:25px;box-shadow:0 20px 65px #000b;font:16px/1.45 system-ui,sans-serif';
+      const question=document.createElement('h2');question.id='fe-reset-question';
+      question.textContent='Are you sure you want to reset '+franchise+' chronological timeline?';
+      question.style.cssText='font:650 1.16rem/1.5 system-ui,sans-serif;margin:0 0 24px';
+      const controls=document.createElement('div');controls.style.cssText='display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap';
+      const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Cancel';
+      const reset=document.createElement('button');reset.type='button';reset.textContent='Reset timeline';
+      for(const button of [cancel,reset])button.style.cssText='min-height:43px;border:1px solid #607184;border-radius:8px;padding:9px 14px;background:#2b3643;color:#fff;font:600 14px system-ui,sans-serif;cursor:pointer';
+      reset.style.background='#0b9caf';reset.style.borderColor='#0b9caf';reset.style.color='#03191c';
+      const priorFocus=document.activeElement;
+      const finish=accepted=>{mask.remove();document.removeEventListener('keydown',onKey,true);if(priorFocus?.isConnected)priorFocus.focus();resolve(accepted);};
+      const onKey=event=>{
+        if(event.key==='Escape'){event.preventDefault();event.stopPropagation();finish(false);}
+        else if(event.key==='Tab'){
+          if(event.shiftKey&&document.activeElement===cancel){event.preventDefault();reset.focus();}
+          else if(!event.shiftKey&&document.activeElement===reset){event.preventDefault();cancel.focus();}
+        }
+      };
+      cancel.addEventListener('click',()=>finish(false));reset.addEventListener('click',()=>finish(true));
+      mask.addEventListener('click',event=>{if(event.target===mask)finish(false);});
+      controls.append(cancel,reset);dialog.append(question,controls);mask.append(dialog);document.body.append(mask);
+      document.addEventListener('keydown',onKey,true);cancel.focus();
+    });
   }
 
   function homeFeedback(message, error=false) {
@@ -654,7 +694,9 @@
       const state=await request('/FranchiseExplorer/TimelineState/'+encodeURIComponent(card.rowId),auth);
       if(state?.queueKeys?.length)player.states.set(row.id,state);
       ensureHomeTimelineStyle();
-      await player.openDialog(row,false,'select'); // Stay on Jellyfin Home.
+      const opening=player.openDialog(row,false,'select'); // Stay on Jellyfin Home.
+      player.activeDialog?.parentElement?.classList.add('fe-home-chronological-modal');
+      await opening;
       return;
     }
     const state=await request('/FranchiseExplorer/TimelineState/'+encodeURIComponent(card.rowId),auth);
@@ -664,7 +706,7 @@
     const player=playbackManager(auth);
     player.states.set(row.id,state);
     if(action==='restart-history'){
-      if(!confirm('Reset all chronological progress for '+card.franchise+'? Only this franchise timeline will reset; Jellyfin watched history will stay unchanged.'))return;
+      if(!await confirmResetChronology(card.franchise))return;
       await player.resetHistory(row,queue);
       stopOldLocalFollow(row.id,auth);
       homeFeedback('Chronological history reset to the first item.');
@@ -675,6 +717,23 @@
       await player.playHere(row,queue,index,0,false,false,true); // Reset time and open the native player directly.
     }
   }
+
+  // Rescue clicks from a cached *old* Injector menu. Previous releases used
+  // <a href=".../Browse?...&action=select">; capture those clicks and open
+  // the new Home modal instead, even if the old widget remains in the DOM.
+  document.addEventListener('click',event=>{
+    const oldLink=event.target.closest?.('#franchise-timeline-resume .fe-resume-menu a[href*="action="]');
+    if(!oldLink)return;
+    let url;try{url=new URL(oldLink.href,location.href);}catch(_){return;}
+    if(!url.pathname.endsWith('/FranchiseExplorer/Browse')||url.origin!==location.origin)return;
+    const action=url.searchParams.get('action'),rowId=url.searchParams.get('timeline');
+    if(!['select','restart-history','restart-current'].includes(action)||!GUID.test(rowId||''))return;
+    event.preventDefault();event.stopImmediatePropagation();
+    const card=cards.find(c=>c.rowId?.toLowerCase()===rowId.toLowerCase())||{rowId,franchise:'this franchise'};
+    void homepageAction(card,action,credential()).catch(error=>{
+      console.warn('Franchise Explorer legacy menu action:',error.message);homeFeedback(error.message,true);
+    });
+  },true);
 
   function scheduleMount() {
     if (queuedMount) return;
@@ -707,7 +766,7 @@
       widget.id = WIDGET_ID;
       widget.setAttribute('aria-label', 'Continue Your Franchises');
     }
-    widget.setAttribute('data-fe-version','0.8.9.9');
+    widget.setAttribute('data-fe-version','0.8.9.10');
     // Jellyfin's home view can destroy and recreate this entire parent.
     // Keep our rendered widget and reattach immediately after the native row.
     if (widget.parentElement !== anchor.parentElement || anchor.nextElementSibling !== widget)
@@ -951,7 +1010,7 @@
     } catch (error) {
       // Transient errors must not erase the user's most recent cards. Log only
       // the status/error class (never an auth header, token or user ID).
-      console.warn('[Franchise Explorer 0.8.9.9] Home tracker refresh failed:', error?.message || 'unknown error');
+      console.warn('[Franchise Explorer 0.8.9.10] Home tracker refresh failed:', error?.message || 'unknown error');
     }
     finally { busy = false; }
   }
