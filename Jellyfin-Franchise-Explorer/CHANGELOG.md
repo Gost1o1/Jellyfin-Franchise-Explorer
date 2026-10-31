@@ -1,3 +1,10 @@
+## v0.8.9.10 — Centered Home popups and stale menu recovery (experimental)
+
+- Match the requested Jellyfin Home screenshot by keeping the complete chronological list in a centered, scrollable overlay, with Watch… controls and the existing tracked/untracked viewing choice.
+- Replace the top-positioned browser confirmation with a compact centered dialog: “Are you sure you want to reset [franchise] chronological timeline?” and Cancel/Reset timeline buttons.
+- Avoid older JavaScript Injector “already loaded” flags blocking updated home controls. Intercept lingering old action links before they navigate to Browse, while still recommending retirement of duplicate scripts.
+- Keep the direct native-player restart behavior and separate Jellyfin watched history; add offline regression coverage for the confirmation and legacy link.
+
 ## v0.8.9.9 — Chronological controls directly on Jellyfin Home (experimental)
 
 - Reset this user's franchise chronological history in place, without navigating to Browse or opening the timeline dialog. The home tracker refreshes afterward.

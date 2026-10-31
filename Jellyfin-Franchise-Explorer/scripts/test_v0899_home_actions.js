@@ -11,9 +11,14 @@ const service = fs.readFileSync(path.join(root,'Web/HomeTileRegistrationService.
 assert(service.includes('script = timelineReader.ReadToEnd() + "\\n" + script;'), 'Home Injector must load the shared timeline module');
 assert(home.includes("option=document.createElement('button')"));
 assert(!home.includes("option.href=serverPath('/FranchiseExplorer/Browse?timeline='"));
-assert(home.includes("await player.openDialog(row,false,'select')"));
+assert(home.includes("player.openDialog(row,false,'select')"));
 assert(home.includes("ensureHomeTimelineStyle()"));
 assert(home.includes("enforceStartOver(id)"));
+assert(home.includes("window.__franchiseTimelineHomeVersion === '0.8.9.10'"));
+assert(home.includes('fe-home-chronological-modal'));
+assert(home.includes("STYLE_ID = 'franchise-timeline-resume-style-v08910'"));
+assert(home.includes('fe-home-timeline-dialog-style-v08910'));
+assert(!home.includes("confirm('Reset all chronological progress"));
 
 const idA='11111111-1111-1111-1111-111111111111';
 const idB='22222222-2222-2222-2222-222222222222';
@@ -25,7 +30,7 @@ const original={rowId,parentNodeId:parent,name:row.name,index:1,total:2,
   completedKeys:['link-a:'+idA],queueKeys:['link-a:'+idA,'link-b:'+idB],
   queueLengths:[1000,2000],queueSourceItemIds:[idA,idB],queueSeasons:[0,0],queueEpisodes:[0,0]};
 let state={...original,completedKeys:[...original.completedKeys]};
-let navigation='',calls=[],confirmResponse=true,ticks=0;
+let navigation='',calls=[],ticks=0;
 const storage=new Map([['fe-local-follow-v1:my-user',JSON.stringify({rowId,sessionId:'s1'})],
   ['fe-local-completion-v1:my-user','pending']]);
 class FakeManager {
@@ -38,26 +43,55 @@ class FakeManager {
 const auth={AccessToken:'mock-token',UserId:'my-user',Id:'mock-server'};
 const card={rowId,franchise:'Marvel Cinematic Universe'};
 const mockCatalog={nodes:[],links:[],rows:[{Id:rowId,ParentNodeId:parent,Name:row.name,RowType:'Timeline',MediaLinkIds:[]}]};
-const injected=home.slice(home.indexOf('  function playbackManager('),home.indexOf('  function scheduleMount()'));
-assert(injected.startsWith('  function playbackManager('));
-const fakeDom={getElementById:()=>null,createElement:()=>({setAttribute(){},style:{},remove(){}}),body:{append(){}}};
+const injected=home.slice(home.indexOf('  function confirmResetChronology('),home.indexOf('  function scheduleMount()'));
+assert(injected.startsWith('  function confirmResetChronology('));
+const listeners=new Map();
+const fakeDom={activeElement:null,createElement:tag=>new FakeElement(tag),
+  getElementById:id=>fakeDom.body.children.find(x=>x.id===id&&!x.removed)||null,
+  addEventListener:(type,fn)=>{const list=listeners.get(type)||[];list.push(fn);listeners.set(type,list);},
+  removeEventListener:(type,fn)=>{listeners.set(type,(listeners.get(type)||[]).filter(x=>x!==fn));},
+  body:null};
+class FakeElement {
+  constructor(tag){this.tagName=tag;this.style={};this.children=[];this.attrs={};this.events={};this.isConnected=true;
+    this.classList={add:()=>{}};}
+  setAttribute(k,v){this.attrs[k]=v;}
+  append(...nodes){this.children.push(...nodes);for(const node of nodes)node.parentElement=this;}
+  remove(){this.removed=true;this.isConnected=false;if(this.parentElement)this.parentElement.children=this.parentElement.children.filter(x=>x!==this);}
+  focus(){fakeDom.activeElement=this;}
+  addEventListener(type,fn){this.events[type]=fn;}
+  click(){this.events.click?.({target:this});}
+}
+fakeDom.body=new FakeElement('body');
 const sandbox={
   window:{FranchiseTimeline:{TimelineManager:FakeManager}},document:fakeDom,
   setTimeout:()=>1,clearTimeout:()=>{},console,
+  URL,location:{origin:'https://jellyfin.test',href:'https://jellyfin.test/web/index.html'},
   localStorage:{getItem:key=>storage.get(key)||null,removeItem:key=>storage.delete(key)},
   normalize:value=>Object.fromEntries(Object.entries(value).map(([k,v])=>[k[0].toLowerCase()+k.slice(1),v])),
   GUID:/^[a-f0-9-]{36}$/i,
   serverPrefix:()=>'',cachedItem:async()=>null,cachedCatalog:async()=>mockCatalog,
   request:async path=>{assert.equal(path,'/FranchiseExplorer/TimelineState/'+rowId);return {...state};},
   ensureHomeTimelineStyle:()=>{calls.push(['style']);},
-  confirm:()=>confirmResponse,
-  homeFeedback:()=>{},
-  tick:async()=>{ticks++;}
+  tick:async()=>{ticks++;},cards:[card],credential:()=>auth
 };
 vm.runInNewContext(injected+'\nglobalThis.runHomeAction=homepageAction;',sandbox);
 
+async function resetPopup(accept) {
+  for(let i=0;i<6&&!fakeDom.getElementById('fe-reset-confirmation');i++)await Promise.resolve();
+  const overlay=fakeDom.getElementById('fe-reset-confirmation');
+  assert(overlay,'Reset should open a custom centered confirmation');
+  const panel=overlay.children[0];
+  assert.equal(panel.attrs.role,'dialog');
+  assert.equal(panel.attrs['aria-modal'],'true');
+  assert.equal(panel.children[0].textContent,'Are you sure you want to reset Marvel Cinematic Universe chronological timeline?');
+  assert(overlay.style.cssText.includes('place-items:center'));
+  const buttons=panel.children[1].children;
+  buttons[accept?1:0].click();
+}
+
 (async()=>{
-  await sandbox.runHomeAction(card,'restart-history',auth);
+  let pending=sandbox.runHomeAction(card,'restart-history',auth);
+  await resetPopup(true);await pending;
   assert.equal(calls.filter(x=>x[0]==='reset').length,1);
   assert.equal(calls.filter(x=>x[0]==='dialog').length,0);
   assert.equal(state.index,0);assert.equal(state.completedKeys.length,0);
@@ -65,8 +99,9 @@ vm.runInNewContext(injected+'\nglobalThis.runHomeAction=homepageAction;',sandbox
   assert.equal(storage.has('fe-local-follow-v1:my-user'),false);
   assert.equal(storage.has('fe-local-completion-v1:my-user'),false);
   assert.equal(navigation,'','Reset should not navigate anywhere');
-  state={...original};calls=[];confirmResponse=false;
-  await sandbox.runHomeAction(card,'restart-history',auth);
+  state={...original};calls=[];
+  pending=sandbox.runHomeAction(card,'restart-history',auth);
+  await resetPopup(false);await pending;
   assert.equal(calls.length,0,'Cancelled reset must preserve progress');
   assert.equal(state.index,1);
 
@@ -89,6 +124,18 @@ vm.runInNewContext(injected+'\nglobalThis.runHomeAction=homepageAction;',sandbox
   assert.equal(dialog[2],false);assert.equal(dialog[3],'select');
   assert.equal(navigation,'','Opening the chronological selection list must keep Home visible');
 
+  // A stale old-Injector menu can still contain a Browse link. The new
+  // script must intercept it before browser navigation and show Home's popup.
+  calls=[];navigation='';
+  const legacyClick=listeners.get('click')?.[0];assert(legacyClick);
+  let prevented=false,stopped=false;
+  legacyClick({target:{closest:()=>({href:'https://jellyfin.test/FranchiseExplorer/Browse?timeline='+rowId+'&action=select'})},
+    preventDefault:()=>{prevented=true;},stopImmediatePropagation:()=>{stopped=true;}});
+  await new Promise(resolve=>setImmediate(resolve));
+  assert(prevented&&stopped,'Old navigation must be stopped before leaving Home');
+  assert(calls.some(x=>x[0]==='dialog'&&x[3]==='select'));
+  assert.equal(navigation,'');
+
   // Test the REAL engine's native start-over handoff, not just our action adapter.
   const nativeStorage=new Map();let directUrl='';
   const nativeEnv={window:{},console,localStorage:{getItem:k=>nativeStorage.get(k)||null,
@@ -108,5 +155,5 @@ vm.runInNewContext(injected+'\nglobalThis.runHomeAction=homepageAction;',sandbox
   assert.equal(intent.forceStartOver,true);
   assert(directUrl.includes('feStartOver=1'));
   assert(!directUrl.includes('FranchiseExplorer/Browse'));
-  console.log('v0.8.9.9 home reset, native restart, and in-place chronological list tests passed.');
+  console.log('v0.8.9.10 centered reset, native restart, stale-menu recovery, and in-place chronological list tests passed.');
 })().catch(error=>{console.error(error);process.exitCode=1;});
