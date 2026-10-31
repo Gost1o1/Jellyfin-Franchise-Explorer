@@ -237,6 +237,7 @@
       // The server records only an expiring intent until actual playback is
       // observed; the browser bridge separately verifies its local player.
       localStorage.setItem(this.handoffKey(),JSON.stringify(intent));
+      window.FranchiseExplorerPlaybackReturn?.arm(target.id,location.href);
       // On Jellyfin Web, use the native shortcuts/PlaybackManager path. The
       // injected bridge creates the ordinary Jellyfin Play/Resume action and
       // watches the real local player; it does not navigate through Details.
@@ -260,7 +261,8 @@
         try{
           sessionStorage.setItem('fe-quickplay-v1',JSON.stringify({version:1,id:target.id,
             created:Date.now(),positionTicks:Math.max(0,positionTicks),startOver:!!forceStartOver,
-            type:target.episode>0?'Episode':'Movie',subtitleEnabled:!!intent.subtitleEnabled}));
+            type:target.episode>0?'Episode':'Movie',returnUrl:location.href,
+            subtitleEnabled:!!intent.subtitleEnabled}));
           this.closeDialog();
           location.assign(prefix+'/web/#/home');
           return;

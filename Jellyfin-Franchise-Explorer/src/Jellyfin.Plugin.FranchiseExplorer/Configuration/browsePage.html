@@ -307,6 +307,7 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
       try{
         sessionStorage.setItem('fe-quickplay-v1',JSON.stringify({version:1,id:item.Id,
           created:Date.now(),positionTicks:0,startOver:true,type:item.Type,
+          returnUrl:location.href,
           subtitleEnabled:localStorage.getItem(playbackPreferenceKey())==='1'}));
         location.href=serverPath('/web/#/home');
         return;

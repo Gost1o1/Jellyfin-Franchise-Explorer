@@ -1,5 +1,5 @@
 /*
- * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.12).
+ * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.13).
  * Adds ONE visual link in the existing "My Media" row. It does not create a
  * Jellyfin library, alter user preferences, or modify the server's media.
  * Requires a compatible JavaScript injector to run in jellyfin-web.
@@ -9,7 +9,7 @@
   'use strict';
 
   // Programmatic registration plus a manual fallback must not create two observers.
-  window.__franchiseExplorerUiVersion = '0.8.9.12';
+  window.__franchiseExplorerUiVersion = '0.8.9.13';
   if (window.__franchiseExplorerMyMediaTileLoaded) return;
   window.__franchiseExplorerMyMediaTileLoaded = true;
   // Replaced with a data URI when registered by the plugin host service.
@@ -211,7 +211,7 @@
       }
     }
     tile.id = TILE_ID;
-    tile.setAttribute('data-fe-version','0.8.9.12');
+    tile.setAttribute('data-fe-version','0.8.9.13');
     tile.setAttribute('aria-label','Open Franchises');
     tile.setAttribute('href',browseUrl());
     // Native actions from a cloned Collections card cannot operate on the
@@ -338,7 +338,7 @@
       if (sourceScalable) observedResize.observe(sourceScalable);
     }
     tile.setAttribute('href',browseUrl());
-    tile.setAttribute('data-fe-version','0.8.9.12');
+    tile.setAttribute('data-fe-version','0.8.9.13');
   }
 
   function schedule() {
@@ -368,7 +368,7 @@
   window.addEventListener('resize', schedule);
 })();
 
-/* v0.8.9.12 — Per-user franchise resume cards and in-place playback shortcuts on Jellyfin Web's home.
+/* v0.8.9.13 — Per-user franchise resume cards and in-place playback shortcuts on Jellyfin Web's home.
  * Jellyfin regularly replaces the home DOM, including after a refresh and
  * client-side navigation. Reattach the same widget rather than waiting for the
  * next API poll, and keep a short session-scoped cache for hard refreshes.
@@ -378,16 +378,16 @@
   'use strict';
   // An older Injector script may still be running. Never let its shared v1
   // marker block the newer in-place playback actions from initializing.
-  if (window.__franchiseTimelineHomeVersion === '0.8.9.12') return;
-  window.__franchiseTimelineHomeVersion = '0.8.9.12';
+  if (window.__franchiseTimelineHomeVersion === '0.8.9.13') return;
+  window.__franchiseTimelineHomeVersion = '0.8.9.13';
   window.__franchiseTimelineHomeLoaded = true;
   const WIDGET_ID = 'franchise-timeline-resume';
   // Versioned styles take precedence if an earlier Injector script left its
   // stylesheet in the page before the new registration initialized.
-  const STYLE_ID = 'franchise-timeline-resume-style-v08912';
+  const STYLE_ID = 'franchise-timeline-resume-style-v08913';
   const NATIVE_HIDE_STYLE_ID = 'fe-native-franchise-row-filter-style';
   const NATIVE_HIDE_CLASS = 'fe-native-franchise-row-hidden';
-  const CACHE_PREFIX = 'fe-franchise-home-v08912:';
+  const CACHE_PREFIX = 'fe-franchise-home-v08913:';
   const MAX_CARDS = 8;
   const phonePortrait = () => window.matchMedia('(orientation: portrait) and (max-width: 700px)').matches;
   const GUID = /^[a-f0-9]{32}$|^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
@@ -402,6 +402,10 @@
   const nativeItemCache = new Map();
   let catalogCache = null, catalogFetched = 0;
   let nativeFilterSerial = 0;
+  // Hide all linked items in an active franchise's saved watch order when the
+  // user enables this setting. Hiding only the current cursor lets earlier
+  // shows (e.g. Agent Carter) reappear after a timeline reset.
+  let nativeTimelineTargets = new Set();
 
   function credential() {
     let servers = [];
@@ -437,6 +441,7 @@
     if (authScope === next) return;
     authScope = next;
     cards = [];
+    nativeTimelineTargets = new Set();
     confirmedEmpty = false;
     renderedSignature = '';
     if (widget) { widget.remove(); widget = null; }
@@ -514,6 +519,7 @@
     }
     const hide = auth && localStorage.getItem(nativeRowSettingKey(auth)) === '0';
     const targets = new Set();
+    for(const id of nativeTimelineTargets)targets.add(id);
     for (const card of cards) {
       if (GUID.test(card.itemId || '')) targets.add(card.itemId.toLowerCase());
       if (GUID.test(card.seriesId || '')) targets.add(card.seriesId.toLowerCase());
@@ -543,7 +549,7 @@
       // Legacy Injector registrations may leave a second tracker with the
       // exact same DOM id. Hide it so its native confirm/resume menu cannot
       // be clicked accidentally after the upgraded script becomes active.
-      '#'+WIDGET_ID+':not([data-fe-version="0.8.9.12"]){display:none!important}',
+      '#'+WIDGET_ID+':not([data-fe-version="0.8.9.13"]){display:none!important}',
       '#'+WIDGET_ID+'{box-sizing:border-box;width:100%;min-width:0;padding:10px max(16px,2.5vw) 16px;color:#fff}',
       '#'+WIDGET_ID+' h2{font-size:1.32rem;margin:8px 0 15px;font-weight:600}',
       '#'+WIDGET_ID+' .fe-resume-grid{display:flex;gap:16px;flex-wrap:wrap;align-items:stretch}',
@@ -582,8 +588,8 @@
   // TimelineManager renders the SAME list as Browse, but Jellyfin Home does
   // not load Browse's stylesheet. The modal is appended to document.body.
   function ensureHomeTimelineStyle() {
-    if (document.getElementById('fe-home-timeline-dialog-style-v08912')) return;
-    const style=document.createElement('style');style.id='fe-home-timeline-dialog-style-v08912';
+    if (document.getElementById('fe-home-timeline-dialog-style-v08913')) return;
+    const style=document.createElement('style');style.id='fe-home-timeline-dialog-style-v08913';
     style.textContent=[
       '.timeline-dialog-mask{position:fixed;inset:0;z-index:2147483630;background:#050709e8;backdrop-filter:blur(2px);display:grid;place-items:center;padding:12px;overscroll-behavior:contain}',
       '.timeline-dialog-mask.fe-home-chronological-modal .timeline-dialog{width:min(830px,100%);max-height:min(88dvh,810px)}',
@@ -687,6 +693,14 @@
   }
   async function homepageAction(card,action,auth) {
     if(!auth)throw Error('Sign in to Jellyfin first.');
+    if(action==='details'){
+      if(!GUID.test(card.itemId||''))throw Error('No current playable title is available for Details.');
+      window.FranchiseExplorerPlaybackReturn?.clear();
+      const sid=auth.Id||auth.ServerId;
+      location.assign(serverPath('/web/#/details?id='+encodeURIComponent(card.itemId)+
+        (sid?'&serverId='+encodeURIComponent(sid):'')));
+      return;
+    }
     if(action==='select'){
       const catalogRaw=await cachedCatalog(auth);
       const catalog={nodes:(catalogRaw.nodes||catalogRaw.Nodes||[]).map(normalize),
@@ -713,6 +727,15 @@
       if(!await confirmResetChronology(card.franchise))return;
       await player.resetHistory(row,queue);
       stopOldLocalFollow(row.id,auth);
+      // The reset changes the cursor to the first movie, but previously
+      // watched franchise episodes must stay hidden in native home rows.
+      // Apply the existing queue immediately, even if a background refresh
+      // is already in progress and tick(true) must wait until the next poll.
+      for(const q of queue){
+        if(GUID.test(q.id||''))nativeTimelineTargets.add(q.id.toLowerCase());
+        if(GUID.test(q.sourceItemId||''))nativeTimelineTargets.add(q.sourceItemId.toLowerCase());
+      }
+      scheduleMount();
       homeFeedback('Chronological history reset to the first item.');
       void tick(true); // Repaint the card in place, without opening the dialog.
     }else if(action==='restart-current'){
@@ -770,7 +793,7 @@
       widget.id = WIDGET_ID;
       widget.setAttribute('aria-label', 'Continue Your Franchises');
     }
-    widget.setAttribute('data-fe-version','0.8.9.12');
+    widget.setAttribute('data-fe-version','0.8.9.13');
     // Jellyfin's home view can destroy and recreate this entire parent.
     // Keep our rendered widget and reattach immediately after the native row.
     if (widget.parentElement !== anchor.parentElement || anchor.nextElementSibling !== widget)
@@ -854,7 +877,8 @@
       for(const [label,action] of [
         ['Restart chronological history','restart-history'],
         ['Restart current viewing','restart-current'],
-        ['Select from chronological list','select']
+        ['Select from chronological list','select'],
+        ['Details','details']
       ]) {
         const option=document.createElement('button');option.type='button';
         option.textContent=label;
@@ -1002,10 +1026,21 @@
       if (!Array.isArray(states)) return;
       const active = states.filter(s => s && GUID.test(s.rowId || '') && s.total > 0
         && s.index >= 0 && s.index < s.total && s.playbackMode !== 'complete').slice(0, MAX_CARDS);
+      const nextTargets=new Set();
+      for(const state of active){
+        if(GUID.test(state.itemId||''))nextTargets.add(state.itemId.toLowerCase());
+        for(const sourceId of state.queueSourceItemIds||[])
+          if(GUID.test(sourceId||''))nextTargets.add(sourceId.toLowerCase());
+        for(const key of state.queueKeys||[]){
+          const id=String(key).slice(String(key).lastIndexOf(':')+1);
+          if(GUID.test(id))nextTargets.add(id.toLowerCase());
+        }
+      }
       let catalog = { nodes: [], rows: [] };
       if (active.length) try { catalog = await cachedCatalog(auth); } catch (_) {}
       const resolved = await Promise.all(active.map(state => cardFor(state, catalog, auth)));
       if (startedScope !== authScope) return;
+      nativeTimelineTargets=nextTargets;
       cards = resolved;
       confirmedEmpty = active.length === 0;
       saveCache();
@@ -1014,7 +1049,7 @@
     } catch (error) {
       // Transient errors must not erase the user's most recent cards. Log only
       // the status/error class (never an auth header, token or user ID).
-      console.warn('[Franchise Explorer 0.8.9.12] Home tracker refresh failed:', error?.message || 'unknown error');
+      console.warn('[Franchise Explorer 0.8.9.13] Home tracker refresh failed:', error?.message || 'unknown error');
     }
     finally { busy = false; }
   }
@@ -1048,8 +1083,8 @@
   'use strict';
   // Older Injector scripts can coexist after an upgrade. A boolean-only
   // guard would silently retain their details-page/autoresume behavior.
-  if(window.__franchiseAutoplayBridgeVersion==='0.8.9.12')return;
-  window.__franchiseAutoplayBridgeVersion='0.8.9.12';
+  if(window.__franchiseAutoplayBridgeVersion==='0.8.9.13')return;
+  window.__franchiseAutoplayBridgeVersion='0.8.9.13';
   window.__franchiseAutoplayBridgeLoaded=true;
   let currentKey='',attempts=0,scheduled=false,routeSettlingSince=0;
   const MAX_ATTEMPTS=36;
@@ -1117,6 +1152,69 @@
   }
   function itemMatch(a,b){return String(a||'').replace(/-/g,'').toLowerCase()===String(b||'').replace(/-/g,'').toLowerCase();}
   function deviceId(){return localStorage.getItem('_deviceId2')||localStorage.getItem('_deviceId')||'';}
+  const playbackReturnKey='fe-return-after-player-v1';
+  function readPlaybackReturn(){
+    try{
+      const value=JSON.parse(sessionStorage.getItem(playbackReturnKey)||'null');
+      if(!value||Date.now()-value.created>12*60*60*1000){sessionStorage.removeItem(playbackReturnKey);return null;}
+      return value;
+    }catch(_){return null;}
+  }
+  function armPlaybackReturn(id,source){
+    if(!/^[a-f0-9-]{32,36}$/i.test(id))return;
+    const auth=localCredentials();
+    try{
+      const origin=location.origin;
+      const root=((location.pathname||'').match(/^(.*?)\/web(?:\/|$)/i)||[])[1]||'';
+      const fallback=origin+root+'/web/#/home';
+      const url=new URL(source||location.href,location.href);
+      const isPlayerOrDetails=/^#\/(?:details|video|playback)(?:\?|\/|$)/i.test(url.hash);
+      sessionStorage.setItem(playbackReturnKey,JSON.stringify({version:1,id,
+        returnUrl:url.origin===origin&&!isPlayerOrDetails?url.href:fallback,
+        userId:String(auth?.UserId||'').toLowerCase(),created:Date.now(),startedAt:0}));
+    }catch(error){console.debug('Franchise Explorer: return destination unavailable',error);}
+  }
+  function clearPlaybackReturn(){try{sessionStorage.removeItem(playbackReturnKey);}catch(_){}}
+  window.FranchiseExplorerPlaybackReturn={arm:armPlaybackReturn,clear:clearPlaybackReturn};
+  // PlaybackManager may return to the title's Details route when the native
+  // player is closed, even if playback began directly from Jellyfin Home.
+  // Only handle our own recent, actually-started same-user playback and leave
+  // deliberately opened Details pages alone.
+  document.addEventListener('playing',event=>{
+    if(!(event.target instanceof HTMLVideoElement))return;
+    const marker=readPlaybackReturn();if(!marker)return;
+    const auth=localCredentials();
+    if(marker.userId!==String(auth?.UserId||'').toLowerCase())return;
+    if(marker.startedAt)return;
+    marker.startedAt=Date.now();
+    try{sessionStorage.setItem(playbackReturnKey,JSON.stringify(marker));}catch(_){}
+  },true);
+  let returning=false;
+  function restorePlaybackOrigin(){
+    if(returning)return;
+    const marker=readPlaybackReturn();if(!marker?.startedAt)return;
+    const auth=localCredentials();
+    if(marker.userId!==String(auth?.UserId||'').toLowerCase())return;
+    if(!/^#\/?details\?/i.test(location.hash||''))return;
+    const route=new URLSearchParams(location.hash.split('?')[1]||'');
+    if(route.get('feAutoPlay')==='1'||!itemMatch(route.get('id'),marker.id))return;
+    returning=true;
+    setTimeout(()=>{
+      returning=false;
+      const current=readPlaybackReturn();
+      if(!current?.startedAt||current.id!==marker.id||!/^#\/?details\?/i.test(location.hash||''))return;
+      const visibleVideo=[...document.querySelectorAll('video')].some(v=>!v.paused&&!v.ended&&v.getClientRects().length);
+      if(visibleVideo)return;
+      try{
+        const destination=new URL(current.returnUrl,location.href);
+        if(destination.origin!==location.origin)return;
+        clearPlaybackReturn();
+        location.replace(destination.href);
+      }catch(error){console.warn('Franchise Explorer: could not return to previous page',error);}
+    },250);
+  }
+  addEventListener('hashchange',restorePlaybackOrigin);
+  addEventListener('popstate',restorePlaybackOrigin);
   let localNoticeTimer=null;
   function showLocalNotice(message,ttl=0){
     let notice=document.getElementById('fe-local-playback-notice');
@@ -1401,7 +1499,7 @@
   // Explicit `play` with position 0 is essential for restart-current: native
   // Jellyfin's Resume action otherwise restores its separate watched offset.
   window.FranchiseExplorerNativePlayback={
-    version:'0.8.9.12',
+    version:'0.8.9.13',
     play(id,options={}){
       if(!/^[a-f0-9-]{32,36}$/i.test(id))return false;
       const container=document.querySelector('.homeTab:not(.hide) .itemsContainer, .homeTab:not(.hide) .itemsContainerWithBorders, .homeTab .itemsContainer, .itemsContainer:not(.hide)');
@@ -1416,6 +1514,7 @@
       const auth=localCredentials();
       const serverId=auth?.Id||auth?.ServerId||'';
       if(!serverId)return false;
+      armPlaybackReturn(id,options.returnUrl||location.href);
       wrapper.dataset.serverid=serverId;
       wrapper.dataset.type=options.type==='Episode'?'Episode':'Movie';
       wrapper.dataset.mediatype='Video';
@@ -1486,6 +1585,7 @@
       if(tries>=50){
         clearInterval(timer);sessionStorage.removeItem('fe-quickplay-v1');
         console.warn('Franchise Explorer: native Home shortcut unavailable; opening the standard player compatibility route.');
+        armPlaybackReturn(current.id,current.returnUrl||location.href);
         const prefix=((location.pathname||'').match(/^(.*?)\/web(?:\/|$)/i)||[])[1]||'';
         location.assign(prefix+'/web/#/details?id='+encodeURIComponent(current.id)+
           '&feAutoPlay=1&feLocalTimeline=1&feSubs='+(current.subtitleEnabled?'1':'0')+
@@ -1584,6 +1684,8 @@
           pendingAutoAdvanceUtc:null,pendingAutoAdvanceFromKey:'',pendingAutoAdvanceToKey:''},
         replayOnly:false,subtitleEnabled:!!owner.subtitleEnabled};
       localStorage.setItem(handoffPrefix+String(auth.UserId).toLowerCase(),JSON.stringify(intent));
+      const previousReturn=readPlaybackReturn();
+      armPlaybackReturn(next,previousReturn?.returnUrl||location.href);
       // Jellyfin may still be navigating back to the previous title's details
       // after the video closes. A simple hash mutation loses that race.
       // Reload the official Jellyfin Web route so the native Play handoff
