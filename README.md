@@ -30,7 +30,7 @@
 
 See the [Marvel Cinematic Universe example walkthrough](#example-setup-marvel-cinematic-universe) for screenshots of the editor, browsing pages, watch order, and Jellyfin homepage integration.
 
-**New to Franchise Explorer?** Start with the [complete user guide](docs/USER_GUIDE.md). It explains every editor field and button, how to set up franchises and subgroups, link Jellyfin media, create chronological rows, manage artwork, and use the viewer preferences—with screenshots.
+**New to Franchise Explorer?** Start with the [complete illustrated user guide](docs/USER_GUIDE.md). It explains every editor field and button, how to resume directly from Jellyfin Home, use the card's three-dot menu, choose whether a selected episode counts toward chronological progress, set up franchises and subgroups, link Jellyfin media, create chronological rows, and manage artwork. The guide includes **20 new screenshots** of the v0.8.9.15 Home and scrolling settings interface, in addition to the original example images.
 
 ## Install or update
 
@@ -127,7 +127,7 @@ All five screenshots are stored in [`docs/screenshots/`](docs/screenshots/) so y
 - Track per-user progress in an experimental chronological player, with resume options and watched indicators.
 - Add an optional **Franchises** entry to Jellyfin Web's **My Media** section.
 - Resume different franchise watch orders from persistent homepage cards showing the next title, artwork, and individual progress (on supported Jellyfin Web installations).
-- Show **vertical movie/series posters on phones in portrait orientation** and the existing wide artwork in landscape; automatically update when you rotate the phone, with a fallback if no poster exists.
+- Show the current **movie/series poster** on the Continue Your Franchises card in **portrait and landscape**, with blurred background fill where needed, instead of swapping to separate wide artwork.
 - Optionally hide the active watch-order show/movie from **Continue Watching** and **Next Up** while keeping it in **Continue Your Franchises** (Jellyfin Web only).
 - Reveal the My Media Franchises tile options on **desktop hover or keyboard focus**; leave them visible for touch input.
 - Open Franchise Explorer's administrator settings from the My Media Franchises tile or the browser header.
