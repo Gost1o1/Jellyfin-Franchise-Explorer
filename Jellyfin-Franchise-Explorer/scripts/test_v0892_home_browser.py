@@ -59,6 +59,7 @@ STATE_MCU = {
     "RowId": ROW_MCU, "ParentNodeId": ROOT_MCU, "Name": "Chronological Order",
     "Index": 1, "Total": 422, "PlaybackMode": "paused",
     "QueueKeys": [f"x:{MOVIE}", f"x:{EPISODE}"],
+    "QueueSourceItemIds": [MOVIE, SERIES],
     "CompletedKeys": [f"x:{MOVIE}"],
 }
 STATE_SW = {
@@ -160,9 +161,9 @@ with sync_playwright() as p:
             page.wait_for_function("document.querySelector('.fe-resume-art img')?.dataset.feArtworkKind === 'poster'")
         tile = page.locator("#franchise-explorer-my-media-tile")
         assert tile.count() == 1
-        assert page.evaluate("window.__franchiseExplorerUiVersion") == "0.8.9.12"
-        assert tile.get_attribute("data-fe-version") == "0.8.9.12"
-        assert page.locator("#franchise-timeline-resume").get_attribute("data-fe-version") == "0.8.9.12"
+        assert page.evaluate("window.__franchiseExplorerUiVersion") == "0.8.9.13"
+        assert tile.get_attribute("data-fe-version") == "0.8.9.13"
+        assert page.locator("#franchise-timeline-resume").get_attribute("data-fe-version") == "0.8.9.13"
         before_menu = page.url
         # The options button is hidden until the tile is hovered or focused.
         # Playwright's button.click() does not reliably establish hover when the

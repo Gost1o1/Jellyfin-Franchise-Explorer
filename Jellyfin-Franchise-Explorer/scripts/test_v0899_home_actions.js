@@ -14,10 +14,10 @@ assert(!home.includes("option.href=serverPath('/FranchiseExplorer/Browse?timelin
 assert(home.includes("player.openDialog(row,false,'select')"));
 assert(home.includes("ensureHomeTimelineStyle()"));
 assert(home.includes("enforceStartOver(id)"));
-assert(home.includes("window.__franchiseTimelineHomeVersion === '0.8.9.12'"));
+assert(home.includes("window.__franchiseTimelineHomeVersion === '0.8.9.13'"));
 assert(home.includes('fe-home-chronological-modal'));
-assert(home.includes("STYLE_ID = 'franchise-timeline-resume-style-v08912'"));
-assert(home.includes('fe-home-timeline-dialog-style-v08912'));
+assert(home.includes("STYLE_ID = 'franchise-timeline-resume-style-v08913'"));
+assert(home.includes('fe-home-timeline-dialog-style-v08913'));
 assert(!home.includes("confirm('Reset all chronological progress"));
 
 const idA='11111111-1111-1111-1111-111111111111';
@@ -41,7 +41,7 @@ class FakeManager {
   async openDialog(...args){calls.push(['dialog',...args]);}
 }
 const auth={AccessToken:'mock-token',UserId:'my-user',Id:'mock-server'};
-const card={rowId,franchise:'Marvel Cinematic Universe'};
+const card={rowId,franchise:'Marvel Cinematic Universe',itemId:idB};
 const mockCatalog={nodes:[],links:[],rows:[{Id:rowId,ParentNodeId:parent,Name:row.name,RowType:'Timeline',MediaLinkIds:[]}]};
 const injected=home.slice(home.indexOf('  function confirmResetChronology('),home.indexOf('  function scheduleMount()'));
 assert(injected.startsWith('  function confirmResetChronology('));
@@ -65,14 +65,14 @@ fakeDom.body=new FakeElement('body');
 const sandbox={
   window:{FranchiseTimeline:{TimelineManager:FakeManager}},document:fakeDom,
   setTimeout:()=>1,clearTimeout:()=>{},console,
-  URL,location:{origin:'https://jellyfin.test',href:'https://jellyfin.test/web/index.html'},
+  URL,location:{origin:'https://jellyfin.test',href:'https://jellyfin.test/web/index.html',assign:url=>{navigation=url;}},
   localStorage:{getItem:key=>storage.get(key)||null,removeItem:key=>storage.delete(key)},
   normalize:value=>Object.fromEntries(Object.entries(value).map(([k,v])=>[k[0].toLowerCase()+k.slice(1),v])),
   GUID:/^[a-f0-9-]{36}$/i,
-  serverPrefix:()=>'',cachedItem:async()=>null,cachedCatalog:async()=>mockCatalog,
+  serverPrefix:()=>'',serverPath:path=>path,cachedItem:async()=>null,cachedCatalog:async()=>mockCatalog,
   request:async path=>{assert.equal(path,'/FranchiseExplorer/TimelineState/'+rowId);return {...state};},
   ensureHomeTimelineStyle:()=>{calls.push(['style']);},
-  tick:async()=>{ticks++;},cards:[card],credential:()=>auth
+  tick:async()=>{ticks++;},scheduleMount:()=>{},nativeTimelineTargets:new Set(),cards:[card],credential:()=>auth
 };
 vm.runInNewContext(injected+'\nglobalThis.runHomeAction=homepageAction;',sandbox);
 
@@ -96,6 +96,7 @@ async function resetPopup(accept) {
   assert.equal(calls.filter(x=>x[0]==='dialog').length,0);
   assert.equal(state.index,0);assert.equal(state.completedKeys.length,0);
   assert.equal(state.positionTicks,0);assert.equal(ticks,1);
+  assert(sandbox.nativeTimelineTargets.has(idB.toLowerCase()),'Reset must preserve native-row exclusion for the formerly active episode');
   assert.equal(storage.has('fe-local-follow-v1:my-user'),false);
   assert.equal(storage.has('fe-local-completion-v1:my-user'),false);
   assert.equal(navigation,'','Reset should not navigate anywhere');
@@ -122,6 +123,16 @@ async function resetPopup(accept) {
   assert(dialog);assert.equal(dialog[1].id,rowId);
   assert.equal(dialog[2],false);assert.equal(dialog[3],'select');
   assert.equal(navigation,'','Opening the chronological selection list must keep Home visible');
+
+  // Details is deliberately separate from Play and must open the selected
+  // movie/episode information screen without automatic video playback.
+  let clearedReturn=false;navigation='';
+  sandbox.window.FranchiseExplorerPlaybackReturn={clear:()=>{clearedReturn=true;}};
+  await sandbox.runHomeAction(card,'details',auth);
+  assert.equal(clearedReturn,true);
+  assert(navigation.startsWith('/web/#/details?id='+idB));
+  assert(!navigation.includes('feAutoPlay=1'));
+  navigation='';
 
   // A stale old-Injector menu can still contain a Browse link. The new
   // script must intercept it before browser navigation and show Home's popup.
@@ -180,5 +191,5 @@ async function resetPopup(accept) {
   assert.equal(quick.id,idB);
   assert.equal(quick.startOver,true);
   assert.equal(quick.type,'Movie');
-  console.log('v0.8.9.12 centered reset, native restart, stale-menu recovery, and in-place chronological list tests passed.');
+  console.log('v0.8.9.13 centered reset, native restart, stale-menu recovery, and in-place chronological list tests passed.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -1,3 +1,10 @@
+## v0.8.9.13 — Return-to-origin navigation, Details, and franchise-wide hiding (experimental)
+
+- Expanded the optional native Continue Watching / Next Up hide filter to saved franchise timeline entries and TV shows, so formerly active episodes stay hidden after resetting chronological progress.
+- Remembered the originating same-tab page for franchise-started video playback and restored it when Jellyfin leaves the player for that item's Details screen.
+- Added an explicit Details option to the Continue Your Franchises three-dot menu; it does not autoplay.
+- Added offline navigation, Details, and full-queue filtering regression contracts; live Jellyfin verification remains required.
+
 ## v0.8.9.12 — Native playback shortcut contract and timeline popup cleanup (experimental)
 
 - Corrected direct playback by constructing Jellyfin Web's required `.itemAction` card, with media type, server ID and explicit zero playback offset. This addresses the 12-second fallback to Details in v0.8.9.11.

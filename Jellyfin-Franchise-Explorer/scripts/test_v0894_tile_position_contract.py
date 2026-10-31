@@ -28,14 +28,14 @@ assert '.fe-settings-toggle[aria-expanded="true"]' in script
 assert 'id="fe-native-rows"' not in browse
 assert 'id="fx-hide-native-pref"' in config
 assert "hide.checked?'0':'1'" in config
-assert "Hide active franchise titles from Continue Watching and Next Up" in config
+assert "Hide franchise titles from Continue Watching and Next Up" in config
 assert "'fe-show-active-native-rows:'" in script and "'fe-show-active-native-rows:'" in config
 assert "itemId: id" in script and "seriesId: item?.Type === 'Episode'" in script
 assert "card.classList.toggle(NATIVE_HIDE_CLASS" in script
 assert "const image=tile.querySelector(" in browser
 assert "holder.parentElement===image" in browser
 assert "menu_geometry['bottomGap']" in browser
-assert 'CurrentScriptId = "jellyfin-franchise-explorer-my-media-v08912"' in service
+assert 'CurrentScriptId = "jellyfin-franchise-explorer-my-media-v08913"' in service
 assert '"jellyfin-franchise-explorer-my-media-v0894"' in service
 assert '"jellyfin-franchise-explorer-my-media-v0893"' in service
 assert '"jellyfin-franchise-explorer-my-media-v1"' in service
