@@ -218,7 +218,9 @@
         : await this.save(state);
       const intent={version:1,created:Date.now(),rowId:row.id,expectedId:target.id,
         state:ready,replayOnly:!!replayOnly,routePending:true,navigationAttempts:0,prior:prev?JSON.parse(JSON.stringify(prev)):null,
-        subtitleEnabled:!!document.getElementById('fe-subtitles')?.checked};
+        // The checkbox now lives in the plugin settings page. Read its
+        // unchanged per-user preference directly for timeline handoff.
+        subtitleEnabled:localStorage.getItem('fe-subtitles:'+this.context.serverId+':'+this.context.userId)==='1'};
       // The server records only an expiring intent until actual playback is
       // observed; the browser bridge separately verifies its local player.
       localStorage.setItem(this.handoffKey(),JSON.stringify(intent));

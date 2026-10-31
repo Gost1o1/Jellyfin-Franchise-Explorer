@@ -90,6 +90,10 @@
 #FranchiseExplorerConfigPage .fx-status {border-radius:8px;background:rgba(77,150,184,.12);padding:10px 12px;margin:12px 0 0;min-height:40px;font-size:.87rem}
 #FranchiseExplorerConfigPage .fx-footer {margin-top:20px}
 #FranchiseExplorerConfigPage .fx-footer-actions {display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+#FranchiseExplorerConfigPage .fx-viewer-preferences {margin:0 0 16px;padding:15px 18px}
+#FranchiseExplorerConfigPage .fx-viewer-preferences h2 {margin:0 0 10px;font-size:1.1rem}
+#FranchiseExplorerConfigPage .fx-viewer-preferences .fx-field {margin:9px 0}
+#FranchiseExplorerConfigPage .fx-viewer-preferences input[type="checkbox"] {width:20px;height:20px;accent-color:#00a7bf;vertical-align:middle;margin-right:7px}
 #FranchiseExplorerConfigPage .fx-hidden {display:none!important}
 #FranchiseExplorerConfigPage .fx-sm-pad {margin-top:4px}
 #FranchiseExplorerConfigPage .fx-source {margin:6px 0;color:#a6c9d1;font-size:.78rem;min-height:24px}
@@ -260,8 +264,7 @@
 <div data-role="content" class="fx-wrap">
   <div class="fx-heading">
     <div>
-      <div class="fx-eyebrow">Jellyfin plugin • Early development</div>
-      <h1>Franchise Explorer <small>v0.8.9.5 preview</small></h1>
+      <h1>Franchise Explorer <small>v0.8.9.6 preview</small></h1>
       <p class="fx-muted">Organize virtual franchises, eras, phases and viewing references without moving media files.</p>
     </div>
   </div>
@@ -270,17 +273,30 @@
     <div class="fx-toolbar-left">
       <button type="button" id="fx-add-root" class="fx-btn fx-btn-primary">+ New franchise</button>
       <button type="button" id="fx-add-child" class="fx-btn" title="Create a group inside the selected group">+ Subgroup</button>
-      <button type="button" id="fx-add-sibling" class="fx-btn" title="Create a group alongside the selected group, under the same parent">+ Same-level group</button>
-      <button type="button" id="fx-demo" class="fx-btn">Insert example groups</button>
       <a id="fx-open-browser" class="fx-btn fx-btn-primary" href="/FranchiseExplorer/Browse" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">Open Franchises browser ↗</a>
-    </div>
-    <div class="fx-toolbar-right">
       <button type="button" id="fx-export" class="fx-btn">Export backup</button>
       <button type="button" id="fx-import-button" class="fx-btn">Import backup</button>
       <input type="file" accept="application/json,.json" id="fx-import-file" class="fx-hidden">
       <button type="button" id="fx-reload" class="fx-btn">Discard edits</button>
     </div>
+    <div class="fx-toolbar-right">
+      <button type="button" id="fx-save" class="fx-btn fx-btn-primary">Save plugin configuration</button>
+      <strong id="fx-dirty-label">No unsaved edits</strong>
+    </div>
   </div>
+  <div class="fx-hidden" aria-hidden="true">
+    <button type="button" id="fx-add-sibling">+ Same-level group</button>
+    <button type="button" id="fx-demo">Insert example groups</button>
+    <input type="text" id="fx-nav-label" maxlength="64" value="Franchises">
+  </div>
+  <section class="fx-panel fx-viewer-preferences" aria-label="Franchise Explorer playback and home preferences">
+    <h2>Playback &amp; Home preferences</h2>
+    <label class="fx-field"><span><input id="fx-subtitles-pref" type="checkbox"> Enable subtitles during Franchise Explorer playback</span>
+      <small class="fx-muted">Off by default. Your Jellyfin client may override subtitle choices.</small></label>
+    <label class="fx-field"><span><input id="fx-hide-native-pref" type="checkbox"> Hide active franchise titles from Continue Watching and Next Up</span>
+      <small class="fx-muted">On hides the active title from those two native home rows; off shows it. The Continue Your Franchises row stays visible. Changes apply to this Jellyfin Web account and browser without altering watched history.</small></label>
+  </section>
+  <div id="fx-status" class="fx-status" role="status" aria-live="polite"></div>
   <div class="fx-grid">
     <aside class="fx-panel fx-sticky" aria-label="Virtual franchise hierarchy">
       <div class="fx-panel-title"><h2>Your franchises</h2><span class="fx-counter" id="fx-tree-count">0 groups</span></div>
@@ -393,6 +409,7 @@
         </div>
         <p class="fx-muted">An override takes priority over any inherited image. Restoring inheritance never changes the Jellyfin source image; uploaded file bytes may remain in plugin storage until cleaned up.</p>
         <hr class="fx-divider">
+        <div class="fx-hidden" aria-hidden="true">
         <h3>Linked Jellyfin media</h3>
         <p class="fx-muted">Search your existing Jellyfin library and choose an item to create a reference. For TV shows, choose a complete show or specify a season/episode range. No movies or shows will be moved, copied, or deleted.</p>
         <label class="fx-field"><span>Search movies, TV shows and episodes</span><input class="fx-input" type="search" id="fx-media-search" placeholder="Search for Thor, Andor, The Clone Wars..." autocomplete="off"></label>
@@ -402,6 +419,7 @@
           <button type="button" class="fx-btn fx-btn-small" id="fx-select-all-results">Select all results</button>
           <button type="button" class="fx-btn fx-btn-small" id="fx-clear-results">Clear selection</button>
           <button type="button" class="fx-btn fx-btn-small fx-btn-primary" id="fx-add-selected-results" disabled>Add selected media (0)</button>
+        </div>
         </div>
         <div id="fx-tv-range" class="fx-modal-overlay fx-hidden" role="dialog" aria-modal="true" aria-labelledby="fx-range-title" aria-describedby="fx-range-help">
           <div class="fx-modal-dialog" tabindex="-1">
@@ -422,6 +440,7 @@
             <div id="fx-range-error" role="alert" class="fx-muted fx-hidden" style="color:#ffb0a5"></div>
           </div>
         </div>
+        <div class="fx-hidden" aria-hidden="true">
         <div id="fx-links" aria-label="Current virtual links" style="margin-top:14px"></div>
         <details id="fx-manual-details" style="margin-top:14px"><summary>Advanced: manually add an item ID</summary>
           <label class="fx-field"><span>Jellyfin item ID (GUID)</span><input id="fx-item-id" type="text" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"></label>
@@ -431,15 +450,10 @@
           <label class="fx-field"><span>Timeline position</span><input id="fx-position" type="number" min="0" max="100000" value="0"></label>
           <div class="fx-row"><button type="button" id="fx-add-link" class="fx-btn">Add reference by ID</button></div>
         </details>
+        </div>
       </div>
     </main>
   </div>
-  <section class="fx-panel fx-footer">
-    <div class="fx-two"><label class="fx-field"><span>Future navigation label</span><input type="text" id="fx-nav-label" maxlength="64" value="Franchises"></label></div>
-    <p class="fx-muted">The optional JavaScript Injector adds a Franchises tile to Jellyfin Web. This label does not create a native library category on Android TV, Roku or other clients.</p>
-    <div class="fx-footer-actions"><button type="button" id="fx-save" class="fx-btn fx-btn-primary">Save plugin configuration</button><strong id="fx-dirty-label">No unsaved edits</strong></div>
-    <div id="fx-status" class="fx-status" role="status" aria-live="polite"></div>
-  </section>
 </div>
 <script type="text/javascript">
 (function () {
@@ -449,6 +463,31 @@
   page.dataset.fxInitialized = 'yes';
   const pluginId = '6bc7820b-7c6d-4e64-a139-dfb90b8d6f42';
   const byId = id => page.querySelector('#' + id);
+  // Per-user, per-browser choices intentionally use the same storage keys
+  // as the Jellyfin Web home integration and playback handoff.
+  function viewerPreferenceKeys() {
+    let entries=[];
+    try {entries=JSON.parse(localStorage.getItem('jellyfin_credentials')||'{}').Servers||[];}catch(_){}
+    const uid=String(typeof ApiClient!=='undefined'&&typeof ApiClient.getCurrentUserId==='function'?ApiClient.getCurrentUserId():'');
+    const sameOrigin=s=>['ManualAddress','LocalAddress','RemoteAddress','LastConnectionAddress'].some(k=>{
+      try{return s[k]&&new URL(s[k]).origin===location.origin;}catch(_){return false;}
+    });
+    const matching=entries.filter(s=>s.AccessToken&&String(s.UserId).toLowerCase()===uid.toLowerCase());
+    const chosen=matching.find(sameOrigin)||(matching.length===1?matching[0]:null);
+    if(!chosen||!uid)return null;
+    return {subtitles:'fe-subtitles:'+chosen.Id+':'+chosen.UserId,
+      nativeRows:'fe-show-active-native-rows:'+location.origin+':'+uid.toLowerCase()};
+  }
+  function wireViewerPreferences() {
+    const keys=viewerPreferenceKeys();
+    const subtitles=byId('fx-subtitles-pref'),hide=byId('fx-hide-native-pref');
+    if(!keys){subtitles.disabled=true;hide.disabled=true;return;}
+    subtitles.checked=localStorage.getItem(keys.subtitles)==='1';
+    hide.checked=localStorage.getItem(keys.nativeRows)==='0';
+    subtitles.addEventListener('change',()=>localStorage.setItem(keys.subtitles,subtitles.checked?'1':'0'));
+    hide.addEventListener('change',()=>localStorage.setItem(keys.nativeRows,hide.checked?'0':'1'));
+  }
+  wireViewerPreferences();
   // Jellyfin may give an embedded plugin a page wider than the visible browser.
   // Constrain this editor to the actual pixels available to the RIGHT of its rendered left edge.
   const wrap = page.querySelector('.fx-wrap');

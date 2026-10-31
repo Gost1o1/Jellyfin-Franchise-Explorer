@@ -24,12 +24,14 @@ public sealed class HomeTileRegistrationService : IHostedService, IDisposable
 {
     private const string InjectorAssemblyName = "Jellyfin.Plugin.JavaScriptInjector";
     private const string ScriptResourceName = "Jellyfin.Plugin.FranchiseExplorer.Web.franchise-my-media.js";
+    private const string TileArtResourceName = "Jellyfin.Plugin.FranchiseExplorer.Web.franchise-tile-backdrop.webp";
     // Script IDs are stable within a UI generation, not forever. Injector and
     // Jellyfin Web can cache the previous script despite a DLL replacement.
     // A new ID lets this release load the updated home and menu integration.
-    private const string CurrentScriptId = "jellyfin-franchise-explorer-my-media-v0895";
+    private const string CurrentScriptId = "jellyfin-franchise-explorer-my-media-v0896";
     private static readonly string[] LegacyScriptIds =
     {
+        "jellyfin-franchise-explorer-my-media-v0895",
         "jellyfin-franchise-explorer-my-media-v0894",
         "jellyfin-franchise-explorer-my-media-v0893",
         "jellyfin-franchise-explorer-my-media-v1"
@@ -130,6 +132,16 @@ public sealed class HomeTileRegistrationService : IHostedService, IDisposable
         if (stream is null) throw new InvalidOperationException("Embedded home-tile JavaScript resource missing.");
         using var reader = new StreamReader(stream);
         string script = reader.ReadToEnd();
+        // Keep the standalone browser script readable/testable. At runtime the
+        // DLL supplies its embedded artwork as a small self-contained data URI.
+        using Stream? artStream = typeof(global::Jellyfin.Plugin.FranchiseExplorer.Plugin).Assembly.GetManifestResourceStream(TileArtResourceName);
+        if (artStream is not null)
+        {
+            using var buffer = new MemoryStream();
+            artStream.CopyTo(buffer);
+            string url = "data:image/webp;base64," + Convert.ToBase64String(buffer.ToArray());
+            script = script.Replace("__FE_TILE_ART_DATA_URL__", url, StringComparison.Ordinal);
+        }
 
         string json = JsonSerializer.Serialize(new Dictionary<string, object>
         {
@@ -141,7 +153,7 @@ public sealed class HomeTileRegistrationService : IHostedService, IDisposable
             ["requiresAuthentication"] = false,
             ["pluginId"] = global::Jellyfin.Plugin.FranchiseExplorer.Plugin.PluginId.ToString(),
             ["pluginName"] = "Franchise Explorer",
-            ["pluginVersion"] = "0.8.9.5"
+            ["pluginVersion"] = "0.8.9.6"
         });
 
         object? payload = parse.Invoke(null, new object[] { json });

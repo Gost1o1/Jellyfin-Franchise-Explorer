@@ -1,5 +1,5 @@
 /*
- * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.5).
+ * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.6).
  * Adds ONE visual link in the existing "My Media" row. It does not create a
  * Jellyfin library, alter user preferences, or modify the server's media.
  * Requires a compatible JavaScript injector to run in jellyfin-web.
@@ -11,7 +11,9 @@
   // Programmatic registration plus a manual fallback must not create two observers.
   if (window.__franchiseExplorerMyMediaTileLoaded) return;
   window.__franchiseExplorerMyMediaTileLoaded = true;
-  window.__franchiseExplorerUiVersion = '0.8.9.5';
+  window.__franchiseExplorerUiVersion = '0.8.9.6';
+  // Replaced with a data URI when registered by the plugin host service.
+  const TILE_ART_DATA = '__FE_TILE_ART_DATA_URL__';
 
   const TILE_ID = 'franchise-explorer-my-media-tile';
   const STYLE_ID = 'franchise-explorer-my-media-style';
@@ -46,6 +48,7 @@
         width:100%;height:100%;margin:0!important;padding:0!important;
         border-radius:inherit;
         background:linear-gradient(130deg,#10232f 0%,#105062 55%,#112b37 100%);
+        background-size:cover;background-position:center center;
         pointer-events:none;
       }
       #${TILE_ID} .fe-tile-icon {
@@ -202,7 +205,7 @@
       }
     }
     tile.id = TILE_ID;
-    tile.setAttribute('data-fe-version','0.8.9.5');
+    tile.setAttribute('data-fe-version','0.8.9.6');
     tile.setAttribute('aria-label','Open Franchises');
     tile.setAttribute('href',browseUrl());
     // Native actions from a cloned Collections card cannot operate on the
@@ -211,6 +214,11 @@
     const imageHost=(tile.querySelector('.cardImageContainer')||tile.querySelector('.poster')||tile.querySelector('.cardImage')||tile.querySelector('.cardScalable'));
     const art=document.createElement('span');art.className='fe-tile-art';
     art.innerHTML='<span class="fe-tile-icon" aria-hidden="true">F</span><span class="fe-tile-art-title">Franchises</span>';
+    if (TILE_ART_DATA.startsWith('data:image/')) {
+      art.classList.add('fe-cinematic-art');
+      art.style.backgroundImage='linear-gradient(0deg,rgba(0,9,17,.7),transparent 68%),url("'+TILE_ART_DATA+'")';
+      art.querySelector('.fe-tile-icon')?.remove();
+    }
     if(imageHost){
       // Remove cloned Collections artwork and its inline background image,
       // but preserve native Jellyfin sizing scaffolding around this host.
@@ -324,7 +332,7 @@
       if (sourceScalable) observedResize.observe(sourceScalable);
     }
     tile.setAttribute('href',browseUrl());
-    tile.setAttribute('data-fe-version','0.8.9.5');
+    tile.setAttribute('data-fe-version','0.8.9.6');
   }
 
   function schedule() {
@@ -354,7 +362,7 @@
   window.addEventListener('resize', schedule);
 })();
 
-/* v0.8.9.5 — Read-only, per-user franchise resume cards on Jellyfin Web's home.
+/* v0.8.9.6 — Read-only, per-user franchise resume cards on Jellyfin Web's home.
  * Jellyfin regularly replaces the home DOM, including after a refresh and
  * client-side navigation. Reattach the same widget rather than waiting for the
  * next API poll, and keep a short session-scoped cache for hard refreshes.
@@ -368,7 +376,7 @@
   const STYLE_ID = 'franchise-timeline-resume-style';
   const NATIVE_HIDE_STYLE_ID = 'fe-native-franchise-row-filter-style';
   const NATIVE_HIDE_CLASS = 'fe-native-franchise-row-hidden';
-  const CACHE_PREFIX = 'fe-franchise-home-v0895:';
+  const CACHE_PREFIX = 'fe-franchise-home-v0896:';
   const MAX_CARDS = 8;
   const phonePortrait = () => window.matchMedia('(orientation: portrait) and (max-width: 700px)').matches;
   const GUID = /^[a-f0-9]{32}$|^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
@@ -524,8 +532,9 @@
       '#'+WIDGET_ID+' h2{font-size:1.32rem;margin:8px 0 15px;font-weight:600}',
       '#'+WIDGET_ID+' .fe-resume-grid{display:flex;gap:16px;flex-wrap:wrap;align-items:stretch}',
       '#'+WIDGET_ID+' .fe-resume-card{display:flex;flex:1 1 445px;max-width:590px;min-width:0;min-height:164px;overflow:hidden;background:#202b37;border:1px solid #4b5b69;border-radius:11px;box-sizing:border-box}',
-      '#'+WIDGET_ID+' .fe-resume-art{display:flex;align-items:center;justify-content:center;position:relative;flex:0 0 39%;min-width:0;background:linear-gradient(145deg,#143c4a,#10232d);color:#82b8c5;text-decoration:none}',
-      '#'+WIDGET_ID+' .fe-resume-art img{width:100%;height:100%;position:absolute;inset:0;object-fit:cover}',
+      '#'+WIDGET_ID+' .fe-resume-art{display:flex;align-items:center;justify-content:center;position:relative;flex:0 0 39%;min-width:0;overflow:hidden;background:linear-gradient(145deg,#143c4a,#10232d);color:#82b8c5;text-decoration:none}',
+      '#'+WIDGET_ID+' .fe-resume-art.fe-resume-landscape::before{content:"";position:absolute;inset:-12px;background-image:var(--fe-resume-backdrop);background-size:cover;background-position:center;filter:blur(12px) brightness(.45);opacity:.9}',
+      '#'+WIDGET_ID+' .fe-resume-art img{width:100%;height:100%;position:absolute;inset:0;object-fit:contain;z-index:1}',
       '#'+WIDGET_ID+' .fe-resume-art img.fe-resume-portrait{object-fit:contain;background:#10232d}',
       '#'+WIDGET_ID+' .fe-resume-art span{font-size:3rem;opacity:.55}',
       '#'+WIDGET_ID+' .fe-resume-content{flex:1;min-width:0;padding:15px 18px;display:flex;flex-direction:column;gap:5px}',
@@ -566,7 +575,7 @@
       widget.id = WIDGET_ID;
       widget.setAttribute('aria-label', 'Continue Your Franchises');
     }
-    widget.setAttribute('data-fe-version','0.8.9.5');
+    widget.setAttribute('data-fe-version','0.8.9.6');
     // Jellyfin's home view can destroy and recreate this entire parent.
     // Keep our rendered widget and reattach immediately after the native row.
     if (widget.parentElement !== anchor.parentElement || anchor.nextElementSibling !== widget)
@@ -610,6 +619,9 @@
             if (src) {
               const usesPoster = portrait && route === card.artworkPortrait;
               img.classList.toggle('fe-resume-portrait', usesPoster);
+              cover.classList.toggle('fe-resume-landscape',!usesPoster);
+              if(!usesPoster)cover.style.setProperty('--fe-resume-backdrop','url("'+src+'")');
+              else cover.style.removeProperty('--fe-resume-backdrop');
               img.dataset.feArtworkKind = usesPoster ? 'poster' : 'landscape';
               img.src = src;
               return;
@@ -774,7 +786,7 @@
     } catch (error) {
       // Transient errors must not erase the user's most recent cards. Log only
       // the status/error class (never an auth header, token or user ID).
-      console.warn('[Franchise Explorer 0.8.9.5] Home tracker refresh failed:', error?.message || 'unknown error');
+      console.warn('[Franchise Explorer 0.8.9.6] Home tracker refresh failed:', error?.message || 'unknown error');
     }
     finally { busy = false; }
   }
