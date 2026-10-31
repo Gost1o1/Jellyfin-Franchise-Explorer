@@ -572,6 +572,11 @@
         const end=accepted=>{mask.remove();if(previous?.isConnected)previous.focus();resolve(accepted);};
         const cancel=this.button('Cancel',()=>end(false));
         const accept=this.button(confirmLabel,()=>end(true),'btn btn-primary');
+        // Match the home card's reset confirmation regardless of Jellyfin's
+        // global button styles (the embedded browser does not share its CSS).
+        const buttonStyle='box-sizing:border-box;min-height:43px;border:1px solid #607184;border-radius:8px;padding:9px 14px;background:#2b3643;color:#fff;font:600 14px system-ui,sans-serif;cursor:pointer';
+        cancel.style.cssText=buttonStyle;
+        accept.style.cssText=buttonStyle+';background:#0b9caf;border-color:#0b9caf;color:#03191c';
         buttons.append(cancel,accept);dialog.append(prompt,buttons);mask.append(dialog);document.body.append(mask);
         mask.addEventListener('click',event=>{if(event.target===mask)end(false);});
         mask.addEventListener('keydown',event=>{

@@ -9,6 +9,36 @@ const home=fs.readFileSync(path.join(root,'Web/franchise-my-media.js'),'utf8');
 const browse=fs.readFileSync(path.join(root,'Configuration/browsePage.html'),'utf8');
 const timeline=fs.readFileSync(path.join(root,'Web/franchise-timeline.js'),'utf8');
 const config=fs.readFileSync(path.join(root,'Configuration/configPage.html'),'utf8');
+assert(home.includes('if (segmentTrack) info.append(segmentStatus, segmentTrack);'),
+  'Multi-episode segment progress must render only when available');
+assert(home.includes("const track = makeProgress('Watch order completed', percent, 'timeline');"),
+  'The existing chronological progress bar must remain at the bottom');
+assert(home.includes('info.append(franchise, title, next, itemStatus, itemTrack);'),
+  'The current episode/movie progress must render first');
+const progressStart=home.indexOf('  function progressForCard(state, isEpisode) {');
+const progressEnd=home.indexOf('  async function cardFor(',progressStart);
+assert(progressStart>=0&&progressEnd>progressStart);
+const progressContext={};
+vm.runInNewContext(home.slice(progressStart,progressEnd)+'\nglobalThis.calculate=progressForCard;',progressContext);
+const queueKeys=['movie:movie','agent-carter-s1:e1','agent-carter-s1:e2','agent-carter-s1:e3',
+  'agent-carter-s2:e1','agent-carter-s2:e2','solo:episode'];
+const queueEpisodes=[0,1,2,3,1,2,1];
+const base={queueKeys,queueEpisodes,queueLengths:[1000,1000,1000,1000,1000,1000,1000],
+  completedKeys:[queueKeys[1]],index:2,positionTicks:500};
+let progress=progressContext.calculate(base,true);
+assert.equal(progress.itemPercent,50,'Current episode playback position must use its own duration');
+assert.equal(progress.segment.total,3,'Range one must have exactly three episodes');
+assert.equal(progress.segment.watched,1,'Only completed episodes count toward the segment');
+assert(Math.abs(progress.segment.percent-100/3)<0.00001);
+progress=progressContext.calculate({...base,index:4,positionTicks:0},true);
+assert.equal(progress.segment.total,2,'Adjacent range two must not merge with range one');
+assert.equal(progress.segment.watched,0);
+progress=progressContext.calculate({...base,index:6},true);
+assert.equal(progress.segment,null,'Single-episode references must not show a segment bar');
+progress=progressContext.calculate({...base,index:0},false);
+assert.equal(progress.segment,null,'Movies must not show a TV segment bar');
+progress=progressContext.calculate({...base,index:1,positionTicks:0},true);
+assert.equal(progress.itemPercent,100,'Completed episodes show a full item bar');
 assert(home.includes('for(const sourceId of state.queueSourceItemIds||[])'),
   'All series within a franchise timeline should stay hidden even after reset');
 assert(home.includes('for(const key of state.queueKeys||[])'),

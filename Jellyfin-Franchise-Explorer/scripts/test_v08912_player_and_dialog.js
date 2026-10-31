@@ -42,6 +42,10 @@ m.button=(text,callback)=>{const e=new Element('button');e.textContent=text;e.ad
   assert.equal(panel.children[0].textContent,phrase);
   const actions=panel.children[1].children;
   assert.equal(actions[1].textContent,'Watch and track');
+  assert(actions[0].style.cssText.includes('border-radius:8px'),'Cancel uses the rounded home-dialog style');
+  assert(actions[0].style.cssText.includes('background:#2b3643'),'Cancel uses a dark background');
+  assert(actions[1].style.cssText.includes('background:#0b9caf'),'Watch and track uses the teal primary style');
+  assert(actions[1].style.cssText.includes('color:#03191c'),'Primary action text has the contrasting dark color');
   actions[0].click();assert.equal(await result,false);
   assert.equal(doc.body.children.length,0,'Cancel removes the confirmation layer');
   result=m.confirmAction(phrase,'Watch and track');

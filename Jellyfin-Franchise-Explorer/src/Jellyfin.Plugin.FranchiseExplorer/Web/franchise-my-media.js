@@ -565,8 +565,11 @@
       '#'+WIDGET_ID+' .fe-resume-title{font-size:1.38rem;line-height:1.22;font-weight:700;overflow-wrap:anywhere}',
       '#'+WIDGET_ID+' .fe-resume-next{font-size:.9rem;color:#f1f5f8;overflow-wrap:anywhere}',
       '#'+WIDGET_ID+' .fe-resume-status{font-size:.78rem;color:#ccd5e1;margin-top:1px}',
-      '#'+WIDGET_ID+' .fe-resume-progress{height:6px;border-radius:8px;background:#3b4a59;overflow:hidden;margin:4px 0 6px}',
+      '#'+WIDGET_ID+' .fe-resume-progress-label{font-size:.76rem;color:#ccd5e1;margin-top:1px}',
+      '#'+WIDGET_ID+' .fe-resume-progress{height:6px;border-radius:8px;background:#3b4a59;overflow:hidden;margin:2px 0 4px}',
       '#'+WIDGET_ID+' .fe-resume-progress span{display:block;height:100%;background:#12a9c4;min-width:0}',
+      '#'+WIDGET_ID+' .fe-resume-progress-episode span{background:#36c4e0}',
+      '#'+WIDGET_ID+' .fe-resume-progress-segment span{background:#58baa5}',
       '#'+WIDGET_ID+' .fe-resume-play{align-self:flex-start;background:#008ca5;color:#fff!important;padding:7px 13px;border-radius:7px;font-size:.84rem;font-weight:600;text-decoration:none;line-height:1.4}',
       '#'+WIDGET_ID+' .fe-resume-play:hover{background:#00a6bf}',
       '#'+WIDGET_ID+' .fe-resume-menu-holder{position:absolute;top:7px;right:7px;z-index:21}',
@@ -855,18 +858,35 @@
       title.textContent = card.title || 'Next in watch order';
       const next = document.createElement('div'); next.className = 'fe-resume-next';
       next.textContent = card.detail || 'Next in chronological order';
+      const makeProgress = (name, value, kind) => {
+        const track = document.createElement('div'); track.className = 'fe-resume-progress fe-resume-progress-' + kind;
+        track.setAttribute('role', 'progressbar'); track.setAttribute('aria-label', name);
+        track.setAttribute('aria-valuemin', '0'); track.setAttribute('aria-valuemax', '100');
+        const percent = Math.max(0, Math.min(100, Number(value) || 0));
+        track.setAttribute('aria-valuenow', String(percent.toFixed(2)));
+        const fill = document.createElement('span'); fill.style.width = percent + '%'; track.append(fill);
+        return track;
+      };
+      const labelPercent = value => {
+        const percent = Math.max(0, Math.min(100, Number(value) || 0));
+        return percent > 0 && percent < 1 ? percent.toFixed(2) : percent.toFixed(1).replace(/\.0$/, '');
+      };
+      const itemStatus = document.createElement('div'); itemStatus.className = 'fe-resume-progress-label';
+      itemStatus.textContent = (card.itemProgressLabel || 'Current item') + ' · ' + labelPercent(card.itemPercent) + '% watched';
+      const itemTrack = makeProgress('Current ' + (card.itemProgressLabel || 'item').toLowerCase() + ' progress', card.itemPercent, 'episode');
+      const segmentStatus = document.createElement('div'); segmentStatus.className = 'fe-resume-progress-label';
+      const segmentTrack = card.segment ? makeProgress('Current TV segment episodes watched', card.segment.percent, 'segment') : null;
+      if (card.segment) segmentStatus.textContent = 'This TV segment · ' + card.segment.watched + ' of ' + card.segment.total + ' episodes watched';
       const status = document.createElement('div'); status.className = 'fe-resume-status';
       const percent = Math.max(0, Math.min(100, Number(card.percent) || 0));
       const shown = percent > 0 && percent < 1 ? percent.toFixed(2) : percent.toFixed(1).replace(/\.0$/, '');
       status.textContent = shown + '% complete · ' + card.position + ' of ' + card.total + ' in chronological order';
-      const track = document.createElement('div'); track.className = 'fe-resume-progress';
-      track.setAttribute('role', 'progressbar'); track.setAttribute('aria-label', 'Watch order completed');
-      track.setAttribute('aria-valuemin', '0'); track.setAttribute('aria-valuemax', '100');
-      track.setAttribute('aria-valuenow', String(percent.toFixed(2)));
-      const fill = document.createElement('span'); fill.style.width = percent + '%'; track.append(fill);
+      const track = makeProgress('Watch order completed', percent, 'timeline');
       const resume = document.createElement('a'); resume.className = 'fe-resume-play'; resume.href = url;
       resume.textContent = '▶  Resume Watch Order';
-      info.append(franchise, title, next, status, track, resume);
+      info.append(franchise, title, next, itemStatus, itemTrack);
+      if (segmentTrack) info.append(segmentStatus, segmentTrack);
+      info.append(status, track, resume);
       const holder = document.createElement('div'); holder.className = 'fe-resume-menu-holder';
       const toggle = document.createElement('button'); toggle.type = 'button'; toggle.className = 'fe-resume-menu-toggle';
       toggle.textContent = '⋮';toggle.title = 'Franchise playback options';
@@ -985,6 +1005,40 @@
     }
     return root?.name || row?.name || state.name || 'Franchise';
   }
+  function progressForCard(state, isEpisode) {
+    const keys = Array.isArray(state.queueKeys) ? state.queueKeys : [];
+    const index = Math.max(0, Math.min(keys.length - 1, Number(state.index) || 0));
+    const currentKey = String(keys[index] || '');
+    const completed = new Set(state.completedKeys || []);
+    const ticks = Math.max(0, Number(state.positionTicks) || 0);
+    const duration = Math.max(0, Number(state.queueLengths?.[index]) || 0);
+    const itemPercent = currentKey && completed.has(currentKey) ? 100 :
+      duration > 0 ? Math.min(100, 100 * ticks / duration) : 0;
+    let segment = null;
+    // Each queue key is <media-reference-id>:<Jellyfin-item-id>. Group by
+    // reference, not by series, so adjacent season/range entries remain
+    // independent segments even when they belong to the same TV show.
+    const colon = currentKey.lastIndexOf(':');
+    if (isEpisode && colon > 0) {
+      const reference = currentKey.slice(0, colon);
+      const isSameEpisodeRange = i => {
+        const key = String(keys[i] || '');
+        const split = key.lastIndexOf(':');
+        return split > 0 && key.slice(0, split) === reference &&
+          (!state.queueEpisodes?.length || Number(state.queueEpisodes[i]) > 0);
+      };
+      let first = index, last = index;
+      while (first > 0 && isSameEpisodeRange(first - 1)) first--;
+      while (last + 1 < keys.length && isSameEpisodeRange(last + 1)) last++;
+      const total = last - first + 1;
+      if (total > 1) {
+        let watched = 0;
+        for (let i = first; i <= last; i++) if (completed.has(keys[i])) watched++;
+        segment = { watched, total, percent: 100 * watched / total };
+      }
+    }
+    return { itemPercent, segment };
+  }
   async function cardFor(state, catalog, auth) {
     const id = itemKey(state);
     let item = null, series = null;
@@ -1000,6 +1054,7 @@
       detail = 'Up next: S' + season + ':E' + episode + (item.Name ? ' – ' + item.Name : '');
     } else if (item?.Type === 'Movie') detail = 'Up next: Movie' + (item.ProductionYear ? ' · ' + item.ProductionYear : '');
     const completed = Array.isArray(state.completedKeys) ? state.completedKeys.length : 0;
+    const levels = progressForCard(state, item?.Type === 'Episode');
     return {
       rowId: state.rowId,
       itemId: id,
@@ -1010,6 +1065,9 @@
       artworkPortrait: item?.Type === 'Episode'
         ? posterRoute(series) : (posterRoute(item) || posterRoute(series)),
       percent: state.total > 0 ? 100 * completed / state.total : 0,
+      itemPercent: levels.itemPercent,
+      itemProgressLabel: item?.Type === 'Episode' ? 'Episode' : item?.Type === 'Movie' ? 'Movie' : 'Current item',
+      segment: levels.segment,
       position: Math.min(state.total, Math.max(1, state.index + 1)),
       total: state.total
     };
