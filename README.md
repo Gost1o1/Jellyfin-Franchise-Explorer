@@ -26,6 +26,12 @@
 
 ## Preview
 
+### Franchise Explorer in action
+
+Browse a complete franchise in one place, with a chronological watch order, phases, movies, TV shows, and collections. This is a **single vertically stitched screenshot** of the current browser, captured from the three screenshots supplied for v0.8.9.15.
+
+![Full Franchise Explorer browser showing the Marvel Cinematic Universe, chronological order, phases, movies, TV shows, and collections in one continuous screenshot](docs/screenshots/user-guide/00-franchise-explorer-full-page.png)
+
 ### Your franchises, right on Jellyfin Home
 
 The **Franchises** tile sits beside your other libraries. **Continue Your Franchises** displays the current movie or series poster, upcoming episode, progress, and **Resume Watch Order**. The intent on a supported Jellyfin Web client is to start the video directly without navigating through the browsing or Details pages.
