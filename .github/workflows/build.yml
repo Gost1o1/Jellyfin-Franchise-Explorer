@@ -8,12 +8,12 @@ permissions:
   contents: read
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Setup .NET 10
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
       - name: Validate repository and web scripts
@@ -53,17 +53,17 @@ jobs:
           dotnet restore src/Jellyfin.Plugin.FranchiseExplorer/Jellyfin.Plugin.FranchiseExplorer.csproj
           dotnet build src/Jellyfin.Plugin.FranchiseExplorer/Jellyfin.Plugin.FranchiseExplorer.csproj --no-restore -c Release
       - name: Upload build artifact (not a release)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: franchise-explorer-unverified-dll
           path: Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/bin/Release/net10.0/Jellyfin.Plugin.FranchiseExplorer.dll
           if-no-files-found: error
           retention-days: 14
   ui-browser:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - name: Install browser test dependencies
