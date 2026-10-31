@@ -47,6 +47,7 @@ jobs:
           python3 scripts/test_v0894_poster_orientation_contract.py
           python3 scripts/test_v0895_release_contract.py
           node scripts/test_v0897_qol.js
+          node scripts/test_v0899_home_actions.js
       - name: Restore and build Jellyfin 12.2 plugin
         working-directory: Jellyfin-Franchise-Explorer
         run: |
