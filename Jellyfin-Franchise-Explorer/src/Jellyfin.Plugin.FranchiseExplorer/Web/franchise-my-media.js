@@ -1,5 +1,5 @@
 /*
- * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.7).
+ * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.8).
  * Adds ONE visual link in the existing "My Media" row. It does not create a
  * Jellyfin library, alter user preferences, or modify the server's media.
  * Requires a compatible JavaScript injector to run in jellyfin-web.
@@ -11,7 +11,7 @@
   // Programmatic registration plus a manual fallback must not create two observers.
   if (window.__franchiseExplorerMyMediaTileLoaded) return;
   window.__franchiseExplorerMyMediaTileLoaded = true;
-  window.__franchiseExplorerUiVersion = '0.8.9.7';
+  window.__franchiseExplorerUiVersion = '0.8.9.8';
   // Replaced with a data URI when registered by the plugin host service.
   const TILE_ART_DATA = '__FE_TILE_ART_DATA_URL__';
 
@@ -211,7 +211,7 @@
       }
     }
     tile.id = TILE_ID;
-    tile.setAttribute('data-fe-version','0.8.9.7');
+    tile.setAttribute('data-fe-version','0.8.9.8');
     tile.setAttribute('aria-label','Open Franchises');
     tile.setAttribute('href',browseUrl());
     // Native actions from a cloned Collections card cannot operate on the
@@ -338,7 +338,7 @@
       if (sourceScalable) observedResize.observe(sourceScalable);
     }
     tile.setAttribute('href',browseUrl());
-    tile.setAttribute('data-fe-version','0.8.9.7');
+    tile.setAttribute('data-fe-version','0.8.9.8');
   }
 
   function schedule() {
@@ -368,7 +368,7 @@
   window.addEventListener('resize', schedule);
 })();
 
-/* v0.8.9.7 — Read-only, per-user franchise resume cards on Jellyfin Web's home.
+/* v0.8.9.8 — Per-user franchise resume cards and playback shortcuts on Jellyfin Web's home.
  * Jellyfin regularly replaces the home DOM, including after a refresh and
  * client-side navigation. Reattach the same widget rather than waiting for the
  * next API poll, and keep a short session-scoped cache for hard refreshes.
@@ -382,7 +382,7 @@
   const STYLE_ID = 'franchise-timeline-resume-style';
   const NATIVE_HIDE_STYLE_ID = 'fe-native-franchise-row-filter-style';
   const NATIVE_HIDE_CLASS = 'fe-native-franchise-row-hidden';
-  const CACHE_PREFIX = 'fe-franchise-home-v0897:';
+  const CACHE_PREFIX = 'fe-franchise-home-v0898:';
   const MAX_CARDS = 8;
   const phonePortrait = () => window.matchMedia('(orientation: portrait) and (max-width: 700px)').matches;
   const GUID = /^[a-f0-9]{32}$|^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
@@ -600,7 +600,7 @@
       widget.id = WIDGET_ID;
       widget.setAttribute('aria-label', 'Continue Your Franchises');
     }
-    widget.setAttribute('data-fe-version','0.8.9.7');
+    widget.setAttribute('data-fe-version','0.8.9.8');
     // Jellyfin's home view can destroy and recreate this entire parent.
     // Keep our rendered widget and reattach immediately after the native row.
     if (widget.parentElement !== anchor.parentElement || anchor.nextElementSibling !== widget)
@@ -837,7 +837,7 @@
     } catch (error) {
       // Transient errors must not erase the user's most recent cards. Log only
       // the status/error class (never an auth header, token or user ID).
-      console.warn('[Franchise Explorer 0.8.9.7] Home tracker refresh failed:', error?.message || 'unknown error');
+      console.warn('[Franchise Explorer 0.8.9.8] Home tracker refresh failed:', error?.message || 'unknown error');
     }
     finally { busy = false; }
   }
