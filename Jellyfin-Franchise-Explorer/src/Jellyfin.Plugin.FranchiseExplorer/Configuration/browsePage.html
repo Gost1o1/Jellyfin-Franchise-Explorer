@@ -120,6 +120,9 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
 .timeline-dialog-header h2{margin:5px 0;font-size:clamp(1.2rem,3vw,1.8rem)}
 .timeline-feedback{color:#e7c485;font-size:.91rem;line-height:1.45;margin:12px 0}
 .timeline-chooser{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:15px 0}
+.timeline-watch-choice{display:flex;align-items:center;gap:9px;flex-wrap:wrap;width:100%;padding:12px;border:1px solid #3d8498;border-radius:10px;background:#122934;box-sizing:border-box}
+.timeline-watch-choice[hidden]{display:none!important}
+.timeline-watch-choice p{width:100%;margin:0 0 5px;font-weight:600;line-height:1.45}
 .timeline-device{max-width:100%;min-width:min(100%,230px)}
 .timeline-entry-list{display:grid;gap:8px;max-width:100%;min-width:0}
 .timeline-entry{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#242a33;border:1px solid #465363;border-radius:10px;padding:12px}
@@ -532,7 +535,7 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
       if(window.FranchiseTimeline){timeline=new window.FranchiseTimeline.TimelineManager({catalog,prefix,token,userId,serverId,getItem});await timeline.load();}
       void render();
       const requested=new URLSearchParams(location.search).get('timeline');
-      if(timeline && requested){const row=catalog.rows.find(r=>r.id===requested&&r.rowType==='Timeline');if(row){openGroup(row.parentNodeId);setTimeout(()=>void timeline.openDialog(row,new URLSearchParams(location.search).get('resume')==='1'),450);}}
+      if(timeline && requested){const row=catalog.rows.find(r=>r.id===requested&&r.rowType==='Timeline');if(row){const params=new URLSearchParams(location.search);const action=['restart-history','restart-current','select'].includes(params.get('action'))?params.get('action'):'';const resume=params.get('resume')==='1';if(action){params.delete('action');history.replaceState(history.state,'',location.pathname+(params.size?'?'+params.toString():'')+location.hash);}openGroup(row.parentNodeId);setTimeout(()=>void timeline.openDialog(row,resume,action),450);}}
     }catch(error){status('Cannot load Franchises: '+error.message+'. Confirm the plugin is running and your Jellyfin session is active.');}
   }
   void init();

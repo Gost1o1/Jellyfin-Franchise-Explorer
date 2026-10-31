@@ -196,6 +196,10 @@
 #FranchiseExplorerConfigPage .fx-row-option{display:flex;gap:8px;align-items:center;padding:7px 1px;font-size:.88rem;line-height:1.4;min-width:0;overflow-wrap:anywhere}
 #FranchiseExplorerConfigPage .fx-row-option input{flex:none;width:18px;height:18px}
 #FranchiseExplorerConfigPage .fx-row-included{margin-top:11px;display:grid;gap:6px}
+#FranchiseExplorerConfigPage .fx-row-included-toggle{margin-top:12px;border:1px solid #475462;border-radius:9px;min-width:0;background:#141e26}
+#FranchiseExplorerConfigPage .fx-row-included-toggle>summary{cursor:pointer;padding:12px;font-weight:650;color:#e6f4fa;user-select:none}
+#FranchiseExplorerConfigPage .fx-row-included-toggle>summary:focus-visible{outline:2px solid #49d9e9;outline-offset:2px}
+#FranchiseExplorerConfigPage .fx-row-included-toggle .fx-row-included{padding:0 9px 10px;margin-top:0}
 #FranchiseExplorerConfigPage .fx-row-included-item{display:flex;align-items:center;gap:8px;min-width:0;padding:8px;border-radius:7px;background:#12191f;border:1px solid #394551}
 #FranchiseExplorerConfigPage .fx-row-included-item>span{flex:1;min-width:0;overflow-wrap:anywhere;font-size:.85rem}
 #FranchiseExplorerConfigPage .fx-row-included-item button{padding:6px 9px;min-height:36px}
@@ -1083,6 +1087,7 @@
   const rowTypes={Groups:'Subgroups only',Media:'Collections / Movies / TV Shows',Timeline:'Chronological or custom viewing order',Mixed:'Subgroups + library items'};
   const rowList=()=>model.Rows.filter(r=>r.ParentNodeId===selected).sort((a,b)=>a.SortOrder-b.SortOrder||a.Name.localeCompare(b.Name));
   const rowSearchStates=new Map();
+  const rowItemsExpanded=new Map(); // Editor-only presentation; never stored in franchise data.
   const descendantLinks=(root)=>{
     const descendants=new Set([root]);let changed=true;
     while(changed){changed=false;for(const n of model.Nodes)if(descendants.has(n.ParentId)&&!descendants.has(n.Id)){descendants.add(n.Id);changed=true;}}
@@ -1213,7 +1218,7 @@
       type.value=r.RowType;type.addEventListener('change',()=>{r.RowType=type.value;setDirty(true);renderRows();});typeLabel.append(typeTitle,type);
       const up=makeRowButton('↑',()=>reorderRow(r.Id,-1));up.disabled=index===0;up.setAttribute('aria-label','Move '+r.Name+' up');
       const down=makeRowButton('↓',()=>reorderRow(r.Id,1));down.disabled=index===rows.length-1;down.setAttribute('aria-label','Move '+r.Name+' down');
-      const remove=makeRowButton('Delete row',()=>{if(!confirm('Delete row "'+r.Name+'"? This removes only its display references; your Jellyfin media and franchise links are unchanged.'))return;model.Rows=model.Rows.filter(x=>x.Id!==r.Id);rowSearchStates.delete(r.Id);setDirty(true);renderRows();},'fx-btn-danger');
+      const remove=makeRowButton('Delete row',()=>{if(!confirm('Delete row "'+r.Name+'"? This removes only its display references; your Jellyfin media and franchise links are unchanged.'))return;model.Rows=model.Rows.filter(x=>x.Id!==r.Id);rowSearchStates.delete(r.Id);rowItemsExpanded.delete(r.Id);setDirty(true);renderRows();},'fx-btn-danger');
       head.append(grip,nameLabel,typeLabel,up,down,remove);card.append(head);
       const pickers=document.createElement('div');pickers.className='fx-row-pickers';
       const includeGroups=['Groups','Mixed'].includes(r.RowType),includeMedia=['Media','Timeline','Mixed'].includes(r.RowType);
@@ -1257,7 +1262,11 @@
           syncMediaOrder(r);setDirty(true);renderRows();
         }));included.append(line);
       }
-      card.append(included);
+      const collapse=document.createElement('details');collapse.className='fx-row-included-toggle';
+      collapse.open=rowItemsExpanded.has(r.Id)?rowItemsExpanded.get(r.Id):members.length<=8;
+      collapse.addEventListener('toggle',()=>rowItemsExpanded.set(r.Id,collapse.open));
+      const summary=document.createElement('summary');summary.textContent='Items in this row ('+members.length+') · Show / hide list';
+      collapse.append(summary,included);card.append(collapse);
       const note=document.createElement('p');note.className='fx-muted';note.textContent='Row '+(index+1)+' · '+members.length+' cards'+(r.RowType==='Timeline'?' · Experimental playback: test short timelines first.':'');card.append(note);list.append(card);
     });
   }
@@ -1290,7 +1299,7 @@
     try{
       setStatus('Loading plugin configuration...');
       const cfg=await ApiClient.getPluginConfiguration(pluginId);
-      model=normalize(cfg);selected='';savedNodes.clear();model.Nodes.forEach(n=>savedNodes.add(n.Id.toLowerCase()));setDirty(false);render();setStatus('Loaded. No media or collections were changed.');
+      model=normalize(cfg);selected='';rowItemsExpanded.clear();savedNodes.clear();model.Nodes.forEach(n=>savedNodes.add(n.Id.toLowerCase()));setDirty(false);render();setStatus('Loaded. No media or collections were changed.');
     }catch(e){setStatus('Could not load configuration: '+(e.message||e),true);}
   }
   byId('fx-save').addEventListener('click',async()=>{

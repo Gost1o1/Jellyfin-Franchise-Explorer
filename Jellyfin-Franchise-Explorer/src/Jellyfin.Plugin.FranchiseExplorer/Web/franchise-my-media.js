@@ -391,6 +391,7 @@
   let lastFetch = 0, busy = false, queuedMount = false, cards = [], authScope = '', renderedSignature = '';
   let confirmedEmpty = false;
   let widget = null;
+  let activeResumeMenu = null;
   const images = new Map();
   const itemCache = new Map();
   const nativeItemCache = new Map();
@@ -537,8 +538,9 @@
       '#'+WIDGET_ID+'{box-sizing:border-box;width:100%;min-width:0;padding:10px max(16px,2.5vw) 16px;color:#fff}',
       '#'+WIDGET_ID+' h2{font-size:1.32rem;margin:8px 0 15px;font-weight:600}',
       '#'+WIDGET_ID+' .fe-resume-grid{display:flex;gap:16px;flex-wrap:wrap;align-items:stretch}',
-      '#'+WIDGET_ID+' .fe-resume-card{display:flex;flex:1 1 445px;max-width:590px;min-width:0;min-height:164px;overflow:hidden;background:#202b37;border:1px solid #4b5b69;border-radius:11px;box-sizing:border-box}',
-      '#'+WIDGET_ID+' .fe-resume-art{display:flex;align-items:center;justify-content:center;position:relative;flex:0 0 39%;min-width:0;overflow:hidden;background:linear-gradient(145deg,#143c4a,#10232d);color:#82b8c5;text-decoration:none}',
+      '#'+WIDGET_ID+' .fe-resume-card{display:flex;flex:1 1 445px;max-width:590px;min-width:0;min-height:164px;position:relative;overflow:visible;background:#202b37;border:1px solid #4b5b69;border-radius:11px;box-sizing:border-box}',
+      '#'+WIDGET_ID+' .fe-resume-card.fe-resume-menu-open{z-index:20}',
+      '#'+WIDGET_ID+' .fe-resume-art{display:flex;align-items:center;justify-content:center;position:relative;flex:0 0 39%;min-width:0;overflow:hidden;border-radius:10px 0 0 10px;background:linear-gradient(145deg,#143c4a,#10232d);color:#82b8c5;text-decoration:none}',
       '#'+WIDGET_ID+' .fe-resume-art.fe-resume-landscape::before{content:"";position:absolute;inset:-12px;background-image:var(--fe-resume-backdrop);background-size:cover;background-position:center;filter:blur(12px) brightness(.45);opacity:.9}',
       '#'+WIDGET_ID+' .fe-resume-art img{width:100%;height:100%;position:absolute;inset:0;object-fit:contain;z-index:1}',
       '#'+WIDGET_ID+' .fe-resume-art img.fe-resume-portrait{object-fit:contain;background:#10232d}',
@@ -552,8 +554,16 @@
       '#'+WIDGET_ID+' .fe-resume-progress span{display:block;height:100%;background:#12a9c4;min-width:0}',
       '#'+WIDGET_ID+' .fe-resume-play{align-self:flex-start;background:#008ca5;color:#fff!important;padding:7px 13px;border-radius:7px;font-size:.84rem;font-weight:600;text-decoration:none;line-height:1.4}',
       '#'+WIDGET_ID+' .fe-resume-play:hover{background:#00a6bf}',
+      '#'+WIDGET_ID+' .fe-resume-menu-holder{position:absolute;top:7px;right:7px;z-index:21}',
+      '#'+WIDGET_ID+' .fe-resume-menu-toggle{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid #738899;border-radius:50%;background:#14232eea;color:#fff;font:bold 21px/1 Arial,sans-serif;cursor:pointer;opacity:0;transition:opacity .15s}',
+      '#'+WIDGET_ID+' .fe-resume-card:hover .fe-resume-menu-toggle,#'+WIDGET_ID+' .fe-resume-card:focus-within .fe-resume-menu-toggle,#'+WIDGET_ID+' .fe-resume-menu-toggle[aria-expanded="true"]{opacity:1}',
+      '#'+WIDGET_ID+' .fe-resume-menu{position:absolute;right:0;top:37px;min-width:220px;max-width:min(88vw,280px);padding:5px;background:#162734;color:#fff;border:1px solid #547083;border-radius:9px;box-shadow:0 12px 28px #000c;box-sizing:border-box}',
+      '#'+WIDGET_ID+' .fe-resume-menu[hidden]{display:none!important}',
+      '#'+WIDGET_ID+' .fe-resume-menu a{display:block;padding:11px 9px;border-radius:6px;color:#fff;text-decoration:none;font:600 13px/1.35 Arial,sans-serif;white-space:normal}',
+      '#'+WIDGET_ID+' .fe-resume-menu a:hover,#'+WIDGET_ID+' .fe-resume-menu a:focus-visible{background:#205367;outline:1px solid #42c9e0}',
       '#'+WIDGET_ID+' .fe-resume-wait{padding:16px;border:1px solid #425564;border-radius:10px;color:#bccbd6;background:#1b2631;font-size:.9rem;max-width:590px}',
-      '#'+WIDGET_ID+' a:focus-visible{outline:3px solid #38c5d9;outline-offset:2px}',
+      '#'+WIDGET_ID+' a:focus-visible,#'+WIDGET_ID+' button:focus-visible{outline:3px solid #38c5d9;outline-offset:2px}',
+      '@media(hover:none),(pointer:coarse){#'+WIDGET_ID+' .fe-resume-menu-toggle{opacity:1}}',
       '@media(max-width:650px){#'+WIDGET_ID+' .fe-resume-card{flex-basis:100%;min-height:140px}#'+WIDGET_ID+' .fe-resume-content{padding:12px;gap:4px}#'+WIDGET_ID+' .fe-resume-title{font-size:1.06rem}#'+WIDGET_ID+' .fe-resume-art{flex-basis:36%}#'+WIDGET_ID+' .fe-resume-next{font-size:.8rem}}'
     ].join('\n');
     document.head.appendChild(style);
@@ -564,6 +574,15 @@
     queuedMount = true;
     requestAnimationFrame(() => { queuedMount = false; mount(); });
   }
+  document.addEventListener('click', event => {
+    if (activeResumeMenu && (!activeResumeMenu.holder.isConnected || !activeResumeMenu.holder.contains(event.target)))
+      activeResumeMenu.close();
+  }, true);
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && activeResumeMenu) {
+      event.preventDefault();activeResumeMenu.close();
+    }
+  });
   function mount() {
     const auth = credential();
     restore(auth);
@@ -590,6 +609,7 @@
     const signature = JSON.stringify({cards,confirmedEmpty,portrait});
     if (signature === renderedSignature && widget.childElementCount) return;
     renderedSignature = signature;
+    if (activeResumeMenu) activeResumeMenu.close();
     const heading = document.createElement('h2');
     heading.textContent = 'Continue Your Franchises';
     const grid = document.createElement('div');
@@ -654,7 +674,32 @@
       const resume = document.createElement('a'); resume.className = 'fe-resume-play'; resume.href = url;
       resume.textContent = '▶  Resume Watch Order';
       info.append(franchise, title, next, status, track, resume);
-      panel.append(cover, info); grid.append(panel);
+      const holder = document.createElement('div'); holder.className = 'fe-resume-menu-holder';
+      const toggle = document.createElement('button'); toggle.type = 'button'; toggle.className = 'fe-resume-menu-toggle';
+      toggle.textContent = '⋮';toggle.title = 'Franchise playback options';
+      toggle.setAttribute('aria-label', 'Playback options for ' + (card.franchise || 'franchise'));
+      toggle.setAttribute('aria-haspopup', 'true');toggle.setAttribute('aria-expanded', 'false');
+      const menu = document.createElement('div');menu.className = 'fe-resume-menu';menu.hidden = true;
+      const close = () => { menu.hidden = true;toggle.setAttribute('aria-expanded','false');panel.classList.remove('fe-resume-menu-open');if(activeResumeMenu?.holder===holder)activeResumeMenu=null; };
+      for(const [label,action] of [
+        ['Restart chronological history','restart-history'],
+        ['Restart current viewing','restart-current'],
+        ['Select from chronological list','select']
+      ]) {
+        const option=document.createElement('a');
+        option.href=serverPath('/FranchiseExplorer/Browse?timeline='+encodeURIComponent(card.rowId)+'&action='+action);
+        option.textContent=label;menu.append(option);
+      }
+      toggle.addEventListener('click', event => {
+        event.preventDefault();event.stopPropagation();
+        const opening=menu.hidden;
+        if(activeResumeMenu)activeResumeMenu.close();
+        menu.hidden=!opening;toggle.setAttribute('aria-expanded',String(opening));
+        panel.classList.toggle('fe-resume-menu-open',opening);
+        activeResumeMenu=opening?{holder,close}:null;
+      });
+      holder.append(toggle,menu);
+      panel.append(cover, info,holder); grid.append(panel);
     }
     widget.replaceChildren(heading, grid);
   }

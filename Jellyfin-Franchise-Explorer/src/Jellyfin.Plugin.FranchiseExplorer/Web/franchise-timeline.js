@@ -216,6 +216,19 @@
       const ready=replayOnly
         ? (prev?await this.save({...prev,playbackMode:'replay',sessionId:'',armedUtc:null}):state)
         : await this.save(state);
+      if(replayOnly){
+        // A prior tracked local playback may still have a browser-side auto-next
+        // owner. Clear it for this row before playing an independent title.
+        const suffix=String(this.context.userId).toLowerCase();
+        const ownerKey='fe-local-follow-v1:'+suffix;
+        try{
+          const owner=JSON.parse(localStorage.getItem(ownerKey)||'null');
+          if(owner?.rowId===row.id){
+            localStorage.removeItem(ownerKey);
+            localStorage.removeItem('fe-local-completion-v1:'+suffix);
+          }
+        }catch(_){localStorage.removeItem(ownerKey);}
+      }
       const intent={version:1,created:Date.now(),rowId:row.id,expectedId:target.id,
         state:ready,replayOnly:!!replayOnly,routePending:true,navigationAttempts:0,prior:prev?JSON.parse(JSON.stringify(prev)):null,
         // The checkbox now lives in the plugin settings page. Read its
@@ -242,6 +255,14 @@
         queueSourceItemIds:queue.map(q=>q.sourceItemId),queueSeasons:queue.map(q=>q.season),queueEpisodes:queue.map(q=>q.episode)
       };
     }
+    async resetHistory(row,queue){
+      if(!queue.length)throw new Error('This chronological list has no playable items.');
+      const state=this.makeState(row,queue,0);
+      state.index=0;state.itemId=queue[0].id;state.positionTicks=0;
+      state.sessionId='';state.playbackMode='paused';state.completedKeys=[];
+      state.pendingAutoAdvanceFromKey='';state.pendingAutoAdvanceToKey='';state.pendingAutoAdvanceUtc=null;
+      return this.save(state); // Only this user's franchise timeline; never Jellyfin watched flags.
+    }
     async start(row,queue,sessionId,index,positionTicks=0,mode='playing',reset=false){
       // Tell Jellyfin to queue the resolved items. State is changed only if
       // the playback command succeeds.
@@ -264,7 +285,9 @@
         old.playbackMode='replay'; // suppress chronological event tracking BEFORE playing
         old.sessionId='';        // an independent replay never rewinds this timeline
       }
-      await this.save(old);
+      // A first-time independent watch must not create a new 0%-complete
+      // timeline. Existing timelines are disarmed so they cannot advance.
+      if(resetTimeline||previous)await this.save(old);
       try{
         if(resetTimeline)await this.play(queue,sessionId,index,0);
         else await this.play([queue[index]],sessionId,0,0);
@@ -363,7 +386,7 @@
       progress.append(this.progressBar(this.progress(row.id)));
       controls.append(btn,details,progress);frame.shelf.insertBefore(controls,frame.track);
     }
-    async openDialog(row,autoResume=false){
+    async openDialog(row,autoResume=false,action=''){
       this.closeDialog();const mask=this.make('div','timeline-dialog-mask');mask.setAttribute('role','presentation');
       const panel=this.make('section','timeline-dialog');panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');
       panel.setAttribute('aria-label','Chronological playback for '+row.name);
@@ -377,6 +400,12 @@
       try{
         const {queue,warnings}=await this.resolve(row);if(this.activeDialog!==panel)return;
         if(warnings.length)feedback.textContent=warnings.join(' · ');else feedback.textContent='';
+        if(action==='restart-history' && queue.length){
+          const agreed=confirm('Restart the entire chronological history for '+row.name+'? All completed entries in THIS franchise timeline will be cleared. Jellyfin watched history will not change.');
+          if(agreed){await this.resetHistory(row,queue);feedback.textContent='Chronological history restarted at the first item. Choose a playback device and select Play from beginning when ready.';}
+          else feedback.textContent='Chronological history was not changed.';
+        }
+        if(this.activeDialog!==panel)return;
         const saved=this.getState(row.id),keys=new Set(saved?.completedKeys||[]);
         summary.append(this.make('p','',queue.length+' playable movies/episodes · '+keys.size+' completed'));
         summary.append(this.progressBar(queue.length?keys.size/queue.length*100:0));
@@ -384,7 +413,10 @@
         const sessionLabel=this.make('label','','Play on this Jellyfin device:');
         const select=this.make('select','field timeline-device');select.setAttribute('aria-label','Choose a Jellyfin playback session');
         chooser.append(sessionLabel,select);
-        const activeDevices=await this.sessions();if(this.activeDialog!==panel)return;
+        let activeDevices=[];
+        try{activeDevices=await this.sessions();}
+        catch(e){feedback.textContent+=(feedback.textContent?' · ':'')+'Remote devices are unavailable; you can still choose this browser.';}
+        if(this.activeDialog!==panel)return;
         const localChoice=this.make('option','','This browser (local playback — recommended)');
         localChoice.value='__local__';select.append(localChoice);
         for(const s of activeDevices){
@@ -409,6 +441,50 @@
         // The local browser option is available even when remote control is disabled.
 
         chooser.append(start,resume);
+        if(action==='restart-current'){
+          const restart=this.button('↻ Restart current viewing',async()=>{
+            const current=this.getState(row.id);
+            const currentIndex=queue.findIndex(q=>q.key===current?.queueKeys?.[current?.index]);
+            const from=currentIndex>=0?currentIndex:0;
+            if(!confirm('Restart '+queue[from].label+' from the beginning? Your earlier chronological history will be kept.'))return;
+            if(select.value==='__local__')return this.playHere(row,queue,from,0,false,false);
+            await this.start(row,queue,select.value,from,0,'playing',false);
+            feedback.textContent='Current viewing restarted at 0:00; earlier franchise progress was preserved.';
+          },'btn btn-primary');
+          chooser.prepend(restart);
+          feedback.textContent='Restart the current movie or episode from 0:00 while keeping the rest of your chronological history.';
+          restart.focus();
+        }
+        let chooseWatch=null;
+        if(action==='select'){
+          feedback.textContent='Choose any movie or episode below, then decide whether this viewing should count toward the chronological timeline.';
+          const choice=this.make('div','timeline-watch-choice');choice.hidden=true;
+          const question=this.make('p','','');
+          let selectedIndex=-1;
+          const watchOnly=this.button('Watch only · No franchise tracking',async()=>{
+            if(selectedIndex<0)return;
+            const index=selectedIndex;choice.hidden=true;
+            if(select.value==='__local__')return this.playHere(row,queue,index,0,false,true);
+            await this.replay(row,queue,index,select.value,false);
+            feedback.textContent='Independent viewing started; chronological history and cursor were preserved.';
+          },'btn btn-primary');
+          const watchTracked=this.button('Watch and track from here',async()=>{
+            if(selectedIndex<0)return;
+            const index=selectedIndex;
+            if(!confirm('Continue the chronological timeline from '+queue[index].label+'? Later completed entries will be cleared in the franchise timeline only.'))return;
+            choice.hidden=true;
+            if(select.value==='__local__')return this.playHere(row,queue,index,0,true,false);
+            await this.replay(row,queue,index,select.value,true);
+            feedback.textContent='Timeline restarted from the selected item.';
+          });
+          const cancel=this.button('Cancel',()=>{choice.hidden=true;selectedIndex=-1;});
+          choice.append(question,watchOnly,watchTracked,cancel);chooser.append(choice);
+          chooseWatch=index=>{
+            selectedIndex=index;
+            question.textContent='Watch '+queue[index].label+' — should this viewing count toward franchise chronological progress? Jellyfin may still record its normal watched/resume history.';
+            choice.hidden=false;choice.scrollIntoView({block:'nearest'});watchOnly.focus();
+          };
+        }
         if(autoResume){
           // Dashboard's explicitly clicked Resume Timeline link.
           void (select.value==='__local__'
@@ -423,6 +499,8 @@
           const details=this.make('div','timeline-entry-text');details.append(this.make('strong','',`${i+1}. ${q.label}`),
             this.make('small','',done?'✓ Completed in this timeline':isCurrent?'▶ Timeline position':'Not started'));
           const act=this.make('div','timeline-entry-actions');
+          if(chooseWatch)act.append(this.button('▶ Watch…',()=>chooseWatch(i),'btn btn-primary'));
+          else {
           const replay=this.button('Replay only',async()=>{
             if(select.value==='__local__')return this.playHere(row,queue,i,0,false,true);
             await this.replay(row,queue,i,select.value,false);
@@ -435,7 +513,9 @@
             await this.replay(row,queue,i,select.value,true);
             feedback.textContent='Jellyfin confirmed playback restarted here; remaining queue commands were sent.';
           });
-          act.append(replay,reset);line.append(details,act);
+          act.append(replay,reset);
+          }
+          line.append(details,act);
           if(isCurrent && !done && q.runTimeTicks){
             const partial=Math.min(100,100*n(saved?.positionTicks)/q.runTimeTicks);
             if(partial>0){details.append(this.progressBar(partial));details.append(this.make('small','',Math.round(partial)+'% through this movie/episode'));}
