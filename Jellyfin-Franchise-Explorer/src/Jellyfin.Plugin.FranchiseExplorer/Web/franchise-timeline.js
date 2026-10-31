@@ -230,7 +230,8 @@
         }catch(_){localStorage.removeItem(ownerKey);}
       }
       const intent={version:1,created:Date.now(),rowId:row.id,expectedId:target.id,
-        state:ready,replayOnly:!!replayOnly,forceStartOver:!!forceStartOver,routePending:true,navigationAttempts:0,prior:prev?JSON.parse(JSON.stringify(prev)):null,
+        state:ready,replayOnly:!!replayOnly,forceStartOver:!!forceStartOver,homeOnly:true,
+        routePending:false,navigationAttempts:0,prior:prev?JSON.parse(JSON.stringify(prev)):null,
         // The checkbox now lives in the plugin settings page. Read its
         // unchanged per-user preference directly for timeline handoff.
         subtitleEnabled:localStorage.getItem('fe-subtitles:'+this.context.serverId+':'+this.context.userId)==='1'};
@@ -240,8 +241,8 @@
       window.FranchiseExplorerPlaybackReturn?.arm(target.id,location.href);
       // On Jellyfin Web, use the native shortcuts/PlaybackManager path. The
       // injected bridge creates the ordinary Jellyfin Play/Resume action and
-      // watches the real local player; it does not navigate through Details.
-      // A missing/unsupported bridge still uses the legacy details handoff.
+      // watches the real local player; it never uses the Details page as a
+      // fallback. Details is a separate, explicit user action.
       const native=window.FranchiseExplorerNativePlayback;
       if(native && typeof native.play==='function'){
         try{
@@ -261,18 +262,20 @@
         try{
           sessionStorage.setItem('fe-quickplay-v1',JSON.stringify({version:1,id:target.id,
             created:Date.now(),positionTicks:Math.max(0,positionTicks),startOver:!!forceStartOver,
-            type:target.episode>0?'Episode':'Movie',returnUrl:location.href,
+            type:target.episode>0?'Episode':'Movie',homeOnly:true,returnUrl:location.href,
             subtitleEnabled:!!intent.subtitleEnabled}));
           this.closeDialog();
           location.assign(prefix+'/web/#/home');
           return;
         }catch(error){console.warn('Franchise Explorer: cross-page native playback unavailable',error);}
       }
-      const sid=this.context.serverId?'&serverId='+encodeURIComponent(this.context.serverId):'';
-      const sub=intent.subtitleEnabled?'1':'0';
+      // If this Web client has no native playback integration, fail visibly
+      // without sending the viewer to a Details page or marking playback as
+      // verified. Restore the saved cursor rather than leaving it armed.
+      localStorage.removeItem(this.handoffKey());
+      try{await this.save(prev||{...state,playbackMode:'paused',sessionId:''});}catch(error){console.warn('Franchise Explorer: could not restore unplayed cursor',error);}
       this.closeDialog();
-      location.assign(prefix+'/web/#/details?id='+encodeURIComponent(target.id)+sid+
-        '&feAutoPlay=1&feLocalTimeline=1&feSubs='+sub+(forceStartOver?'&feStartOver=1':''));
+      throw new Error('Direct playback is unavailable on this Jellyfin client. Open Jellyfin Home and retry; no Details page was opened.');
     }
     makeState(row,queue,index=0){
       const old=this.getState(row.id);const same=old && Array.isArray(old.queueKeys) &&

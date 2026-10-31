@@ -29,9 +29,10 @@ public sealed class HomeTileRegistrationService : IHostedService, IDisposable
     // Script IDs are stable within a UI generation, not forever. Injector and
     // Jellyfin Web can cache the previous script despite a DLL replacement.
     // A new ID lets this release load the updated home and menu integration.
-    private const string CurrentScriptId = "jellyfin-franchise-explorer-my-media-v08914";
+    private const string CurrentScriptId = "jellyfin-franchise-explorer-my-media-v08915";
     private static readonly string[] LegacyScriptIds =
     {
+        "jellyfin-franchise-explorer-my-media-v08914",
         "jellyfin-franchise-explorer-my-media-v08913",
         "jellyfin-franchise-explorer-my-media-v08912",
         "jellyfin-franchise-explorer-my-media-v08911",
@@ -169,7 +170,7 @@ public sealed class HomeTileRegistrationService : IHostedService, IDisposable
             ["requiresAuthentication"] = false,
             ["pluginId"] = global::Jellyfin.Plugin.FranchiseExplorer.Plugin.PluginId.ToString(),
             ["pluginName"] = "Franchise Explorer",
-            ["pluginVersion"] = "0.8.9.14"
+            ["pluginVersion"] = "0.8.9.15"
         });
 
         object? payload = parse.Invoke(null, new object[] { json });
