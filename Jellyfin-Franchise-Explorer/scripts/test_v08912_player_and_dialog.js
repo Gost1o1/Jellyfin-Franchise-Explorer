@@ -52,5 +52,5 @@ m.button=(text,callback)=>{const e=new Element('button');e.textContent=text;e.ad
   doc.body.children[0].children[0].children[1].children[1].click();
   assert.equal(await result,true);
   assert.equal(doc.body.children.length,0,'Accept removes the confirmation layer');
-  console.log('v0.8.9.13 centered tracking-choice and blocking-modal lifecycle contracts passed.');
+  console.log('v0.8.9.14 centered tracking-choice and blocking-modal lifecycle contracts passed.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
