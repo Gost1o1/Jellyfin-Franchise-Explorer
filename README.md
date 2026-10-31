@@ -26,13 +26,7 @@
 
 ## Preview
 
-### Browse an entire franchise in one place
-
-Virtual franchises have their own artwork, nested phases or eras, collections, and custom viewing orders. Everything points to media already in Jellyfin.
-
-![Franchise Explorer browsing the Marvel Cinematic Universe, its six phases, collections, and chronological watch order](docs/franchise-explorer-preview.png)
-
-### Continue watching directly from Jellyfin Home
+### Your franchises, right on Jellyfin Home
 
 The **Franchises** tile sits beside your other libraries. **Continue Your Franchises** displays the current movie or series poster, upcoming episode, progress, and **Resume Watch Order**. The intent on a supported Jellyfin Web client is to start the video directly without navigating through the browsing or Details pages.
 
@@ -60,7 +54,7 @@ Upload separate posters, backdrops, clearlogos, icons, and banners—or use inhe
 
 See the [Marvel Cinematic Universe example walkthrough](#example-setup-marvel-cinematic-universe) for more screenshots, or jump to the [illustrated user guide](docs/USER_GUIDE.md) for detailed instructions.
 
-**New to Franchise Explorer?** Start with the [complete illustrated user guide](docs/USER_GUIDE.md). It explains every editor field and button, how to resume directly from Jellyfin Home, use the card's three-dot menu, choose whether a selected episode counts toward chronological progress, set up franchises and subgroups, link Jellyfin media, create chronological rows, and manage artwork. The guide includes **20 new screenshots** of the v0.8.9.15 Home and scrolling settings interface, in addition to the original example images.
+**New to Franchise Explorer?** Start with the [complete illustrated user guide](docs/USER_GUIDE.md). It explains every editor field and button, how to resume directly from Jellyfin Home, use the card's three-dot menu, choose whether a selected episode counts toward chronological progress, set up franchises and subgroups, link Jellyfin media, create chronological rows, and manage artwork. The guide includes **20 screenshots** of the v0.8.9.15 Home and scrolling settings interface.
 
 ## Install or update
 
@@ -121,33 +115,35 @@ For explanations of **all** available settings and controls, see [How to use Fra
 
 Open **Dashboard → Plugins → Franchise Explorer**. Create a top-level franchise (for example, **Marvel Cinematic Universe**), then add subgroups for its phases. Select a group to set its name, description, order, artwork, and optional **Browse rows**. Use the rows to decide how subgroups, collections, and watch-order entries appear to viewers. Changes to these virtual groups do not move your Jellyfin media files.
 
-![Franchise Explorer editor showing a Marvel Cinematic Universe franchise, Phase One through Phase Six subgroups, and the Browse rows configuration](docs/screenshots/01-franchise-editor.png)
+![Current Franchise Explorer editor showing the Marvel Cinematic Universe virtual hierarchy and configurable browse rows](docs/screenshots/user-guide/10-group-editor.png)
 
 ### 2. Open the Franchises browser
 
 Select **Open Franchises browser** from the editor, or open **Franchises** from Jellyfin Web's **My Media** row. The top level displays franchise posters directly, with no redundant introductory banner or duplicate "Groups and subgroups" heading. Franchise cards show separate counts for distinct TV shows and movies; entering a franchise defaults to **Your order** while still allowing A–Z sorting. Click the top-left **F logo / Franchise Explorer title** at any level to return to **Your franchises**. The playback and native home-row visibility checkboxes live in **Dashboard → Plugins → Franchise Explorer** under **Playback & Home preferences**, rather than on the browsing page.
 
-![Franchises browser showing the main franchise posters and the checkbox for hiding active titles from Continue Watching and Next Up](docs/screenshots/02-franchises-library.png)
+![Franchises My Media tile with the Open Franchises and Franchise Explorer Settings menu](docs/screenshots/user-guide/07-my-media-tile-menu.png)
 
-### 3. Browse a franchise's phases and collections
+### 3. Configure a franchise's phases and collections
 
-Open **Marvel Cinematic Universe** (or another franchise you created). Its page can show a backdrop, a poster, descriptive text, and separate horizontal rows such as **Phases** and **Collections**. These are references to your existing media and virtual groups, not duplicate Jellyfin libraries.
+Select **Marvel Cinematic Universe** in the editor and configure separate **Phases** and **Collections** browse rows. Expand each row to choose the linked phase subgroups or existing Jellyfin collections and arrange their display order. These are references to your existing media and virtual groups, not duplicate Jellyfin libraries.
 
-![Marvel Cinematic Universe franchise page with franchise artwork, six phase posters, and a collections row](docs/screenshots/03-marvel-franchise.png)
+![Expanded Phases browse row containing Phase One through Phase Six](docs/screenshots/user-guide/15-phases-expanded.png)
+
+![Expanded Collections browse row showing linked native Jellyfin collections](docs/screenshots/user-guide/18-collections-expanded.png)
 
 ### 4. Arrange and play a chronological watch order
 
 Add movies, shows, seasons, or episode ranges to a chronological row in the editor. In the browser, scroll to **Chronological Order** to review the sequence, track progress, or choose **Play chronological order**. The progress indicators show Franchise Explorer's watch-order state; they are not a replacement for Jellyfin's native watched status. Playback and automatic handoff between items remain experimental.
 
-![Marvel Cinematic Universe chronological watch order showing films, Agent Carter episode ranges, watched indicators, and playback progress](docs/screenshots/04-chronological-watch-order.png)
+![Expanded Chronological Order editor with Marvel films and Agent Carter season ranges](docs/screenshots/user-guide/14-chronological-items.png)
 
 ### 5. Resume from the Jellyfin homepage
 
 With **JavaScript Injector** and the registered Franchise Explorer script enabled, Jellyfin Web shows a **Franchises** tile under **My Media** and a **Continue Your Franchises** card for a started watch order. The card shows the current title, next episode, completion progress, and **Resume Watch Order**. This example also shows the hide-active-title setting **on**, so **Agent Carter** remains in the franchise resume card but is absent from the regular **Continue Watching** and **Next Up** rows. Other, unrelated titles remain visible.
 
-![Jellyfin homepage with the Franchises My Media tile, a Marvel Cinematic Universe Agent Carter resume card, and the native rows with the active franchise title hidden](docs/screenshots/05-jellyfin-home-integration.png)
+![Jellyfin homepage showing the Franchises tile and a Captain America resume card for the Marvel Cinematic Universe](docs/screenshots/user-guide/01-jellyfin-home.png)
 
-All five screenshots are stored in [`docs/screenshots/`](docs/screenshots/) so you can view them individually or reuse them when documenting your own setup.
+All README feature screenshots come from the **new v0.8.9.15 images**, stored in [`docs/screenshots/user-guide/`](docs/screenshots/user-guide/).
 
 ## What it does
 
