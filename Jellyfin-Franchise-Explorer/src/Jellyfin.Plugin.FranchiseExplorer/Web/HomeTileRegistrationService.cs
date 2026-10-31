@@ -24,13 +24,15 @@ public sealed class HomeTileRegistrationService : IHostedService, IDisposable
 {
     private const string InjectorAssemblyName = "Jellyfin.Plugin.JavaScriptInjector";
     private const string ScriptResourceName = "Jellyfin.Plugin.FranchiseExplorer.Web.franchise-my-media.js";
+    private const string TimelineResourceName = "Jellyfin.Plugin.FranchiseExplorer.Web.franchise-timeline.js";
     private const string TileArtResourceName = "Jellyfin.Plugin.FranchiseExplorer.Web.franchise-tile-backdrop.webp";
     // Script IDs are stable within a UI generation, not forever. Injector and
     // Jellyfin Web can cache the previous script despite a DLL replacement.
     // A new ID lets this release load the updated home and menu integration.
-    private const string CurrentScriptId = "jellyfin-franchise-explorer-my-media-v0898";
+    private const string CurrentScriptId = "jellyfin-franchise-explorer-my-media-v0899";
     private static readonly string[] LegacyScriptIds =
     {
+        "jellyfin-franchise-explorer-my-media-v0898",
         "jellyfin-franchise-explorer-my-media-v0897",
         "jellyfin-franchise-explorer-my-media-v0896",
         "jellyfin-franchise-explorer-my-media-v0895",
@@ -134,6 +136,13 @@ public sealed class HomeTileRegistrationService : IHostedService, IDisposable
         if (stream is null) throw new InvalidOperationException("Embedded home-tile JavaScript resource missing.");
         using var reader = new StreamReader(stream);
         string script = reader.ReadToEnd();
+        // The home-page popup reuses the same chronological timeline engine as
+        // Browse. Load it before the home widget in the ONE Injector script;
+        // the browser never needs to navigate to the standalone editor.
+        using Stream? timelineStream = typeof(global::Jellyfin.Plugin.FranchiseExplorer.Plugin).Assembly.GetManifestResourceStream(TimelineResourceName);
+        if (timelineStream is null) throw new InvalidOperationException("Embedded franchise timeline JavaScript resource missing.");
+        using var timelineReader = new StreamReader(timelineStream);
+        script = timelineReader.ReadToEnd() + "\n" + script;
         // Keep the standalone browser script readable/testable. At runtime the
         // DLL supplies its embedded artwork as a small self-contained data URI.
         using Stream? artStream = typeof(global::Jellyfin.Plugin.FranchiseExplorer.Plugin).Assembly.GetManifestResourceStream(TileArtResourceName);
@@ -155,7 +164,7 @@ public sealed class HomeTileRegistrationService : IHostedService, IDisposable
             ["requiresAuthentication"] = false,
             ["pluginId"] = global::Jellyfin.Plugin.FranchiseExplorer.Plugin.PluginId.ToString(),
             ["pluginName"] = "Franchise Explorer",
-            ["pluginVersion"] = "0.8.9.8"
+            ["pluginVersion"] = "0.8.9.9"
         });
 
         object? payload = parse.Invoke(null, new object[] { json });

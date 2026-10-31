@@ -199,7 +199,7 @@
     // NowPlayingItem will activate timeline tracking. A localStorage request
     // is an expiring *intent*, NOT watch history.
     handoffKey(){return 'fe-local-timeline-v1:'+String(this.context.userId).toLowerCase();}
-    async playHere(row,queue,index,positionTicks=0,reset=false,replayOnly=false){
+    async playHere(row,queue,index,positionTicks=0,reset=false,replayOnly=false,forceStartOver=false){
       if(index<0 || index>=queue.length)throw new Error('Select a playable entry.');
       const target=queue[index];
       const prev=this.getState(row.id);
@@ -230,7 +230,7 @@
         }catch(_){localStorage.removeItem(ownerKey);}
       }
       const intent={version:1,created:Date.now(),rowId:row.id,expectedId:target.id,
-        state:ready,replayOnly:!!replayOnly,routePending:true,navigationAttempts:0,prior:prev?JSON.parse(JSON.stringify(prev)):null,
+        state:ready,replayOnly:!!replayOnly,forceStartOver:!!forceStartOver,routePending:true,navigationAttempts:0,prior:prev?JSON.parse(JSON.stringify(prev)):null,
         // The checkbox now lives in the plugin settings page. Read its
         // unchanged per-user preference directly for timeline handoff.
         subtitleEnabled:localStorage.getItem('fe-subtitles:'+this.context.serverId+':'+this.context.userId)==='1'};
@@ -241,7 +241,7 @@
       const sid=this.context.serverId?'&serverId='+encodeURIComponent(this.context.serverId):'';
       const sub=intent.subtitleEnabled?'1':'0';
       location.assign(prefix+'/web/#/details?id='+encodeURIComponent(target.id)+sid+
-        '&feAutoPlay=1&feLocalTimeline=1&feSubs='+sub);
+        '&feAutoPlay=1&feLocalTimeline=1&feSubs='+sub+(forceStartOver?'&feStartOver=1':''));
     }
     makeState(row,queue,index=0){
       const old=this.getState(row.id);const same=old && Array.isArray(old.queueKeys) &&
