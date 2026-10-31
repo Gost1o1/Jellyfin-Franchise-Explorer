@@ -246,7 +246,10 @@
         try{
           if(native.play(target.id,{positionTicks:Math.max(0,positionTicks),
             startOver:!!forceStartOver,subtitleEnabled:!!intent.subtitleEnabled,
-            intentKey:this.handoffKey()}))return;
+            type:target.episode>0?'Episode':'Movie',intentKey:this.handoffKey()})){
+              this.closeDialog(); // Unmount the blocking modal BEFORE native playback starts.
+              return;
+            }
         }catch(error){console.warn('Franchise Explorer: direct playback unavailable',error);}
       }
       const prefix=this.context.prefix||'';
@@ -257,13 +260,15 @@
         try{
           sessionStorage.setItem('fe-quickplay-v1',JSON.stringify({version:1,id:target.id,
             created:Date.now(),positionTicks:Math.max(0,positionTicks),startOver:!!forceStartOver,
-            subtitleEnabled:!!intent.subtitleEnabled}));
+            type:target.episode>0?'Episode':'Movie',subtitleEnabled:!!intent.subtitleEnabled}));
+          this.closeDialog();
           location.assign(prefix+'/web/#/home');
           return;
         }catch(error){console.warn('Franchise Explorer: cross-page native playback unavailable',error);}
       }
       const sid=this.context.serverId?'&serverId='+encodeURIComponent(this.context.serverId):'';
       const sub=intent.subtitleEnabled?'1':'0';
+      this.closeDialog();
       location.assign(prefix+'/web/#/details?id='+encodeURIComponent(target.id)+sid+
         '&feAutoPlay=1&feLocalTimeline=1&feSubs='+sub+(forceStartOver?'&feStartOver=1':''));
     }
@@ -425,7 +430,7 @@
         const {queue,warnings}=await this.resolve(row);if(this.activeDialog!==panel)return;
         if(warnings.length)feedback.textContent=warnings.join(' · ');else feedback.textContent='';
         if(action==='restart-history' && queue.length){
-          const agreed=confirm('Restart the entire chronological history for '+row.name+'? All completed entries in THIS franchise timeline will be cleared. Jellyfin watched history will not change.');
+          const agreed=await this.confirmAction('Restart the entire chronological history for '+row.name+'? All completed entries in THIS franchise timeline will be cleared. Jellyfin watched history will not change.','Restart history');
           if(agreed){await this.resetHistory(row,queue);feedback.textContent='Chronological history restarted at the first item. Choose a playback device and select Play from beginning when ready.';}
           else feedback.textContent='Chronological history was not changed.';
         }
@@ -470,7 +475,7 @@
             const current=this.getState(row.id);
             const currentIndex=queue.findIndex(q=>q.key===current?.queueKeys?.[current?.index]);
             const from=currentIndex>=0?currentIndex:0;
-            if(!confirm('Restart '+queue[from].label+' from the beginning? Your earlier chronological history will be kept.'))return;
+            if(!await this.confirmAction('Restart '+queue[from].label+' from the beginning? Your earlier chronological history will be kept.','Restart viewing'))return;
             if(select.value==='__local__')return this.playHere(row,queue,from,0,false,false);
             await this.start(row,queue,select.value,from,0,'playing',false);
             feedback.textContent='Current viewing restarted at 0:00; earlier franchise progress was preserved.';
@@ -495,7 +500,7 @@
           const watchTracked=this.button('Watch and track from here',async()=>{
             if(selectedIndex<0)return;
             const index=selectedIndex;
-            if(!confirm('Continue the chronological timeline from '+queue[index].label+'? Later completed entries will be cleared in the franchise timeline only.'))return;
+            if(!await this.confirmAction('Continue the chronological timeline from '+queue[index].label+'? Later completed entries will be cleared in the franchise timeline only.','Watch and track'))return;
             choice.hidden=true;
             if(select.value==='__local__')return this.playHere(row,queue,index,0,true,false);
             await this.replay(row,queue,index,select.value,true);
@@ -531,7 +536,7 @@
             feedback.textContent='Jellyfin confirmed independent replay started. The chronological cursor and completed items were preserved.';
           });
           const reset=this.button('Restart timeline here',async()=>{
-            const okay=confirm('Move this timeline back to '+q.label+'? Later entries will be marked unfinished in THIS timeline only.');
+            const okay=await this.confirmAction('Move this timeline back to '+q.label+'? Later entries will be marked unfinished in THIS timeline only.','Restart here');
             if(!okay)return;
             if(select.value==='__local__')return this.playHere(row,queue,i,0,true,false);
             await this.replay(row,queue,i,select.value,true);
@@ -549,6 +554,34 @@
       }catch(e){this.showError(e);}
     }
     closeDialog(){if(this.activeDialog){this.activeDialog.parentElement?.remove();this.activeDialog=null;}}
+    confirmAction(message,confirmLabel='Confirm'){
+      // Browser-native confirm() appears at the top of the browser, not in
+      // the middle of Jellyfin. Use a focused, fully modal in-page prompt.
+      return new Promise(resolve=>{
+        const mask=this.make('div','timeline-choice-confirm-mask');
+        mask.style.cssText='position:fixed;inset:0;z-index:2147483646;display:grid;place-items:center;padding:16px;background:#06090cce;backdrop-filter:blur(3px)';
+        const dialog=this.make('section','timeline-choice-confirm');
+        dialog.setAttribute('role','alertdialog');dialog.setAttribute('aria-modal','true');
+        dialog.setAttribute('aria-label','Confirm chronological timeline action');
+        dialog.style.cssText='box-sizing:border-box;width:min(460px,100%);padding:24px;border:1px solid #657989;border-radius:12px;background:#202a35;color:#fff;box-shadow:0 20px 60px #000d;font:15px/1.5 system-ui,sans-serif';
+        const prompt=this.make('p','',message);prompt.style.margin='0 0 20px';
+        const buttons=this.make('div','');buttons.style.cssText='display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap';
+        const previous=document.activeElement;
+        const end=accepted=>{mask.remove();if(previous?.isConnected)previous.focus();resolve(accepted);};
+        const cancel=this.button('Cancel',()=>end(false));
+        const accept=this.button(confirmLabel,()=>end(true),'btn btn-primary');
+        buttons.append(cancel,accept);dialog.append(prompt,buttons);mask.append(dialog);document.body.append(mask);
+        mask.addEventListener('click',event=>{if(event.target===mask)end(false);});
+        mask.addEventListener('keydown',event=>{
+          if(event.key==='Escape'){event.preventDefault();end(false);}
+          if(event.key==='Tab'){
+            const next=event.shiftKey?cancel:accept;
+            if(document.activeElement===next){event.preventDefault();(event.shiftKey?accept:cancel).focus();}
+          }
+        });
+        cancel.focus();
+      });
+    }
     beginMonitoring(){
       if(this.pollTimer)return;
       this.pollTimer=setInterval(()=>void this.poll().catch(e=>console.debug('Timeline monitor:',e.message)),12000);

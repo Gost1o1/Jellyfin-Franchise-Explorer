@@ -1,3 +1,11 @@
+## v0.8.9.12 — Native playback shortcut contract and timeline popup cleanup (experimental)
+
+- Corrected direct playback by constructing Jellyfin Web's required `.itemAction` card, with media type, server ID and explicit zero playback offset. This addresses the 12-second fallback to Details in v0.8.9.11.
+- Unmounted the chronological list immediately on accepted playback handoff so the overlay does not block or freeze the native player.
+- Replaced browser-native chronological tracking and restart confirmations with centered in-page prompts.
+- Independent **Watch only** playback skips irrelevant franchise timeline verification warnings; timeline tracking remains separate from Jellyfin's own watched history.
+- Added tests for the DOM shortcut contract and confirmation/popup lifecycle. Live Jellyfin tests remain required.
+
 ## v0.8.9.11 — Native direct playback and start-over (experimental)
 
 - Jellyfin Web Home now attempts to start movies/episodes using Jellyfin's delegated **Play** action, avoiding the intermediate details page. On unsupported clients it falls back to the existing compatibility handoff.

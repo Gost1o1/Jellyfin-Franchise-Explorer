@@ -13,7 +13,7 @@ This is a **Web-only visual tile**, not a native library. It does not appear in 
 1. From the installed Franchise Explorer v0.7 admin editor, **Export backup JSON** and back up the plugin's `franchise-artwork` directory as well as Jellyfin configuration.
 2. In **Dashboard → Plugins → Repositories**, add JavaScript Injector's catalog `https://raw.githubusercontent.com/n00bcodr/jellyfin-plugins/main/manifest.json` if not already present. This is third-party software under its own license, not bundled with Franchise Explorer.
 3. In **Plugins → Catalog**, install the JavaScript Injector version explicitly compatible with **Jellyfin 12**. Restart your Windows Jellyfin service.
-4. Install/update **Franchise Explorer v0.8.9.11** from your existing GitHub plugin repository and restart the Jellyfin service.
+4. Install/update **Franchise Explorer v0.8.9.12** from your existing GitHub plugin repository and restart the Jellyfin service.
 5. Hard-refresh Jellyfin Web using `Ctrl+Shift+R` or clear its cached assets; return to Home → **My Media**. A teal Franchises card should appear after the existing library cards.
 6. Click the card. It should open the same separate Franchises browser that worked from the plugin's settings page.
 
