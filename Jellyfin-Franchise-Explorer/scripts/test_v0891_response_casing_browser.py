@@ -24,6 +24,9 @@ with sync_playwright() as pw:
               const memory=new Map();
               Object.defineProperty(window,'localStorage',{value:{getItem:k=>memory.get(k)??null,
                 setItem:(k,v)=>memory.set(k,String(v)),removeItem:k=>memory.delete(k)}});
+              const quickMemory=new Map();
+              Object.defineProperty(window,'sessionStorage',{value:{getItem:k=>quickMemory.get(k)??null,
+                setItem:(k,v)=>quickMemory.set(k,String(v)),removeItem:k=>quickMemory.delete(k)}});
               localStorage.setItem('jellyfin_credentials',JSON.stringify({Servers:[{
                 AccessToken:'TEST',UserId:uid,ManualAddress:'about:blank'}]}));
               localStorage.setItem('fe-local-follow-v1:'+uid,JSON.stringify({
@@ -49,14 +52,18 @@ with sync_playwright() as pw:
               const intent=JSON.parse(localStorage.getItem('fe-local-timeline-v1:'+uid)||'null');
               const staged=JSON.parse(sessionStorage.getItem('fe-quickplay-v1')||'null');
               return intent?.expectedId===second && intent.homeOnly &&
-                staged?.id===second && location.hash==='#/home';
+                staged?.id===second && staged.autoNext===true &&
+                !location.hash.includes('feAutoPlay');
             }''',arg={'uid':uid,'second':second},timeout=10000)
             state=page.evaluate('''uid=>({
               intent:JSON.parse(localStorage.getItem('fe-local-timeline-v1:'+uid)||'null'),
+              nextPlay:JSON.parse(sessionStorage.getItem('fe-quickplay-v1')||'null'),
               hash:location.hash})''',uid)
             assert state['intent']['state']['completedKeys']==['ref1:'+first],state
             assert state['intent']['state']['index']==1,state
-            assert state['hash']=='#/home',state
+            assert state['nextPlay']['id']==second,state
+            assert state['intent']['routePending'] is False,state
+            assert 'feAutoPlay' not in state['hash'],state
             print('PASS',style,'completion marker -> next-episode browser handoff')
             page.close()
     finally:

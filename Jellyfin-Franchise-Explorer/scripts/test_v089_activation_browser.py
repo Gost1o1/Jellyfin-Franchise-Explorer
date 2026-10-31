@@ -24,6 +24,9 @@ with sync_playwright() as playwright:
           const memory=new Map();
           Object.defineProperty(window,'localStorage',{value:{getItem:k=>memory.get(k)??null,
             setItem:(k,v)=>memory.set(k,String(v)),removeItem:k=>memory.delete(k)}});
+          const quickMemory=new Map();
+          Object.defineProperty(window,'sessionStorage',{value:{getItem:k=>quickMemory.get(k)??null,
+            setItem:(k,v)=>quickMemory.set(k,String(v)),removeItem:k=>quickMemory.delete(k)}});
           localStorage.setItem('jellyfin_credentials',JSON.stringify({Servers:[{
             AccessToken:'TEST',UserId:uid,ManualAddress:'about:blank'}]}));
           const state={rowId:row,name:'Chronological Order',index:0,itemId:first,total:2,
@@ -83,7 +86,8 @@ with sync_playwright() as playwright:
           const intent=JSON.parse(localStorage.getItem('fe-local-timeline-v1:'+uid)||'null');
           const staged=JSON.parse(sessionStorage.getItem('fe-quickplay-v1')||'null');
           return intent?.expectedId===second && intent.homeOnly &&
-            staged?.id===second && location.hash==='#/home';
+            staged?.id===second && staged.autoNext===true &&
+            !location.hash.includes('feAutoPlay');
         }''',arg={'uid':uid,'second':second},timeout=12000)
         print('PASS armed playback -> GUID-normalized session activation -> native Home auto-next handoff')
         page.close()

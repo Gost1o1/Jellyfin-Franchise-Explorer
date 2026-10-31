@@ -26,6 +26,11 @@ with sync_playwright() as pw:
               const memory=new Map();
               Object.defineProperty(window,'localStorage',{value:{getItem:k=>memory.get(k)??null,
                 setItem:(k,v)=>memory.set(k,String(v)),removeItem:k=>memory.delete(k)}});
+              // about:blank has an opaque origin: provide the same-tab store
+              // that a real /web/#/home Jellyfin page normally supplies.
+              const quickMemory=new Map();
+              Object.defineProperty(window,'sessionStorage',{value:{getItem:k=>quickMemory.get(k)??null,
+                setItem:(k,v)=>quickMemory.set(k,String(v)),removeItem:k=>quickMemory.delete(k)}});
               localStorage.setItem('jellyfin_credentials',JSON.stringify({Servers:[{
                 AccessToken:'TEST',UserId:uid,ManualAddress:'about:blank'}]}));
               const oldKey='ref1:'+first,nextKey='ref2:'+second;
@@ -63,11 +68,19 @@ with sync_playwright() as pw:
             page.wait_for_timeout(4900 if transient else 1500)
             result=page.evaluate('''uid=>({calls:window.completeCalls,
               intent:JSON.parse(localStorage.getItem('fe-local-timeline-v1:'+uid)||'null'),
+              nextPlay:JSON.parse(sessionStorage.getItem('fe-quickplay-v1')||'null'),
               completion:localStorage.getItem('fe-local-completion-v1:'+uid),hash:location.hash})''',uid)
             assert result['calls']==(2 if transient else 1),result
             assert result['completion'] is None,result
             assert result['intent'] is not None and result['intent']['expectedId']==second,result
-            assert result['hash']=='#/home',result
+            assert result['intent']['homeOnly'] is True,result
+            assert result['intent']['routePending'] is False,result
+            assert result['nextPlay'] is not None and result['nextPlay']['id']==second,result
+            assert result['nextPlay']['autoNext'] is True,result
+            # An about:blank browser mock has no Jellyfin Home router, so its
+            # location.hash is not authoritative. The stored, one-shot native
+            # Home request is; there must never be a Details autoplay route.
+            assert 'feAutoPlay' not in result['hash'] and '#/details' not in result['hash'],result
             print('PASS recovery with transient failure' if transient else 'PASS immediate completion handoff')
             page.close()
     finally:
