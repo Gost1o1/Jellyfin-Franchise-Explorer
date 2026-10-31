@@ -14,10 +14,10 @@ assert(!home.includes("option.href=serverPath('/FranchiseExplorer/Browse?timelin
 assert(home.includes("player.openDialog(row,false,'select')"));
 assert(home.includes("ensureHomeTimelineStyle()"));
 assert(home.includes("enforceStartOver(id)"));
-assert(home.includes("window.__franchiseTimelineHomeVersion === '0.8.9.10'"));
+assert(home.includes("window.__franchiseTimelineHomeVersion === '0.8.9.11'"));
 assert(home.includes('fe-home-chronological-modal'));
-assert(home.includes("STYLE_ID = 'franchise-timeline-resume-style-v08910'"));
-assert(home.includes('fe-home-timeline-dialog-style-v08910'));
+assert(home.includes("STYLE_ID = 'franchise-timeline-resume-style-v08911'"));
+assert(home.includes('fe-home-timeline-dialog-style-v08911'));
 assert(!home.includes("confirm('Reset all chronological progress"));
 
 const idA='11111111-1111-1111-1111-111111111111';
@@ -37,7 +37,7 @@ class FakeManager {
   constructor(context){this.context=context;this.states=new Map();}
   async resetHistory(row,queue){calls.push(['reset',row,queue]);state={...state,index:0,itemId:idA,
     positionTicks:0,sessionId:'',playbackMode:'paused',completedKeys:[]};return state;}
-  async playHere(...args){calls.push(['play',...args]);navigation='/web/#/details?id='+args[1][args[2]].id;}
+  async playHere(...args){calls.push(['play',...args]);}
   async openDialog(...args){calls.push(['dialog',...args]);}
 }
 const auth={AccessToken:'mock-token',UserId:'my-user',Id:'mock-server'};
@@ -113,8 +113,7 @@ async function resetPopup(accept) {
   assert.equal(play[6],false,'Restart is tracked, not independent');
   assert.equal(play[7],true,'Restart must force native player to start over');
   assert.equal(state.completedKeys.length,1,'Earlier completed entries must stay complete');
-  assert(navigation.includes('/web/#/details?id='+idB));
-  assert(!navigation.includes('FranchiseExplorer/Browse'));
+  assert.equal(navigation,'','Restart-current on Home must not open the details page');
 
   calls=[];navigation='';
   await sandbox.runHomeAction(card,'select',auth);
@@ -155,5 +154,27 @@ async function resetPopup(accept) {
   assert.equal(intent.forceStartOver,true);
   assert(directUrl.includes('feStartOver=1'));
   assert(!directUrl.includes('FranchiseExplorer/Browse'));
-  console.log('v0.8.9.10 centered reset, native restart, stale-menu recovery, and in-place chronological list tests passed.');
+  // When the injected Web shortcut is available, the engine must bypass the
+  // details-page route and explicitly request position 0 for restart-current.
+  let directCall=null;directUrl='';
+  nativeEnv.window.FranchiseExplorerNativePlayback={play:(id,options)=>{
+    directCall={id,options};return true;
+  }};
+  await manager.playHere(row,queue,1,0,false,false,true);
+  assert.equal(directCall.id,idB);
+  assert.equal(directCall.options.positionTicks,0);
+  assert.equal(directCall.options.startOver,true);
+  assert.equal(directUrl,'','A supported native shortcut must not visit /details');
+  // Standalone Browse cannot use the Web DOM directly: it must hand off to
+  // /web Home via same-tab storage instead of displaying the details page.
+  nativeEnv.window.FranchiseExplorerNativePlayback=null;
+  nativeEnv.location.pathname='/FranchiseExplorer/Browse';
+  nativeEnv.sessionStorage={setItem:(key,val)=>nativeStorage.set('session:'+key,val)};
+  directUrl='';
+  await manager.playHere(row,queue,1,0,false,false,true);
+  assert.equal(directUrl,'/web/#/home');
+  const quick=JSON.parse(nativeStorage.get('session:fe-quickplay-v1'));
+  assert.equal(quick.id,idB);
+  assert.equal(quick.startOver,true);
+  console.log('v0.8.9.11 centered reset, native restart, stale-menu recovery, and in-place chronological list tests passed.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

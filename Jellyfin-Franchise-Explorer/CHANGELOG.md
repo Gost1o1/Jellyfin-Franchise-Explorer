@@ -1,3 +1,10 @@
+## v0.8.9.11 — Native direct playback and start-over (experimental)
+
+- Jellyfin Web Home now attempts to start movies/episodes using Jellyfin's delegated **Play** action, avoiding the intermediate details page. On unsupported clients it falls back to the existing compatibility handoff.
+- Restart-current now explicitly requests Play at `0` ticks instead of invoking native Resume with Jellyfin's watched offset. The local-player start-over guard remains a backup.
+- Version-isolated the native playback bridge and hid old duplicate Home widgets left by prior Injector scripts; added a v0.8.9.11 script ID and migration guide to help identify older active scripts.
+- Added offline direct-playback DOM and restart-at-zero regression contracts. Live Jellyfin host/device tests remain required.
+
 ## v0.8.9.10 — Centered Home popups and stale menu recovery (experimental)
 
 - Match the requested Jellyfin Home screenshot by keeping the complete chronological list in a centered, scrollable overlay, with Watch… controls and the existing tracked/untracked viewing choice.
