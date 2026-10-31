@@ -5,7 +5,7 @@ on:
       version:
         description: 'Release version; must equal csproj Version'
         required: true
-        default: '0.8.9.13'
+        default: '0.8.9.14'
         type: string
       confirm:
         description: 'Type RELEASE_EXPERIMENTAL to publish'
