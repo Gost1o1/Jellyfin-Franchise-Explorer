@@ -344,3 +344,11 @@ See Git history for earlier releases.
 - Register a new `jellyfin-franchise-explorer-my-media-v0898` script ID and retire the plugin-owned v0897 registration after the new one succeeds; other plugins' Injector scripts remain untouched.
 - Fail fast on mismatched versions before installing Playwright and running the browser suite. Validate all three assembly-version fields during the release check.
 - Preserve the v0.8.9.7 UI improvements, one-off chronological playback menu, collapsible editor lists, and upgraded GitHub Actions.
+## v0.8.9.15 — Direct Home resume, native next episode and poster artwork (experimental)
+
+- Converted the Continue Your Franchises image and Resume Watch Order button into native playback actions. Neither opens the standalone Franchises browser or chronological selection dialog.
+- The Web auto-next bridge now watches for newly queued episode intents on the existing page, routes only to Jellyfin Home when necessary, and starts the next episode using the native Play shortcut instead of redirecting through Details.
+- Removed automatic fallback to title Details when native shortcut playback is unavailable. Unsupported playback is reported without claiming verified chronology.
+- Prefer the existing series/movie Primary poster in both landscape and portrait Home card orientations, with the landscape art used only when no poster is available.
+- Updated the v0.8.9.15 JavaScript Injector registration and historical-script cleanup, version checks, and offline playback contracts; live host verification remains required.
+

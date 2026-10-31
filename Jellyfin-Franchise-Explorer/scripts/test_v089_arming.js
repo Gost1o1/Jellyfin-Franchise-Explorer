@@ -17,11 +17,15 @@ async function scenario(replayOnly,failSave=false) {
   const memory = new Map();
   const navigation = [];
   const writes = [];
+  const nativeCalls=[];
   const sandbox = {window:{},document:{getElementById:()=>null},localStorage:{
     getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,String(v)),
     removeItem:k=>memory.delete(k)}, location:{assign:url=>navigation.push(url)},
     console,URLSearchParams};
   vm.runInNewContext(script,sandbox);
+  sandbox.window.FranchiseExplorerNativePlayback={play:(id,options)=>{
+    nativeCalls.push({id,options});return true;
+  }};
   const manager = new sandbox.window.FranchiseTimeline.TimelineManager({userId:uid,prefix:'',serverId:''});
   manager.states.set(rowId,{rowId,index:1,completedKeys:[queue[0].key,queue[1].key],
     queueKeys:queue.map(q=>q.key),positionTicks:400});
@@ -36,8 +40,10 @@ async function scenario(replayOnly,failSave=false) {
   const intent=JSON.parse(memory.get('fe-local-timeline-v1:'+uid));
   assert.equal(intent.expectedId,first);
   assert.equal(intent.replayOnly,replayOnly);
-  assert.equal(navigation.length,1);
-  assert.match(navigation[0],/feLocalTimeline=1/);
+  assert.equal(nativeCalls.length,1);
+  assert.equal(nativeCalls[0].id,first);
+  assert.equal(intent.homeOnly,true);
+  assert.equal(navigation.length,0,'Local playback must not navigate to Details');
   if(replayOnly){
     assert.equal(writes.length,1,'Replay only must disarm an active timeline session');
     assert.equal(writes[0].playbackMode,'replay');

@@ -67,7 +67,7 @@ with sync_playwright() as pw:
             assert result['calls']==(2 if transient else 1),result
             assert result['completion'] is None,result
             assert result['intent'] is not None and result['intent']['expectedId']==second,result
-            assert 'feAutoPlay=1' in result['hash'],result
+            assert result['hash']=='#/home',result
             print('PASS recovery with transient failure' if transient else 'PASS immediate completion handoff')
             page.close()
     finally:

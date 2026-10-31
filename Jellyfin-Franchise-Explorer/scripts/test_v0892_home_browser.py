@@ -146,24 +146,26 @@ with sync_playwright() as p:
         assert "0.24% complete" in first.locator(".fe-resume-status").text_content(), first.inner_text()
         assert second.locator(".fe-resume-franchise").text_content().strip() == "Star Wars", second.inner_text()
         assert second.locator(".fe-resume-title").text_content().strip() == "The Phantom Menace", second.inner_text()
-        assert "/FranchiseExplorer/Browse?timeline=" in page.locator(".fe-resume-play").first.get_attribute("href")
+        assert page.locator(".fe-resume-play").first.evaluate("el => el.tagName") == "BUTTON"
+        assert page.locator(".fe-resume-art").first.evaluate("el => el.tagName") == "BUTTON"
+        assert page.locator(".fe-resume-play").first.get_attribute("href") is None
         page.wait_for_function("document.querySelector('.fe-resume-art img')?.src.startsWith('blob:')")
-        expected_art = "poster" if width == 390 else "landscape"
+        expected_art = "poster"
         page.wait_for_function("expected => document.querySelector('.fe-resume-art img')?.dataset.feArtworkKind === expected", arg=expected_art)
         assert page.locator('.fe-resume-art img').first.get_attribute('data-fe-artwork-kind') == expected_art
         # A movie without Primary poster art keeps the existing horizontal image.
         if width == 390:
             page.wait_for_function("document.querySelectorAll('.fe-resume-art img')[1]?.dataset.feArtworkKind === 'landscape'")
-            # Portrait -> landscape -> portrait without a full page refresh.
+            # Portrait -> landscape -> portrait keeps the same Primary poster.
             page.set_viewport_size({"width": 950, "height": 430})
-            page.wait_for_function("document.querySelector('.fe-resume-art img')?.dataset.feArtworkKind === 'landscape'")
+            page.wait_for_function("document.querySelector('.fe-resume-art img')?.dataset.feArtworkKind === 'poster'")
             page.set_viewport_size({"width": 390, "height": 900})
             page.wait_for_function("document.querySelector('.fe-resume-art img')?.dataset.feArtworkKind === 'poster'")
         tile = page.locator("#franchise-explorer-my-media-tile")
         assert tile.count() == 1
-        assert page.evaluate("window.__franchiseExplorerUiVersion") == "0.8.9.14"
-        assert tile.get_attribute("data-fe-version") == "0.8.9.14"
-        assert page.locator("#franchise-timeline-resume").get_attribute("data-fe-version") == "0.8.9.14"
+        assert page.evaluate("window.__franchiseExplorerUiVersion") == "0.8.9.15"
+        assert tile.get_attribute("data-fe-version") == "0.8.9.15"
+        assert page.locator("#franchise-timeline-resume").get_attribute("data-fe-version") == "0.8.9.15"
         before_menu = page.url
         # The options button is hidden until the tile is hovered or focused.
         # Playwright's button.click() does not reliably establish hover when the

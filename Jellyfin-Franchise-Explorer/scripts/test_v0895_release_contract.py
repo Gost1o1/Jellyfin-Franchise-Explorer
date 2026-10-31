@@ -13,14 +13,15 @@ config = (project / 'Configuration/configPage.html').read_text()
 release = (repo / '.github/workflows/release.yml').read_text()
 
 for field in ('Version', 'AssemblyVersion', 'FileVersion'):
-    assert f'<{field}>0.8.9.14</{field}>' in csproj
-assert 'CurrentScriptId = "jellyfin-franchise-explorer-my-media-v08914"' in service
+    assert f'<{field}>0.8.9.15</{field}>' in csproj
+assert 'CurrentScriptId = "jellyfin-franchise-explorer-my-media-v08915"' in service
+assert '"jellyfin-franchise-explorer-my-media-v08914"' in service
 assert '"jellyfin-franchise-explorer-my-media-v08913"' in service
 assert '"jellyfin-franchise-explorer-my-media-v0899"' in service
-assert '["pluginVersion"] = "0.8.9.14"' in service
-assert "window.__franchiseExplorerUiVersion = '0.8.9.14'" in script
-assert "CACHE_PREFIX = 'fe-franchise-home-v08914:'" in script
-assert "widget.setAttribute('data-fe-version','0.8.9.14')" in script
+assert '["pluginVersion"] = "0.8.9.15"' in service
+assert "window.__franchiseExplorerUiVersion = '0.8.9.15'" in script
+assert "CACHE_PREFIX = 'fe-franchise-home-v08915:'" in script
+assert "widget.setAttribute('data-fe-version','0.8.9.15')" in script
 assert "Hide franchise titles from Continue Watching and Next Up" in config
 assert 'id="fe-native-rows"' not in browse
 assert 'id="fx-hide-native-pref"' in config
@@ -37,13 +38,13 @@ assert "localStorage.getItem('fe-subtitles:'+this.context.serverId+':'+this.cont
 assert 'id="fx-add-sibling"' in config and 'id="fx-demo"' in config  # bindings survive while controls are hidden
 assert config.index('id="fx-export"') < config.index('id="fx-import-button"') < config.index('id="fx-reload"')
 assert 'franchise-tile-backdrop.webp' in csproj and (project / 'Web/franchise-tile-backdrop.webp').is_file()
-assert "default: '0.8.9.14'" in release
+assert "default: '0.8.9.15'" in release
 assert 'Verify requested release version before browser tests' in release
 assert release.index('run: python3 scripts/check_version.py "$RELEASE_VERSION"') < release.index('python -m pip install playwright')
 assert 'gh release view "v${RELEASE_VERSION}"' in release
 assert release.index('gh release view "v${RELEASE_VERSION}"') < release.index('dotnet build')
 assert 'gh release create "v${RELEASE_VERSION}"' in release
 assert '--clobber' not in release
-assert 'v0.8.9.14' in (repo / 'README.md').read_text()
-assert (root / 'docs/UPGRADE_V08914.md').is_file()
-print('v0.8.9.14 release version and duplicate-tag guard contract passed.')
+assert 'v0.8.9.15' in (repo / 'README.md').read_text()
+assert (root / 'docs/UPGRADE_V08915.md').is_file()
+print('v0.8.9.15 release version and duplicate-tag guard contract passed.')

@@ -81,9 +81,11 @@ with sync_playwright() as playwright:
         }''',{'first':first,'second':second})
         page.wait_for_function('''({uid,second})=>{
           const intent=JSON.parse(localStorage.getItem('fe-local-timeline-v1:'+uid)||'null');
-          return intent?.expectedId===second && location.hash.includes('feAutoPlay=1');
+          const staged=JSON.parse(sessionStorage.getItem('fe-quickplay-v1')||'null');
+          return intent?.expectedId===second && intent.homeOnly &&
+            staged?.id===second && location.hash==='#/home';
         }''',arg={'uid':uid,'second':second},timeout=12000)
-        print('PASS armed playback -> GUID-normalized session activation -> verified auto-next route')
+        print('PASS armed playback -> GUID-normalized session activation -> native Home auto-next handoff')
         page.close()
     finally:
         browser.close()

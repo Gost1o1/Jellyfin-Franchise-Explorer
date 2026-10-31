@@ -70,6 +70,8 @@ const environment = {
   location:{assign:url=>{lastNavigation=url;}}
 };
 vm.runInNewContext(timeline,environment);
+const directCalls=[];
+environment.window.FranchiseExplorerNativePlayback={play:(id,opts)=>{directCalls.push({id,opts});return true;}};
 const TimelineManager=environment.window.FranchiseTimeline.TimelineManager;
 const manager=new TimelineManager({userId:'user1',serverId:'server1',prefix:'',token:'test'});
 const row={id:'row-1',parentNodeId:'root-1',name:'Chronological Order'};
@@ -104,7 +106,8 @@ manager.save=async state=>{manager.states.set(state.rowId,state);return state;};
   assert.equal(intent.expectedId,queue[0].id);
   assert.equal(store.has('fe-local-follow-v1:user1'),false,'One-off viewing must clear the previous local auto-next owner');
   assert.equal(store.has('fe-local-completion-v1:user1'),false,'One-off viewing must clear an old completion signal');
-  assert(lastNavigation.includes('feLocalTimeline=1'));
+  assert.equal(directCalls.length,1);
+  assert.equal(lastNavigation,'','One-off playback must not visit Details');
   // Remote one-off playback also must not create an empty history for a fresh timeline.
   manager.states.delete(row.id);
   manager.play=async()=>({started:true});

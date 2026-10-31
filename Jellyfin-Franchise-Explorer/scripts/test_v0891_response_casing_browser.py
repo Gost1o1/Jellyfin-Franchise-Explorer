@@ -47,14 +47,16 @@ with sync_playwright() as pw:
             page.add_script_tag(content=bridge)
             page.wait_for_function('''({uid,second})=>{
               const intent=JSON.parse(localStorage.getItem('fe-local-timeline-v1:'+uid)||'null');
-              return intent?.expectedId===second && location.hash.includes('feAutoPlay=1');
+              const staged=JSON.parse(sessionStorage.getItem('fe-quickplay-v1')||'null');
+              return intent?.expectedId===second && intent.homeOnly &&
+                staged?.id===second && location.hash==='#/home';
             }''',arg={'uid':uid,'second':second},timeout=10000)
             state=page.evaluate('''uid=>({
               intent:JSON.parse(localStorage.getItem('fe-local-timeline-v1:'+uid)||'null'),
               hash:location.hash})''',uid)
             assert state['intent']['state']['completedKeys']==['ref1:'+first],state
             assert state['intent']['state']['index']==1,state
-            assert 'feLocalTimeline=1' in state['hash'],state
+            assert state['hash']=='#/home',state
             print('PASS',style,'completion marker -> next-episode browser handoff')
             page.close()
     finally:

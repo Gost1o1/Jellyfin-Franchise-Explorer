@@ -11,7 +11,8 @@ config=(plugin/'Configuration/configPage.html').read_text()
 service=(plugin/'Web/TimelinePlaybackMonitorService.cs').read_text()
 assert 'id="preview-notice"' not in browse
 assert '<div class="fx-warning" role="alert">' not in config
-assert 'location.assign(webRoot+' in script
+assert "sessionStorage.setItem('fe-quickplay-v1'" in script
+assert 'location.assign(homeUrl)' in script
 assert 'CompletedAtEndDespiteUnflaggedStop' in service
 assert 'args.PlayedToCompletion || nearEnd' in service
 

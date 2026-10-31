@@ -94,4 +94,4 @@ assert.equal(timers.length,0,'Unrelated item details must not be hijacked');
 back.clear();location.hash='#/details?id='+id;
 events.get('hashchange')();
 assert.equal(timers.length,0,'Explicit Details must clear return navigation');
-console.log('v0.8.9.14 Home return-to-origin, Details and full-franchise filtering contracts passed.');
+console.log('v0.8.9.15 Home return-to-origin, Details and full-franchise filtering contracts passed.');

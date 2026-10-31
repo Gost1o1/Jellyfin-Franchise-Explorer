@@ -14,10 +14,10 @@ assert(!home.includes("option.href=serverPath('/FranchiseExplorer/Browse?timelin
 assert(home.includes("player.openDialog(row,false,'select')"));
 assert(home.includes("ensureHomeTimelineStyle()"));
 assert(home.includes("enforceStartOver(id)"));
-assert(home.includes("window.__franchiseTimelineHomeVersion === '0.8.9.14'"));
+assert(home.includes("window.__franchiseTimelineHomeVersion === '0.8.9.15'"));
 assert(home.includes('fe-home-chronological-modal'));
-assert(home.includes("STYLE_ID = 'franchise-timeline-resume-style-v08914'"));
-assert(home.includes('fe-home-timeline-dialog-style-v08914'));
+assert(home.includes("STYLE_ID = 'franchise-timeline-resume-style-v08915'"));
+assert(home.includes('fe-home-timeline-dialog-style-v08915'));
 assert(!home.includes("confirm('Reset all chronological progress"));
 
 const idA='11111111-1111-1111-1111-111111111111';
@@ -117,6 +117,14 @@ async function resetPopup(accept) {
   assert.equal(navigation,'','Restart-current on Home must not open the details page');
 
   calls=[];navigation='';
+  await sandbox.runHomeAction(card,'resume',auth);
+  const resumePlay=calls.find(x=>x[0]==='play');
+  assert(resumePlay,'Resume Watch Order must invoke local playback, not browse navigation');
+  assert.equal(resumePlay[3],1,'Resume must use the saved chronological index');
+  assert.equal(resumePlay[4],321,'Resume must preserve the current item playback position');
+  assert.equal(navigation,'','Home resume must not navigate to Browse or Details');
+
+  calls=[];navigation='';
   await sandbox.runHomeAction(card,'select',auth);
   assert.equal(calls.some(x=>x[0]==='style'),true);
   const dialog=calls.find(x=>x[0]==='dialog');
@@ -157,14 +165,10 @@ async function resetPopup(accept) {
   manager.save=async s=>{manager.states.set(s.rowId,s);return s;};
   const queue=original.queueKeys.map((key,i)=>({id:i===0?idA:idB,key,sourceItemId:i===0?idA:idB,
     runTimeTicks:original.queueLengths[i],season:0,episode:0}));
-  await manager.playHere(row,queue,1,0,false,false,true);
-  const saved=manager.getState(rowId);
-  assert.equal(saved.index,1);assert.equal(saved.positionTicks,0);
-  assert.equal(saved.completedKeys.length,1);
-  const intent=JSON.parse(nativeStorage.get(manager.handoffKey()));
-  assert.equal(intent.forceStartOver,true);
-  assert(directUrl.includes('feStartOver=1'));
-  assert(!directUrl.includes('FranchiseExplorer/Browse'));
+  nativeEnv.location.pathname='/web/index.html';
+  await assert.rejects(manager.playHere(row,queue,1,0,false,false,true),/Direct playback is unavailable/);
+  assert.equal(directUrl,'','An unsupported Home client must never be sent to Details');
+  assert.equal(nativeStorage.has(manager.handoffKey()),false,'Failed native playback must not leave a local playback intent');
   // When the injected Web shortcut is available, the engine must bypass the
   // details-page route and explicitly request position 0 for restart-current.
   let directCall=null;directUrl='';
@@ -174,6 +178,12 @@ async function resetPopup(accept) {
   let modalRemoved=false;
   manager.activeDialog={parentElement:{remove:()=>{modalRemoved=true;}}};
   await manager.playHere(row,queue,1,0,false,false,true);
+  const saved=manager.getState(rowId);
+  assert.equal(saved.index,1);assert.equal(saved.positionTicks,0);
+  assert.equal(saved.completedKeys.length,1);
+  const intent=JSON.parse(nativeStorage.get(manager.handoffKey()));
+  assert.equal(intent.forceStartOver,true);
+  assert.equal(intent.homeOnly,true);
   assert.equal(directCall.id,idB);
   assert.equal(directCall.options.positionTicks,0);
   assert.equal(directCall.options.startOver,true);
@@ -191,5 +201,5 @@ async function resetPopup(accept) {
   assert.equal(quick.id,idB);
   assert.equal(quick.startOver,true);
   assert.equal(quick.type,'Movie');
-  console.log('v0.8.9.14 centered reset, native restart, stale-menu recovery, and in-place chronological list tests passed.');
+  console.log('v0.8.9.15 centered reset, native restart, stale-menu recovery, and in-place chronological list tests passed.');
 })().catch(error=>{console.error(error);process.exitCode=1;});
