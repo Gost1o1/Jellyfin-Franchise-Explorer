@@ -51,6 +51,7 @@ Jellyfin-Franchise-Explorer/docs/UPGRADE_V08910.md
 Jellyfin-Franchise-Explorer/docs/UPGRADE_V08911.md
 Jellyfin-Franchise-Explorer/docs/UPGRADE_V08912.md
 Jellyfin-Franchise-Explorer/docs/UPGRADE_V08913.md
+Jellyfin-Franchise-Explorer/docs/UPGRADE_V08914.md
 Jellyfin-Franchise-Explorer/examples/virtual-franchises-demo.json
 Jellyfin-Franchise-Explorer/scripts/Apply-Repository-Upgrade.ps1
 Jellyfin-Franchise-Explorer/scripts/check_repo.py

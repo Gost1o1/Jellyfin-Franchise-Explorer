@@ -1,3 +1,11 @@
+## v0.8.9.14 — Three-level homepage progress and consistent confirmations (experimental)
+
+- Added current episode/movie playback progress above the Continue Your Franchises chronological progress bar.
+- Added a middle, completed-episode counter/progress bar for multi-episode TV ranges only; consecutive ranges from the same series remain separate.
+- Styled centered tracking-choice confirmation buttons to match the existing dark Cancel and teal primary reset buttons.
+- Bumped assembly, JavaScript Injector registration, UI/cache versions and manual release workflow to v0.8.9.14, preserving the v0.8.9.13 release.
+- Added offline progress calculations and confirmation-style regressions; live Jellyfin testing is still required.
+
 ## v0.8.9.13 — Return-to-origin navigation, Details, and franchise-wide hiding (experimental)
 
 - Expanded the optional native Continue Watching / Next Up hide filter to saved franchise timeline entries and TV shows, so formerly active episodes stay hidden after resetting chronological progress.
