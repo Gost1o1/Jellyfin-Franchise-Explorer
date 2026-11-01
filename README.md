@@ -24,6 +24,14 @@
 > [!IMPORTANT]
 > **Experimental project for Jellyfin 12.2.** Franchise Explorer is unfinished and is being tested on a personal Jellyfin server. Features and client compatibility can change. **Back up Jellyfin and your plugin data before installing or updating.** Chronological playback and automatic next-item playback are still experimental; do not assume they work in every client.
 
+## Video tutorial
+
+Watch the [Franchise Explorer YouTube tutorial](https://youtu.be/Hbd1Rvwifnc) for a walkthrough of installation, franchise setup, custom watch orders, artwork, and playback controls.
+
+[![Watch the Franchise Explorer tutorial on YouTube](https://img.youtube.com/vi/Hbd1Rvwifnc/hqdefault.jpg)](https://youtu.be/Hbd1Rvwifnc)
+
+Prefer written instructions? Follow the [installation steps](#install-or-update) below or open the [complete illustrated user guide](docs/USER_GUIDE.md).
+
 ## Preview
 
 ### Franchise Explorer in action
@@ -168,6 +176,7 @@ All README feature screenshots come from the **new v0.8.9.15 images**, stored in
 
 ## Need help?
 
+- [Watch the YouTube video tutorial](https://youtu.be/Hbd1Rvwifnc)
 - [Step-by-step setup and complete settings reference](docs/USER_GUIDE.md)
 - [Report a bug or request a feature](https://github.com/Gost1o1/Jellyfin-Franchise-Explorer/issues)
 - [Source code and developer notes](Jellyfin-Franchise-Explorer/)
