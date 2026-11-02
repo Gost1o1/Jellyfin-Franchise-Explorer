@@ -87,6 +87,12 @@
 #FranchiseExplorerConfigPage .fx-link strong {font-size:.88rem}
 #FranchiseExplorerConfigPage .fx-link small {color:#b0bbc8;display:block;margin-top:5px}
 #FranchiseExplorerConfigPage .fx-link-actions {display:flex;flex-direction:row;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+#FranchiseExplorerConfigPage .fx-link-group {min-width:185px;max-width:270px;margin:0;flex:1 1 185px}
+#FranchiseExplorerConfigPage .fx-link-group>span {font-size:.78rem;margin-bottom:4px}
+#FranchiseExplorerConfigPage .fx-link-row-picker {min-width:180px;align-self:center;border:1px solid var(--fx-border);border-radius:7px;padding:7px}
+#FranchiseExplorerConfigPage .fx-link-row-picker>summary {cursor:pointer;font-size:.82rem;font-weight:600}
+#FranchiseExplorerConfigPage .fx-link-row-option {display:flex;align-items:center;gap:8px;margin-top:9px;font-size:.79rem;cursor:pointer}
+#FranchiseExplorerConfigPage .fx-link-row-option input {accent-color:#08afc4}
 #FranchiseExplorerConfigPage .fx-status {border-radius:8px;background:rgba(77,150,184,.12);padding:10px 12px;margin:12px 0 0;min-height:40px;font-size:.87rem}
 #FranchiseExplorerConfigPage .fx-footer {margin-top:20px}
 #FranchiseExplorerConfigPage .fx-footer-actions {display:flex;gap:12px;flex-wrap:wrap;align-items:center}
@@ -268,7 +274,7 @@
 <div data-role="content" class="fx-wrap">
   <div class="fx-heading">
     <div>
-      <h1>Franchise Explorer <small>v0.8.9.16 preview</small></h1>
+      <h1>Franchise Explorer <small>v0.8.9.17 preview</small></h1>
       <p class="fx-muted">Organize virtual franchises, eras, phases and viewing references without moving media files.</p>
     </div>
   </div>
@@ -342,7 +348,7 @@
         </section>
         <hr class="fx-divider">
         <h3>Existing Jellyfin collection</h3>
-        <p class="fx-muted">Connecting a collection (BoxSet) associates its artwork but does not import members automatically. Click <strong>Import collection members</strong> to copy its movies and shows as virtual references. If you use custom browse rows, choose which references belong in those rows; otherwise unassigned references appear in a separate browser shelf. This import is a one-time snapshot, not automatic synchronization. Disconnecting the collection does not delete imported references.</p>
+        <p class="fx-muted">Connecting a collection (BoxSet) associates its artwork but does not import members automatically. Choose a destination group, then click <strong>Import collection members</strong> to add its movies and shows as virtual references. You can change each reference's group below. If that group has custom browse rows, assign references to those rows separately to avoid an Unassigned shelf. This import is a one-time snapshot, not automatic synchronization. Disconnecting the collection does not delete imported references.</p>
         <div class="fx-info" id="fx-connected-collection">No Jellyfin collection connected.</div>
         <label class="fx-field" id="fx-collection-artwork-field"><span>Artwork when a collection is connected</span>
           <select id="fx-collection-artwork-mode" class="fx-input">
@@ -352,6 +358,10 @@
           <small class="fx-muted">Importing collection members never changes artwork by itself. Uploaded images always win. Preserve current artwork prefers parent/linked-media images; if none exist, collection artwork remains the fallback.</small>
         </label>
         <label class="fx-field"><span>Find a collection</span><input type="search" id="fx-collection-search" class="fx-input" placeholder="Search Marvel, Thor, Star Wars..." autocomplete="off"></label>
+        <label class="fx-field"><span>Import members into group</span>
+          <select id="fx-import-target" class="fx-input" aria-label="Destination group for imported collection members"></select>
+          <small class="fx-muted">Choose this franchise or any subgroup within it. Imported media stays virtual; no Jellyfin files move.</small>
+        </label>
         <div class="fx-row">
           <button type="button" id="fx-find-collections" class="fx-btn fx-btn-small">Find collections</button>
           <button type="button" id="fx-import-collection" class="fx-btn fx-btn-small fx-btn-primary" disabled>Import collection members</button>
@@ -449,7 +459,7 @@
         </div>
         <section class="fx-link-manager" aria-label="Manage imported virtual references">
           <h3>Manage imported virtual references</h3>
-          <p class="fx-muted">Importing a collection copies its members as virtual references at that moment. Disconnecting or deleting the original Jellyfin collection does not remove those references. Unassigned references appear in the browser's "Unassigned Movies &amp; TV Shows" row.</p>
+          <p class="fx-muted">Importing a collection copies its members as virtual references at that moment. Disconnecting or deleting the original Jellyfin collection does not remove those references. Use <strong>Assign to group</strong> to move a reference into another group within this franchise, and <strong>Show in browse rows</strong> to include it in existing rows. Each reference lists rows already using it; the same title added separately to a row is labeled as a separate entry.</p>
           <button type="button" id="fx-remove-unassigned" class="fx-btn fx-btn-small fx-btn-danger" disabled>Remove unassigned references (0)</button>
           <details id="fx-manage-links" style="margin-top:12px"><summary>View and remove individual virtual references</summary>
             <div id="fx-links" aria-label="Current virtual links" style="margin-top:14px"></div>
@@ -670,6 +680,44 @@
   }
   function children(parent) {
     return model.Nodes.filter(n => n.ParentId === parent).sort((a,b) => a.SortOrder-b.SortOrder || a.Name.localeCompare(b.Name));
+  }
+  // A collection may import into any subgroup of its current franchise, but
+  // moving a reference into a different top-level franchise is never implicit.
+  function groupChoices(nodeId) {
+    let root=model.Nodes.find(n=>n.Id===nodeId);
+    if(!root)return [];
+    const seen=new Set();
+    while(root.ParentId && !seen.has(root.Id)) {
+      seen.add(root.Id);
+      const parent=model.Nodes.find(n=>n.Id===root.ParentId);
+      if(!parent)return [];
+      root=parent;
+    }
+    const result=[];
+    const visit=(node,depth)=>{
+      result.push({node,depth});
+      for(const child of children(node.Id))visit(child,depth+1);
+    };
+    visit(root,0);
+    return result;
+  }
+  function fillGroupSelect(select,scopeNodeId,value) {
+    select.replaceChildren();
+    const choices=groupChoices(scopeNodeId);
+    for(const {node,depth} of choices){
+      const option=document.createElement('option');option.value=node.Id;
+      option.textContent=('↳ '.repeat(Math.min(depth,8)))+node.Name+(depth?' · '+node.NodeType:' · Franchise');
+      select.append(option);
+    }
+    select.value=choices.some(x=>x.node.Id===value)?value:scopeNodeId;
+  }
+  function linkBelongsToGroup(linkNodeId,groupId) {
+    let cursor=model.Nodes.find(n=>n.Id===linkNodeId),depth=0;
+    while(cursor&&depth++<251){
+      if(cursor.Id===groupId)return true;
+      cursor=model.Nodes.find(n=>n.Id===cursor.ParentId);
+    }
+    return false;
   }
   function normalizeSiblingPositions(parentId) {
     children(parentId).forEach((n,i)=>{n.SortOrder=i+1;});
@@ -921,6 +969,10 @@
   }
   function renderCollectionConnection(node) {
     const connected=Boolean(node.CollectionId);
+    const target=byId('fx-import-target');
+    const previous=target.dataset.sourceId===node.Id?target.value:node.Id;
+    fillGroupSelect(target,node.Id,previous);
+    target.dataset.sourceId=node.Id;
     byId('fx-import-collection').disabled=!connected;
     byId('fx-unlink-collection').disabled=!connected;
     byId('fx-collection-artwork-field').classList.toggle('fx-hidden',!connected);
@@ -983,6 +1035,11 @@
   }
   byId('fx-import-collection').addEventListener('click',async()=>{
     const node=model.Nodes.find(n=>n.Id===selected);if(!node||!node.CollectionId)return;
+    const destinationId=byId('fx-import-target').value;
+    const destination=model.Nodes.find(n=>n.Id===destinationId);
+    if(!destination||!groupChoices(node.Id).some(x=>x.node.Id===destinationId)){
+      collectionStatus('Choose a group within the selected franchise.',true);return;
+    }
     const nodeId=node.Id,button=byId('fx-import-collection');button.disabled=true;
     try {
       collectionStatus('Reading collection members from Jellyfin...');
@@ -990,15 +1047,15 @@
       if(selected!==nodeId)throw new Error('Group selection changed. Retry the import.');
       // Do not recursively write native collections or touch files.
       const usable=all.filter(item=>validGuid(String(item.Id||'')) && ['Movie','Series','Season','Episode','Video'].includes(item.Type));
-      const unseen=usable.filter(item=>!model.MediaLinks.some(l=>l.NodeId===nodeId&&l.JellyfinItemId.toLowerCase()===item.Id.toLowerCase()));
+      const unseen=usable.filter(item=>!model.MediaLinks.some(l=>l.NodeId===destinationId&&l.JellyfinItemId.toLowerCase()===item.Id.toLowerCase()));
       const excluded=all.length-usable.length;
       if(!unseen.length){collectionStatus('No new movies or shows to import. '+excluded+' unsupported/nested collection entries skipped.');return;}
       if(model.MediaLinks.length+unseen.length>3000)throw new Error('The preview limit is 3,000 virtual media references.');
-      if(!confirm('Add '+unseen.length+' existing movies/shows as virtual links to '+node.Name+'? No files or original collections will change. '+excluded+' other entries will be skipped.'))return;
-      let position=model.MediaLinks.filter(l=>l.NodeId===nodeId).reduce((max,l)=>Math.max(max,num(l.Position)),0);
-      for(const item of unseen){model.MediaLinks.push({Id:guid(),NodeId:nodeId,JellyfinItemId:item.Id,DisplayName:String(item.Name||'Untitled').slice(0,150),ItemType:item.Type,ViewingOrder:'Custom',Position:++position,...rangeFields({ItemType:item.Type})});}
+      if(!confirm('Add '+unseen.length+' existing movies/shows as virtual links to '+destination.Name+'? No files or original collections will change. '+excluded+' other entries will be skipped.'))return;
+      let position=model.MediaLinks.filter(l=>l.NodeId===destinationId).reduce((max,l)=>Math.max(max,num(l.Position)),0);
+      for(const item of unseen){model.MediaLinks.push({Id:guid(),NodeId:destinationId,JellyfinItemId:item.Id,DisplayName:String(item.Name||'Untitled').slice(0,150),ItemType:item.Type,ViewingOrder:'Custom',Position:++position,...rangeFields({ItemType:item.Type})});}
       setDirty(true);renderTree();renderLinks(nodeId);renderRows();renderArtwork();
-      collectionStatus('Imported '+unseen.length+' new virtual references; skipped '+excluded+' unsupported entries. Save configuration to persist. Snapshot only, not live sync.');
+      collectionStatus('Imported '+unseen.length+' new virtual references into '+destination.Name+'; skipped '+excluded+' unsupported entries. Select that group on the left to view its references. Save configuration to persist. Snapshot only, not live sync.');
     }catch(err){collectionStatus('Import failed: '+(err.message||err),true);}
     finally{button.disabled=false;}
   });
@@ -1028,12 +1085,48 @@
     renderLinks(node.Id);
     renderRows();
   }
+  function reassignVirtualLink(link,destinationId) {
+    if(!link || link.NodeId===destinationId)return false;
+    if(!groupChoices(link.NodeId).some(x=>x.node.Id===destinationId))throw new Error('The destination must be in the same franchise.');
+    if(model.MediaLinks.some(other=>other.Id!==link.Id&&other.NodeId===destinationId&&linkIdentity(other)===linkIdentity(link))) {
+      throw new Error('This title and TV Show range are already linked to the destination group.');
+    }
+    const previousId=link.NodeId;
+    link.Position=model.MediaLinks.filter(x=>x.NodeId===destinationId).reduce((max,x)=>Math.max(max,num(x.Position)),0)+1;
+    link.NodeId=destinationId;
+    // A row may reference media from its own group or descendants. Preserve
+    // compatible watch orders, but remove references no longer in its subtree.
+    for(const row of model.Rows){
+      if(row.MediaLinkIds.includes(link.Id) && !linkBelongsToGroup(destinationId,row.ParentNodeId)){
+        row.MediaLinkIds=row.MediaLinkIds.filter(id=>id!==link.Id);
+        syncMediaOrder(row);
+      }
+    }
+    setDirty(true);
+    return previousId!==destinationId;
+  }
+  function setLinkRowMembership(link,rowId,include) {
+    const row=model.Rows.find(r=>r.Id===rowId);
+    if(!row||!['Media','Timeline','Mixed'].includes(row.RowType)||!linkBelongsToGroup(link.NodeId,row.ParentNodeId)){
+      throw new Error('That browse row cannot contain this reference.');
+    }
+    const has=row.MediaLinkIds.includes(link.Id);
+    if(has===include)return false;
+    if(include)row.MediaLinkIds.push(link.Id);
+    else row.MediaLinkIds=row.MediaLinkIds.filter(id=>id!==link.Id);
+    syncMediaOrder(row);
+    setDirty(true);
+    return true;
+  }
   function renderLinks(nodeId) {
-    const container=byId('fx-links');container.replaceChildren();
+    const container=byId('fx-links');
+    const expanded=new Set([...container.querySelectorAll('details.fx-link-row-picker[open]')].map(d=>d.dataset.linkId));
+    container.replaceChildren();
     const links=model.MediaLinks.filter(l=>l.NodeId===nodeId).sort((a,b)=>a.ViewingOrder.localeCompare(b.ViewingOrder)||a.Position-b.Position);
     // An imported collection is a one-time snapshot. Links not used by ANY
     // row can be removed together without affecting explicit row references.
-    const assigned=new Set(model.Rows.flatMap(r=>r.MediaLinkIds||[]));
+    const mediaRows=model.Rows.filter(r=>['Media','Timeline','Mixed'].includes(r.RowType));
+    const assigned=new Set(mediaRows.filter(r=>r.ParentNodeId===nodeId).flatMap(r=>r.MediaLinkIds||[]));
     const hasCustomRows=model.Rows.some(r=>r.ParentNodeId===nodeId);
     const unassigned=hasCustomRows?links.filter(l=>!assigned.has(l.Id)):[];
     const bulk=byId('fx-remove-unassigned');
@@ -1047,7 +1140,61 @@
       const name=document.createElement('strong');name.textContent=l.DisplayName||l.JellyfinItemId;
       const details=document.createElement('small');details.textContent=displayType(l.ItemType)+' · '+(l.RangeMode&&l.RangeMode!=='Full'?linkRangeLabel(l)+' · ':'')+l.ViewingOrder+' · position '+l.Position;
       label.append(name,details);
+      const rowName=r=>((model.Nodes.find(n=>n.Id===r.ParentNodeId)?.Name||'Unknown group')+' → '+r.Name);
+      const linkedRows=mediaRows.filter(r=>r.MediaLinkIds.includes(l.Id)&&linkBelongsToGroup(l.NodeId,r.ParentNodeId));
+      const membership=document.createElement('small');membership.className='fx-link-rows';
+      membership.textContent='Rows using this reference: '+(linkedRows.length?linkedRows.map(rowName).join('; '):'None (unassigned to a browse row)');
+      if(hasCustomRows&&!linkedRows.some(r=>r.ParentNodeId===nodeId))membership.textContent+=' · Not in a row for this group';
+      label.append(membership);
+      const separateRows=mediaRows.filter(r=>r.Items.some(item=>String(item.JellyfinItemId).toLowerCase()===l.JellyfinItemId.toLowerCase()));
+      if(separateRows.length){
+        const separate=document.createElement('small');separate.className='fx-link-rows';
+        separate.textContent='Same title added separately in: '+separateRows.map(rowName).join('; ')+' (not this virtual reference)';
+        label.append(separate);
+      }
       const actions=document.createElement('div');actions.className='fx-link-actions';
+      const groupLabel=document.createElement('label');groupLabel.className='fx-field fx-link-group';
+      const groupTitle=document.createElement('span');groupTitle.textContent='Assign to group';
+      const groupSelect=document.createElement('select');groupSelect.className='fx-input';
+      groupSelect.setAttribute('aria-label','Assign '+(l.DisplayName||l.JellyfinItemId)+' to group');
+      fillGroupSelect(groupSelect,l.NodeId,l.NodeId);
+      groupSelect.addEventListener('change',()=>{
+        const destinationId=groupSelect.value;
+        try{
+          if(!reassignVirtualLink(l,destinationId))return;
+          const destination=model.Nodes.find(n=>n.Id===destinationId);
+          render();
+          setStatus('Moved '+(l.DisplayName||'reference')+' to '+destination.Name+'. Select that group on the left to manage it. Save plugin configuration to persist.');
+        }catch(err){groupSelect.value=l.NodeId;setStatus('Cannot reassign reference: '+(err.message||err),true);}
+      });
+      groupLabel.append(groupTitle,groupSelect);
+      const eligibleRows=mediaRows.filter(r=>linkBelongsToGroup(l.NodeId,r.ParentNodeId));
+      if(eligibleRows.length){
+        const rowPicker=document.createElement('details');rowPicker.className='fx-link-row-picker';rowPicker.dataset.linkId=l.Id;
+        rowPicker.open=expanded.has(l.Id);
+        const summary=document.createElement('summary');
+        summary.textContent='Show in browse rows ('+eligibleRows.filter(r=>r.MediaLinkIds.includes(l.Id)).length+'/'+eligibleRows.length+')';
+        rowPicker.append(summary);
+        for(const row of eligibleRows){
+          const rowLabel=document.createElement('label');rowLabel.className='fx-link-row-option';
+          const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.checked=row.MediaLinkIds.includes(l.Id);
+          checkbox.setAttribute('aria-label','Show '+(l.DisplayName||l.JellyfinItemId)+' in '+rowName(row));
+          checkbox.addEventListener('change',()=>{
+            if(checkbox.checked&&row.Items.some(item=>linkIdentity(item)===linkIdentity(l))&&
+              !confirm('This row already contains the same title as a separate direct entry. Add this virtual reference too? The title may appear twice until you remove the separate entry.')){
+              checkbox.checked=false;return;
+            }
+            try{
+              if(setLinkRowMembership(l,row.Id,checkbox.checked)){
+                renderLinks(nodeId);renderRows();
+                setStatus('Updated browse-row assignments for '+(l.DisplayName||'reference')+'. Click Save plugin configuration to persist.');
+              }
+            }catch(err){checkbox.checked=!checkbox.checked;setStatus('Cannot assign row: '+(err.message||err),true);}
+          });
+          rowLabel.append(checkbox,document.createTextNode(rowName(row)));rowPicker.append(rowLabel);
+        }
+        actions.append(rowPicker);
+      }
       const minus=document.createElement('button');minus.type='button';minus.className='fx-btn fx-btn-small';minus.textContent='↑ Earlier';
       minus.addEventListener('click',()=>moveLink(l,-1,nodeId));
       const plus=document.createElement('button');plus.type='button';plus.className='fx-btn fx-btn-small';plus.textContent='↓ Later';
@@ -1062,12 +1209,12 @@
         editRange.addEventListener('click',()=>openRangeEditor({Id:l.JellyfinItemId,Name:l.DisplayName||'TV Show',Type:'Series'},l));
         actions.appendChild(editRange);
       }
-      actions.append(minus,plus,remove);item.append(label,actions);container.appendChild(item);
+      actions.append(groupLabel,minus,plus,remove);item.append(label,actions);container.appendChild(item);
     });
   }
   byId('fx-remove-unassigned').addEventListener('click',()=>{
     if(!selected)return;
-    const assigned=new Set(model.Rows.flatMap(r=>r.MediaLinkIds||[]));
+    const assigned=new Set(model.Rows.filter(r=>r.ParentNodeId===selected&&['Media','Timeline','Mixed'].includes(r.RowType)).flatMap(r=>r.MediaLinkIds||[]));
     if(!model.Rows.some(r=>r.ParentNodeId===selected))return;
     const unused=model.MediaLinks.filter(l=>l.NodeId===selected&&!assigned.has(l.Id));
     if(!unused.length)return;
