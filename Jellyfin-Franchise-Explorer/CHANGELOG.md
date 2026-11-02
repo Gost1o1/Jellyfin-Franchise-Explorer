@@ -1,3 +1,10 @@
+## v0.8.9.20 — Native Android chronological queue (experimental)
+
+- Android Integrated Player launches the selected movie plus the remaining chronological movies and episodes as a single native ExoPlayer queue. v0.8.9.19 launched only one item, which made Android exit to Home after the movie ended.
+- Requires the Jellyfin user's **Enable next episode autoplay** preference; the Android native player checks this before playing the next queue item.
+- Preserves one-off **Watch only** behavior, fails closed when saved queue metadata is inconsistent, and leaves the desktop Web player unchanged.
+- Includes simulated native-queue regression coverage; physical Android playback has not yet been verified.
+
 ## v0.8.9.14 — Three-level homepage progress and consistent confirmations (experimental)
 
 - Added current episode/movie playback progress above the Continue Your Franchises chronological progress bar.
