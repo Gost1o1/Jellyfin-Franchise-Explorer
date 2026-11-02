@@ -274,7 +274,7 @@
 <div data-role="content" class="fx-wrap">
   <div class="fx-heading">
     <div>
-      <h1>Franchise Explorer <small>v0.8.9.17 preview</small></h1>
+      <h1>Franchise Explorer <small>v0.8.9.18 preview</small></h1>
       <p class="fx-muted">Organize virtual franchises, eras, phases and viewing references without moving media files.</p>
     </div>
   </div>
@@ -580,7 +580,31 @@
   let model = { NavigationLabel:'Franchises', Nodes:[], MediaLinks:[], Rows:[] };
   let selected = '';
   let dirty = false;
-  const setStatus = (message, error) => { byId('fx-status').textContent = message; byId('fx-status').style.color = error ? '#f2a49d' : ''; };
+  const errorTimers = new WeakMap();
+  function recordClientError(source,message){
+    const detail=String(message||'Unknown error');
+    console.error('[Franchise Explorer '+source+']',detail);
+    try{
+      const token=typeof ApiClient.accessToken==='function'?ApiClient.accessToken():'';
+      if(!token)return;
+      void fetch(ApiClient.getUrl('FranchiseExplorer/ClientLog'),{
+        method:'POST',headers:{Authorization:'MediaBrowser Token="'+token+'"','Content-Type':'application/json'},
+        body:JSON.stringify({source,message:detail.slice(0,1000)})
+      }).catch(()=>{});
+    }catch(_){/* Keep the console error if the server is unavailable. */}
+  }
+  function statusElement(el,message,error,color,source){
+    const oldTimer=errorTimers.get(el);if(oldTimer)clearTimeout(oldTimer);
+    el.textContent=message;el.style.color=error?color:'';
+    if(error){
+      recordClientError(source,message);
+      errorTimers.set(el,setTimeout(()=>{
+        if(el.textContent===message){el.textContent='';el.style.color='';}
+        errorTimers.delete(el);
+      },6500));
+    }
+  }
+  const setStatus = (message, error) => statusElement(byId('fx-status'),message,error,'#f2a49d','settings');
   const setDirty = value => { dirty = value; byId('fx-dirty-label').textContent = dirty ? 'Unsaved edits — remember to save' : 'No unsaved edits'; };
   const num = (v) => Number.isFinite(Number(v)) ? Math.max(0, Math.min(100000, Math.trunc(Number(v)))) : 0;
   const displayType = type => type === 'Series' ? 'TV Show' : (type || 'Media');
@@ -958,7 +982,7 @@
     });
   }
   let collectionSearchSequence=0;
-  function collectionStatus(msg,error) {const e=byId('fx-collection-status');e.textContent=msg;e.style.color=error?'#f6a6a6':'';}
+  function collectionStatus(msg,error) {statusElement(byId('fx-collection-status'),msg,error,'#f6a6a6','collection');}
   async function jellyfinItems(params) {
     const userId=typeof ApiClient.getCurrentUserId==='function'?ApiClient.getCurrentUserId():undefined;
     if(typeof ApiClient.getItems==='function') {
@@ -1356,7 +1380,13 @@
       if(state.searchId!==sequence)return;
       state.results=(response.Items||[]).filter(x=>['BoxSet','Movie','Series'].includes(x.Type)&&validGuid(String(x.Id||'')));
       state.chosen=new Set();state.busy=false;state.status=state.results.length?state.results.length+' matching collections, movies and TV shows.':'No matching titles found.';
-    }catch(err){if(state.searchId!==sequence)return;state.results=[];state.busy=false;state.status='Search error: '+(err.message||err);}
+    }catch(err){
+      if(state.searchId!==sequence)return;
+      state.results=[];state.busy=false;state.status='Search error: '+(err.message||err);
+      recordClientError('row-search',state.status);
+      const failingMessage=state.status;
+      setTimeout(()=>{if(state.searchId===sequence&&state.status===failingMessage){state.status='';refreshRowSearchResults(rowId);}},6500);
+    }
     // Do not rerender the input or other row controls when an async search finishes.
     refreshRowSearchResults(rowId);
   }
@@ -1553,7 +1583,7 @@
   // All queries use Jellyfin's authenticated ApiClient. No external service or background scan.
   let searchSequence=0;
   let searchTimer=null;
-  function showSearchStatus(message,error) {const el=byId('fx-search-status');el.textContent=message;el.style.color=error?'#ffa0a0':'';}
+  function showSearchStatus(message,error) {statusElement(byId('fx-search-status'),message,error,'#ffa0a0','library-search');}
   function mediaImageUrl(item) {
     if (!item || !item.ImageTags || !item.ImageTags.Primary || typeof ApiClient.getImageUrl!=='function') return '';
     try{return ApiClient.getImageUrl(item.Id,{type:'Primary',maxWidth:90});}catch(_){return '';}
@@ -1612,6 +1642,12 @@
   }
   function rangeError(message) {
     const el=byId('fx-range-error');el.textContent=message;el.classList.remove('fx-hidden');
+    const oldTimer=errorTimers.get(el);if(oldTimer)clearTimeout(oldTimer);
+    recordClientError('tv-range',message);
+    errorTimers.set(el,setTimeout(()=>{
+      if(el.textContent===message){el.textContent='';el.classList.add('fx-hidden');}
+      errorTimers.delete(el);
+    },6500));
   }
   byId('fx-cancel-range').addEventListener('click',closeRangeEditor);
   byId('fx-close-range').addEventListener('click',closeRangeEditor);

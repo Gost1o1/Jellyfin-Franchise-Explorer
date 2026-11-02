@@ -1,5 +1,5 @@
 /*
- * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.17).
+ * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.18).
  * Adds ONE visual link in the existing "My Media" row. It does not create a
  * Jellyfin library, alter user preferences, or modify the server's media.
  * Requires a compatible JavaScript injector to run in jellyfin-web.
@@ -9,7 +9,7 @@
   'use strict';
 
   // Programmatic registration plus a manual fallback must not create two observers.
-  window.__franchiseExplorerUiVersion = '0.8.9.17';
+  window.__franchiseExplorerUiVersion = '0.8.9.18';
   if (window.__franchiseExplorerMyMediaTileLoaded) return;
   window.__franchiseExplorerMyMediaTileLoaded = true;
   // Replaced with a data URI when registered by the plugin host service.
@@ -29,6 +29,21 @@
     const base = match ? match[1] : '';
     return `${base}/FranchiseExplorer/Browse`;
   }
+
+  function logClientError(source, message) {
+    const detail=String(message||'Unknown error');
+    console.error('[Franchise Explorer '+source+']',detail);
+    try{
+      const auth=localCredentials();
+      if(!auth?.AccessToken)return;
+      const base=((location.pathname||'').match(/^(.*?)\/web(?:\/|$)/i)||[])[1]||'';
+      void fetch(base+'/FranchiseExplorer/ClientLog',{
+        method:'POST',headers:{Authorization:'MediaBrowser Token="'+auth.AccessToken+'"','Content-Type':'application/json'},
+        body:JSON.stringify({source,message:detail.slice(0,1000)})
+      }).catch(()=>{}); // The on-screen warning must not depend on log delivery.
+    }catch(_){/* Console remains available if Jellyfin is disconnected. */}
+  }
+  window.FranchiseExplorerReportError=logClientError;
 
   function settingsUrl() {
     const match = (window.location.pathname || '').match(/^(.*?)\/web(?:\/|$)/i);
@@ -232,7 +247,7 @@
       }
     }
     tile.id = TILE_ID;
-    tile.setAttribute('data-fe-version','0.8.9.17');
+    tile.setAttribute('data-fe-version','0.8.9.18');
     tile.setAttribute('aria-label','Open Franchises');
     tile.setAttribute('href',browseUrl());
     // Native actions from a cloned Collections card cannot operate on the
@@ -359,7 +374,7 @@
       if (sourceScalable) observedResize.observe(sourceScalable);
     }
     tile.setAttribute('href',browseUrl());
-    tile.setAttribute('data-fe-version','0.8.9.17');
+    tile.setAttribute('data-fe-version','0.8.9.18');
   }
 
   function schedule() {
@@ -389,7 +404,7 @@
   window.addEventListener('resize', schedule);
 })();
 
-/* v0.8.9.17 — Per-user franchise resume cards and in-place playback shortcuts on Jellyfin Web's home.
+/* v0.8.9.18 — Per-user franchise resume cards and in-place playback shortcuts on Jellyfin Web's home.
  * Jellyfin regularly replaces the home DOM, including after a refresh and
  * client-side navigation. Reattach the same widget rather than waiting for the
  * next API poll, and keep a short session-scoped cache for hard refreshes.
@@ -399,16 +414,16 @@
   'use strict';
   // An older Injector script may still be running. Never let its shared v1
   // marker block the newer in-place playback actions from initializing.
-  if (window.__franchiseTimelineHomeVersion === '0.8.9.17') return;
-  window.__franchiseTimelineHomeVersion = '0.8.9.17';
+  if (window.__franchiseTimelineHomeVersion === '0.8.9.18') return;
+  window.__franchiseTimelineHomeVersion = '0.8.9.18';
   window.__franchiseTimelineHomeLoaded = true;
   const WIDGET_ID = 'franchise-timeline-resume';
   // Versioned styles take precedence if an earlier Injector script left its
   // stylesheet in the page before the new registration initialized.
-  const STYLE_ID = 'franchise-timeline-resume-style-v08917';
+  const STYLE_ID = 'franchise-timeline-resume-style-v08918';
   const NATIVE_HIDE_STYLE_ID = 'fe-native-franchise-row-filter-style';
   const NATIVE_HIDE_CLASS = 'fe-native-franchise-row-hidden';
-  const CACHE_PREFIX = 'fe-franchise-home-v08917:';
+  const CACHE_PREFIX = 'fe-franchise-home-v08918:';
   const MAX_CARDS = 8;
   const phonePortrait = () => window.matchMedia('(orientation: portrait) and (max-width: 700px)').matches;
   const GUID = /^[a-f0-9]{32}$|^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
@@ -605,7 +620,7 @@
       // Legacy Injector registrations may leave a second tracker with the
       // exact same DOM id. Hide it so its native confirm/resume menu cannot
       // be clicked accidentally after the upgraded script becomes active.
-      '#'+WIDGET_ID+':not([data-fe-version="0.8.9.17"]){display:none!important}',
+      '#'+WIDGET_ID+':not([data-fe-version="0.8.9.18"]){display:none!important}',
       '#'+WIDGET_ID+'{box-sizing:border-box;width:100%;min-width:0;padding:10px max(16px,2.5vw) 16px;color:#fff}',
       '#'+WIDGET_ID+' h2{font-size:1.32rem;margin:8px 0 15px;font-weight:600}',
       '#'+WIDGET_ID+' .fe-resume-grid{display:flex;gap:16px;flex-wrap:wrap;align-items:stretch}',
@@ -648,8 +663,8 @@
   // TimelineManager renders the SAME list as Browse, but Jellyfin Home does
   // not load Browse's stylesheet. The modal is appended to document.body.
   function ensureHomeTimelineStyle() {
-    if (document.getElementById('fe-home-timeline-dialog-style-v08917')) return;
-    const style=document.createElement('style');style.id='fe-home-timeline-dialog-style-v08917';
+    if (document.getElementById('fe-home-timeline-dialog-style-v08918')) return;
+    const style=document.createElement('style');style.id='fe-home-timeline-dialog-style-v08918';
     style.textContent=[
       '.timeline-dialog-mask{position:fixed;inset:0;z-index:2147483630;background:#050709e8;backdrop-filter:blur(2px);display:grid;place-items:center;padding:12px;overscroll-behavior:contain}',
       '.timeline-dialog-mask.fe-home-chronological-modal .timeline-dialog{width:min(830px,100%);max-height:min(88dvh,810px)}',
@@ -719,6 +734,10 @@
   }
 
   function homeFeedback(message, error=false) {
+    if(error){
+      if(window.FranchiseExplorerReportError)window.FranchiseExplorerReportError('home',message);
+      else console.error('[Franchise Explorer home]',message);
+    }
     let notice=document.getElementById('fe-home-timeline-feedback');
     if(!notice){notice=document.createElement('div');notice.id='fe-home-timeline-feedback';notice.setAttribute('role','status');document.body.append(notice);}
     notice.style.cssText='position:fixed;bottom:24px;left:16px;right:16px;margin:auto;max-width:620px;z-index:2147483635;padding:14px 18px;border-radius:10px;box-shadow:0 10px 30px #0009;font:600 14px/1.5 system-ui,sans-serif;background:'+(error?'#532c2c':'#173c39')+';border:1px solid '+(error?'#e49c9c':'#5bc6bb')+';color:#fff';
@@ -876,7 +895,7 @@
       widget.id = WIDGET_ID;
       widget.setAttribute('aria-label', 'Continue Your Franchises');
     }
-    widget.setAttribute('data-fe-version','0.8.9.17');
+    widget.setAttribute('data-fe-version','0.8.9.18');
     // Jellyfin's home view can destroy and recreate this entire parent.
     // Keep our rendered widget and reattach immediately after the native row.
     if (widget.parentElement !== anchor.parentElement || anchor.nextElementSibling !== widget)
@@ -1203,7 +1222,7 @@
     } catch (error) {
       // Transient errors must not erase the user's most recent cards. Log only
       // the status/error class (never an auth header, token or user ID).
-      console.warn('[Franchise Explorer 0.8.9.17] Home tracker refresh failed:', error?.message || 'unknown error');
+      console.warn('[Franchise Explorer 0.8.9.18] Home tracker refresh failed:', error?.message || 'unknown error');
     }
     finally { busy = false; }
   }
@@ -1237,8 +1256,8 @@
   'use strict';
   // Older Injector scripts can coexist after an upgrade. A boolean-only
   // guard would silently retain their details-page/autoresume behavior.
-  if(window.__franchiseAutoplayBridgeVersion==='0.8.9.17')return;
-  window.__franchiseAutoplayBridgeVersion='0.8.9.17';
+  if(window.__franchiseAutoplayBridgeVersion==='0.8.9.18')return;
+  window.__franchiseAutoplayBridgeVersion='0.8.9.18';
   window.__franchiseAutoplayBridgeLoaded=true;
   let currentKey='',attempts=0,scheduled=false,routeSettlingSince=0;
   const MAX_ATTEMPTS=36;
@@ -1420,7 +1439,11 @@
   addEventListener('hashchange',restorePlaybackOrigin);
   addEventListener('popstate',restorePlaybackOrigin);
   let localNoticeTimer=null;
-  function showLocalNotice(message,ttl=0){
+  function showLocalNotice(message,ttl=6500){
+    if(/could not|cannot|failed|failure|error|unavailable|did not/i.test(message)){
+      if(window.FranchiseExplorerReportError)window.FranchiseExplorerReportError('playback',message);
+      else console.error('[Franchise Explorer playback]',message);
+    }
     let notice=document.getElementById('fe-local-playback-notice');
     if(!notice){
       notice=document.createElement('div');notice.id='fe-local-playback-notice';
@@ -1430,7 +1453,7 @@
     }
     notice.textContent=message;
     if(localNoticeTimer)clearTimeout(localNoticeTimer);
-    if(ttl>0)localNoticeTimer=setTimeout(()=>{notice.remove();localNoticeTimer=null;},ttl);
+    localNoticeTimer=setTimeout(()=>{notice.remove();localNoticeTimer=null;},Math.max(2000,Math.min(ttl,8000)));
   }
   function localVideoAdvancing(snapshot){
     // Verify a real rendering player. Session NowPlayingItem alone may refer
@@ -1704,7 +1727,7 @@
   // Explicit `play` with position 0 is essential for restart-current: native
   // Jellyfin's Resume action otherwise restores its separate watched offset.
   window.FranchiseExplorerNativePlayback={
-    version:'0.8.9.17',
+    version:'0.8.9.18',
     play(id,options={}){
       if(!/^[a-f0-9-]{32,36}$/i.test(id))return false;
       const container=document.querySelector('.homeTab:not(.hide) .itemsContainer, .homeTab:not(.hide) .itemsContainerWithBorders, .homeTab .itemsContainer, .itemsContainer:not(.hide)');

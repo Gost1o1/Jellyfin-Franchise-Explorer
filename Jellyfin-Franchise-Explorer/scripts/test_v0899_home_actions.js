@@ -14,10 +14,10 @@ assert(!home.includes("option.href=serverPath('/FranchiseExplorer/Browse?timelin
 assert(home.includes("player.openDialog(row,false,'select')"));
 assert(home.includes("ensureHomeTimelineStyle()"));
 assert(home.includes("enforceStartOver(id)"));
-assert(home.includes("window.__franchiseTimelineHomeVersion === '0.8.9.17'"));
+assert(home.includes("window.__franchiseTimelineHomeVersion === '0.8.9.18'"));
 assert(home.includes('fe-home-chronological-modal'));
-assert(home.includes("STYLE_ID = 'franchise-timeline-resume-style-v08917'"));
-assert(home.includes('fe-home-timeline-dialog-style-v08917'));
+assert(home.includes("STYLE_ID = 'franchise-timeline-resume-style-v08918'"));
+assert(home.includes('fe-home-timeline-dialog-style-v08918'));
 assert(!home.includes("confirm('Reset all chronological progress"));
 
 const idA='11111111-1111-1111-1111-111111111111';
@@ -201,5 +201,5 @@ async function resetPopup(accept) {
   assert.equal(quick.id,idB);
   assert.equal(quick.startOver,true);
   assert.equal(quick.type,'Movie');
-  console.log('v0.8.9.17 centered reset, native restart, stale-menu recovery, and in-place chronological list tests passed.');
+  console.log('v0.8.9.18 centered reset, native restart, stale-menu recovery, and in-place chronological list tests passed.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -2,9 +2,11 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using MediaBrowser.Common.Api;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.FranchiseExplorer.Api;
 
@@ -18,6 +20,40 @@ namespace Jellyfin.Plugin.FranchiseExplorer.Api;
 [Route("FranchiseExplorer")]
 public sealed class FranchiseBrowseController : ControllerBase
 {
+    private readonly ILogger<FranchiseBrowseController> _logger;
+
+    public FranchiseBrowseController(ILogger<FranchiseBrowseController> logger)
+    {
+        _logger = logger;
+    }
+
+    public sealed class ClientErrorReport
+    {
+        public string? Source { get; set; }
+        public string? Message { get; set; }
+    }
+
+    /// <summary>
+    /// Record user-visible browser errors in Jellyfin's normal server log.
+    /// Authenticated users only; do not accept arbitrary structured log fields.
+    /// </summary>
+    [HttpPost("ClientLog")]
+    [Authorize]
+    [RequestSizeLimit(4096)]
+    public IActionResult ClientLog([FromBody] ClientErrorReport? report)
+    {
+        if (report is null || string.IsNullOrWhiteSpace(report.Message)) return BadRequest();
+        var source = Regex.Replace((report.Source ?? "browser")[..Math.Min(report.Source?.Length ?? 7, 60)], @"[^a-zA-Z0-9 _.-]", "");
+        var message = report.Message[..Math.Min(report.Message.Length, 1000)];
+        // Error text can originate from an HTTP failure. Never persist URLs,
+        // authorization headers, or API keys verbatim in the server log.
+        message = Regex.Replace(message, @"https?://\S+", "[URL]", RegexOptions.IgnoreCase);
+        message = Regex.Replace(message, @"(?i)(authorization|api[_-]?key|access[_-]?token|token)\s*[:=]\s*\S+", "$1=[REDACTED]");
+        message = message.Replace('\r', ' ').Replace('\n', ' ');
+        _logger.LogWarning("Franchise Explorer client notification [{Source}]: {Message}", source, message);
+        return NoContent();
+    }
+
     [HttpGet("Browse")]
     [AllowAnonymous]
     public IActionResult Browse()

@@ -337,7 +337,16 @@
     button(label,callback,cls='btn'){
       const el=this.make('button',cls,label);el.type='button';el.addEventListener('click',()=>Promise.resolve(callback()).catch(e=>this.showError(e)));return el;
     }
-    showError(error){console.error(error);if(this.activeDialog){this.activeDialog.querySelector('.timeline-feedback').textContent=error.message||String(error);}}
+    showError(error){
+      const message=error?.message||String(error);
+      console.error('Franchise Explorer timeline:',error);
+      window.FranchiseExplorerReportError?.('timeline',message);
+      const panel=this.activeDialog;
+      const feedback=panel?.querySelector('.timeline-feedback');
+      if(!feedback)return;
+      feedback.textContent=message;
+      setTimeout(()=>{if(this.activeDialog===panel&&feedback.textContent===message)feedback.textContent='';},6500);
+    }
     progressLabel(percent){
       return percent>0 && percent<0.1 ? percent.toFixed(2)+'%' :
         percent>0 && percent<1 ? percent.toFixed(1)+'%' : Math.round(percent)+'%';
@@ -435,7 +444,12 @@
       mask.addEventListener('keydown',trap);panel.querySelector('button')?.focus();
       try{
         const {queue,warnings}=await this.resolve(row);if(this.activeDialog!==panel)return;
-        if(warnings.length)feedback.textContent=warnings.join(' · ');else feedback.textContent='';
+        if(warnings.length){
+          const message=warnings.join(' · ');
+          feedback.textContent=message;
+          window.FranchiseExplorerReportError?.('timeline-warning',message);
+          setTimeout(()=>{if(this.activeDialog===panel&&feedback.textContent===message)feedback.textContent='';},6500);
+        }else feedback.textContent='';
         if(action==='restart-history' && queue.length){
           const agreed=await this.confirmAction('Restart the entire chronological history for '+row.name+'? All completed entries in THIS franchise timeline will be cleared. Jellyfin watched history will not change.','Restart history');
           if(agreed){await this.resetHistory(row,queue);feedback.textContent='Chronological history restarted at the first item. Choose a playback device and select Play from beginning when ready.';}
@@ -451,7 +465,13 @@
         chooser.append(sessionLabel,select);
         let activeDevices=[];
         try{activeDevices=await this.sessions();}
-        catch(e){feedback.textContent+=(feedback.textContent?' · ':'')+'Remote devices are unavailable; you can still choose this browser.';}
+        catch(e){
+          const message='Remote devices are unavailable; you can still choose this browser.';
+          feedback.textContent+=(feedback.textContent?' · ':'')+message;
+          window.FranchiseExplorerReportError?.('timeline-device',message+' '+(e.message||e));
+          const displayed=feedback.textContent;
+          setTimeout(()=>{if(this.activeDialog===panel&&feedback.textContent===displayed)feedback.textContent='';},6500);
+        }
         if(this.activeDialog!==panel)return;
         const localChoice=this.make('option','','This browser (local playback — recommended)');
         localChoice.value='__local__';select.append(localChoice);
