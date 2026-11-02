@@ -268,7 +268,7 @@
 <div data-role="content" class="fx-wrap">
   <div class="fx-heading">
     <div>
-      <h1>Franchise Explorer <small>v0.8.9.15 preview</small></h1>
+      <h1>Franchise Explorer <small>v0.8.9.16 preview</small></h1>
       <p class="fx-muted">Organize virtual franchises, eras, phases and viewing references without moving media files.</p>
     </div>
   </div>
@@ -297,6 +297,9 @@
     <h2>Playback &amp; Home preferences</h2>
     <label class="fx-field"><span><input id="fx-subtitles-pref" type="checkbox"> Enable subtitles during Franchise Explorer playback</span>
       <small class="fx-muted">Off by default. Your Jellyfin client may override subtitle choices.</small></label>
+    <label class="fx-field"><span>Preferred subtitle language</span>
+      <select id="fx-subtitle-language" class="fx-input"><option value="">Use Jellyfin's preferred subtitle language</option></select>
+      <small class="fx-muted">Automatically inherits this user's preferred subtitle language from Jellyfin settings unless you choose an override. Used when subtitles are enabled. Other Jellyfin clients may use their own playback settings. This does not change Jellyfin's display language.</small></label>
     <label class="fx-field"><span><input id="fx-hide-native-pref" type="checkbox"> Hide franchise titles from Continue Watching and Next Up</span>
       <small class="fx-muted">On hides movies and episodes included in your active franchise timelines from these native rows, even after a timeline reset. Off shows them normally. Continue Your Franchises stays visible. This per-user, per-browser setting never alters watched history.</small></label>
   </section>
@@ -339,7 +342,7 @@
         </section>
         <hr class="fx-divider">
         <h3>Existing Jellyfin collection</h3>
-        <p class="fx-muted">Connect a collection (BoxSet) to import its movies and shows as virtual references. Existing artwork is preserved by default; you can explicitly choose to use the collection's images instead. This is a snapshot import, not automatic ongoing synchronization.</p>
+        <p class="fx-muted">Connecting a collection (BoxSet) associates its artwork but does not import members automatically. Click <strong>Import collection members</strong> to copy its movies and shows as virtual references. If you use custom browse rows, choose which references belong in those rows; otherwise unassigned references appear in a separate browser shelf. This import is a one-time snapshot, not automatic synchronization. Disconnecting the collection does not delete imported references.</p>
         <div class="fx-info" id="fx-connected-collection">No Jellyfin collection connected.</div>
         <label class="fx-field" id="fx-collection-artwork-field"><span>Artwork when a collection is connected</span>
           <select id="fx-collection-artwork-mode" class="fx-input">
@@ -444,8 +447,15 @@
             <div id="fx-range-error" role="alert" class="fx-muted fx-hidden" style="color:#ffb0a5"></div>
           </div>
         </div>
+        <section class="fx-link-manager" aria-label="Manage imported virtual references">
+          <h3>Manage imported virtual references</h3>
+          <p class="fx-muted">Importing a collection copies its members as virtual references at that moment. Disconnecting or deleting the original Jellyfin collection does not remove those references. Unassigned references appear in the browser's "Unassigned Movies &amp; TV Shows" row.</p>
+          <button type="button" id="fx-remove-unassigned" class="fx-btn fx-btn-small fx-btn-danger" disabled>Remove unassigned references (0)</button>
+          <details id="fx-manage-links" style="margin-top:12px"><summary>View and remove individual virtual references</summary>
+            <div id="fx-links" aria-label="Current virtual links" style="margin-top:14px"></div>
+          </details>
+        </section>
         <div class="fx-hidden" aria-hidden="true">
-        <div id="fx-links" aria-label="Current virtual links" style="margin-top:14px"></div>
         <details id="fx-manual-details" style="margin-top:14px"><summary>Advanced: manually add an item ID</summary>
           <label class="fx-field"><span>Jellyfin item ID (GUID)</span><input id="fx-item-id" type="text" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"></label>
           <label class="fx-field"><span>Display label</span><input id="fx-item-name" type="text" maxlength="150" placeholder="Example: Thor: Ragnarok"></label>
@@ -480,16 +490,45 @@
     const chosen=matching.find(sameOrigin)||(matching.length===1?matching[0]:null);
     if(!chosen||!uid)return null;
     return {subtitles:'fe-subtitles:'+chosen.Id+':'+chosen.UserId,
+      subtitleLanguage:'fe-subtitle-language:'+chosen.Id+':'+chosen.UserId,
       nativeRows:'fe-show-active-native-rows:'+location.origin+':'+uid.toLowerCase()};
   }
   function wireViewerPreferences() {
     const keys=viewerPreferenceKeys();
-    const subtitles=byId('fx-subtitles-pref'),hide=byId('fx-hide-native-pref');
-    if(!keys){subtitles.disabled=true;hide.disabled=true;return;}
+    const subtitles=byId('fx-subtitles-pref'),hide=byId('fx-hide-native-pref'),language=byId('fx-subtitle-language');
+    const codes='ar bg ca cs da de el en es et fa fi fr he hi hr hu id is it ja ko lt lv ms nb nl pl pt ro ru sk sl sr sv th tr uk ur vi zh'.split(' ');
+    const names=typeof Intl!=='undefined'&&typeof Intl.DisplayNames==='function'
+      ?new Intl.DisplayNames(['en'],{type:'language'}):null;
+    codes.map(code=>({code,label:names?.of(code)||code.toUpperCase()}))
+      .sort((a,b)=>a.label.localeCompare(b.label))
+      .forEach(({code,label})=>{const option=document.createElement('option');option.value=code;option.textContent=label;language.append(option);});
+    if(!keys){subtitles.disabled=true;hide.disabled=true;language.disabled=true;return;}
     subtitles.checked=localStorage.getItem(keys.subtitles)==='1';
+    const preferred=localStorage.getItem(keys.subtitleLanguage)||'';
+    language.value=codes.includes(preferred)?preferred:'';
     hide.checked=localStorage.getItem(keys.nativeRows)==='0';
     subtitles.addEventListener('change',()=>localStorage.setItem(keys.subtitles,subtitles.checked?'1':'0'));
+    language.addEventListener('change',()=>localStorage.setItem(keys.subtitleLanguage,language.value));
     hide.addEventListener('change',()=>localStorage.setItem(keys.nativeRows,hide.checked?'0':'1'));
+    // The blank dropdown choice is a LIVE inherited Jellyfin user preference,
+    // not a separate English default or a copy saved on this browser.
+    // Keep it selected so changes made in Jellyfin's user profile take effect.
+    void (async()=>{
+      try{
+        if(typeof ApiClient==='undefined'||typeof ApiClient.getCurrentUser!=='function')return;
+        const user=await ApiClient.getCurrentUser();
+        if(!page.isConnected)return;
+        const preference=user?.Configuration?.SubtitleLanguagePreference
+          ||user?.configuration?.subtitleLanguagePreference
+          ||user?.SubtitleLanguagePreference||user?.subtitleLanguagePreference||'';
+        if(!preference)return;
+        const aliases={eng:'en',deu:'de',ger:'de',fra:'fr',fre:'fr',spa:'es',ita:'it',por:'pt',nld:'nl',dut:'nl',jpn:'ja',zho:'zh',chi:'zh',kor:'ko',rus:'ru',swe:'sv',nor:'nb',ara:'ar',hin:'hi',tur:'tr'};
+        const code=String(preference).trim().toLowerCase().split(/[-_]/)[0];
+        const normalized=aliases[code]||code;
+        const displayName=names?.of(normalized)||normalized.toUpperCase();
+        language.options[0].textContent='Use Jellyfin preference ('+displayName+')';
+      }catch(_){/* Keep the automatic default if user profile is unavailable. */}
+    })();
   }
   wireViewerPreferences();
   // Jellyfin may give an embedded plugin a page wider than the visible browser.
@@ -929,7 +968,7 @@
   byId('fx-unlink-collection').addEventListener('click',()=>{
     const node=model.Nodes.find(n=>n.Id===selected);if(!node)return;
     node.CollectionId='';setDirty(true);renderCollectionConnection(node);renderArtwork();
-    collectionStatus('Collection association removed. Existing imported media links are preserved.');
+    collectionStatus('Collection disconnected. Previously imported virtual references are preserved; use Manage imported virtual references below to remove unused ones.');
   });
   async function collectionMembers(id) {
     const items=[];
@@ -979,7 +1018,7 @@
       byId('fx-move-down').disabled=index<0||index>=siblings.length-1;
     }
     byId('fx-nav-label').value=model.NavigationLabel;
-    if (!node) {renderRows();renderArtwork();return;}
+    if (!node) {byId('fx-remove-unassigned').disabled=true;byId('fx-remove-unassigned').textContent='Remove unassigned references (0)';renderRows();renderArtwork();return;}
     byId('fx-name').value=node.Name;
     byId('fx-type').value=node.NodeType;
     byId('fx-overview').value=node.Overview;
@@ -992,6 +1031,14 @@
   function renderLinks(nodeId) {
     const container=byId('fx-links');container.replaceChildren();
     const links=model.MediaLinks.filter(l=>l.NodeId===nodeId).sort((a,b)=>a.ViewingOrder.localeCompare(b.ViewingOrder)||a.Position-b.Position);
+    // An imported collection is a one-time snapshot. Links not used by ANY
+    // row can be removed together without affecting explicit row references.
+    const assigned=new Set(model.Rows.flatMap(r=>r.MediaLinkIds||[]));
+    const hasCustomRows=model.Rows.some(r=>r.ParentNodeId===nodeId);
+    const unassigned=hasCustomRows?links.filter(l=>!assigned.has(l.Id)):[];
+    const bulk=byId('fx-remove-unassigned');
+    bulk.disabled=!unassigned.length;
+    bulk.textContent='Remove unassigned references ('+unassigned.length+')';
     const title=document.createElement('h3');title.textContent='Current references ('+links.length+')';container.appendChild(title);
     if(!links.length){const p=document.createElement('p');p.className='fx-muted';p.textContent='No media linked to this group yet.';container.appendChild(p);}
     links.forEach(l=>{
@@ -1006,7 +1053,10 @@
       const plus=document.createElement('button');plus.type='button';plus.className='fx-btn fx-btn-small';plus.textContent='↓ Later';
       plus.addEventListener('click',()=>moveLink(l,1,nodeId));
       const remove=document.createElement('button');remove.type='button';remove.className='fx-btn fx-btn-small fx-btn-danger';remove.textContent='Remove';
-      remove.addEventListener('click',()=>{if(!confirm('Remove this virtual link only? Original media will not be changed.'))return;model.MediaLinks=model.MediaLinks.filter(x=>x.Id!==l.Id);setDirty(true);render();});
+      remove.addEventListener('click',()=>{if(!confirm('Remove this virtual link only? Original media will not be changed.'))return;
+        model.MediaLinks=model.MediaLinks.filter(x=>x.Id!==l.Id);
+        for(const row of model.Rows){row.MediaLinkIds=row.MediaLinkIds.filter(id=>id!==l.Id);syncMediaOrder(row);}
+        setDirty(true);render();});
       if(l.ItemType==='Series') {
         const editRange=document.createElement('button');editRange.type='button';editRange.className='fx-btn fx-btn-small';editRange.textContent='Edit TV Show range';
         editRange.addEventListener('click',()=>openRangeEditor({Id:l.JellyfinItemId,Name:l.DisplayName||'TV Show',Type:'Series'},l));
@@ -1015,6 +1065,18 @@
       actions.append(minus,plus,remove);item.append(label,actions);container.appendChild(item);
     });
   }
+  byId('fx-remove-unassigned').addEventListener('click',()=>{
+    if(!selected)return;
+    const assigned=new Set(model.Rows.flatMap(r=>r.MediaLinkIds||[]));
+    if(!model.Rows.some(r=>r.ParentNodeId===selected))return;
+    const unused=model.MediaLinks.filter(l=>l.NodeId===selected&&!assigned.has(l.Id));
+    if(!unused.length)return;
+    if(!confirm('Remove '+unused.length+' unassigned virtual reference(s) from this franchise? This cannot remove or change movies, TV shows, or Jellyfin collections. Save plugin configuration to apply.'))return;
+    const ids=new Set(unused.map(l=>l.Id));
+    model.MediaLinks=model.MediaLinks.filter(l=>!ids.has(l.Id));
+    setDirty(true);render();
+    setStatus('Removed '+ids.size+' unassigned virtual references. Click Save plugin configuration to persist.');
+  });
   function moveLink(link,direction,nodeId) {
     const ordered=model.MediaLinks.filter(l=>l.NodeId===nodeId&&l.ViewingOrder===link.ViewingOrder).sort((a,b)=>a.Position-b.Position||a.DisplayName.localeCompare(b.DisplayName));
     const index=ordered.findIndex(l=>l.Id===link.Id);const swap=index+direction;

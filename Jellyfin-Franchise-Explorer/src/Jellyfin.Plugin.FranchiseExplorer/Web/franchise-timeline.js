@@ -234,7 +234,8 @@
         routePending:false,navigationAttempts:0,prior:prev?JSON.parse(JSON.stringify(prev)):null,
         // The checkbox now lives in the plugin settings page. Read its
         // unchanged per-user preference directly for timeline handoff.
-        subtitleEnabled:localStorage.getItem('fe-subtitles:'+this.context.serverId+':'+this.context.userId)==='1'};
+        subtitleEnabled:localStorage.getItem('fe-subtitles:'+this.context.serverId+':'+this.context.userId)==='1',
+        subtitleLanguage:localStorage.getItem('fe-subtitle-language:'+this.context.serverId+':'+this.context.userId)||''};
       // The server records only an expiring intent until actual playback is
       // observed; the browser bridge separately verifies its local player.
       localStorage.setItem(this.handoffKey(),JSON.stringify(intent));
@@ -248,6 +249,7 @@
         try{
           if(native.play(target.id,{positionTicks:Math.max(0,positionTicks),
             startOver:!!forceStartOver,subtitleEnabled:!!intent.subtitleEnabled,
+            subtitleLanguage:intent.subtitleLanguage,
             type:target.episode>0?'Episode':'Movie',intentKey:this.handoffKey()})){
               this.closeDialog(); // Unmount the blocking modal BEFORE native playback starts.
               return;
@@ -263,7 +265,7 @@
           sessionStorage.setItem('fe-quickplay-v1',JSON.stringify({version:1,id:target.id,
             created:Date.now(),positionTicks:Math.max(0,positionTicks),startOver:!!forceStartOver,
             type:target.episode>0?'Episode':'Movie',homeOnly:true,returnUrl:location.href,
-            subtitleEnabled:!!intent.subtitleEnabled}));
+            subtitleEnabled:!!intent.subtitleEnabled,subtitleLanguage:intent.subtitleLanguage}));
           this.closeDialog();
           location.assign(prefix+'/web/#/home');
           return;

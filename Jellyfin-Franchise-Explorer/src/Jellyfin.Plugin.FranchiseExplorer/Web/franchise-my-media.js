@@ -1,5 +1,5 @@
 /*
- * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.15).
+ * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.16).
  * Adds ONE visual link in the existing "My Media" row. It does not create a
  * Jellyfin library, alter user preferences, or modify the server's media.
  * Requires a compatible JavaScript injector to run in jellyfin-web.
@@ -9,7 +9,7 @@
   'use strict';
 
   // Programmatic registration plus a manual fallback must not create two observers.
-  window.__franchiseExplorerUiVersion = '0.8.9.15';
+  window.__franchiseExplorerUiVersion = '0.8.9.16';
   if (window.__franchiseExplorerMyMediaTileLoaded) return;
   window.__franchiseExplorerMyMediaTileLoaded = true;
   // Replaced with a data URI when registered by the plugin host service.
@@ -112,10 +112,15 @@
   }
 
   function isMyMediaHeading(element) {
-    // This is intentionally English-only until Jellyfin exposes an API for
-    // inserting custom library tiles. Do not infer it from unrelated text.
+    // English is only a fast path; the structural fallback below also works
+    // when Jellyfin renders a translated home screen (for example German).
     const label = (element.textContent || '').replace(/\s+/g, ' ').trim();
     return label === 'My Media' || label === 'My Media (small)';
+  }
+
+  function cardsContainer(section) {
+    const content = section?.querySelector('.itemsContainer, emby-itemscontainer, [is="emby-itemscontainer"]');
+    return content?.querySelector('.card, .libraryCard, .homeLibraryTile') ? content : null;
   }
 
   function findMyMediaContainer() {
@@ -126,10 +131,24 @@
       // Some Jellyfin 12 layouts place the heading in a wrapper within the section.
       if (!section) section = heading.parentElement?.parentElement || null;
       for (let step = 0; step < 3 && section; step++, section = section.parentElement) {
-        const content = section.querySelector('.itemsContainer, emby-itemscontainer, [is="emby-itemscontainer"]');
-        if (content && content.querySelector('.card, .libraryCard, .homeLibraryTile')) return content;
+        const content = cardsContainer(section);
+        if (content) return content;
       }
     }
+    // Jellyfin localizes section headings, but its library cards keep stable
+    // DOM structure. Prefer explicit library markers; as a final fallback use
+    // the FIRST home row (Jellyfin renders My Media before playback shelves).
+    // Never fall through to a subsequent Continue Watching / Next Up row.
+    const root = document.querySelector('.homeTab:not(.hide)') || document.querySelector('.homeTab') || document;
+    const known = root.querySelector('#home-my-media, [data-section="myMedia"], [data-section="my-media"], .homeLibrarySection, .homeLibraries');
+    if (cardsContainer(known)) return cardsContainer(known);
+    const sections = [...root.querySelectorAll('.verticalSection, .homeSection, section')]
+      .filter(s => !!cardsContainer(s));
+    const library = sections.find(s => s.querySelector('.homeLibraryTile, .libraryCard, [data-type="CollectionFolder"], [data-itemtype="CollectionFolder"], [data-collectiontype]'));
+    if (library) return cardsContainer(library);
+    const first = sections[0];
+    if (first && cardsContainer(first).querySelectorAll(':scope > .card, :scope > .libraryCard, :scope > .homeLibraryTile').length >= 2)
+      return cardsContainer(first);
     return null;
   }
 
@@ -173,7 +192,9 @@
         .forEach(el => labels.push(el.textContent));
       // Some Jellyfin themes have no conventional card text class.
       labels.push(card.textContent);
-      if (labels.some(label => (label || '').replace(/\s+/g, ' ').trim().toLowerCase() === 'collections')) return card;
+      if (card.querySelector('[data-collectiontype="boxsets"], [data-collectiontype="collections"]') ||
+          ['boxsets','collections'].includes((card.getAttribute('data-collectiontype') || '').toLowerCase())) return card;
+      if (labels.some(label => ['collections','sammlungen','colecciones','collezioni','collecties','collections de films'].includes((label || '').replace(/\s+/g, ' ').trim().toLowerCase()))) return card;
     }
     return null;
   }
@@ -211,7 +232,7 @@
       }
     }
     tile.id = TILE_ID;
-    tile.setAttribute('data-fe-version','0.8.9.15');
+    tile.setAttribute('data-fe-version','0.8.9.16');
     tile.setAttribute('aria-label','Open Franchises');
     tile.setAttribute('href',browseUrl());
     // Native actions from a cloned Collections card cannot operate on the
@@ -338,7 +359,7 @@
       if (sourceScalable) observedResize.observe(sourceScalable);
     }
     tile.setAttribute('href',browseUrl());
-    tile.setAttribute('data-fe-version','0.8.9.15');
+    tile.setAttribute('data-fe-version','0.8.9.16');
   }
 
   function schedule() {
@@ -368,7 +389,7 @@
   window.addEventListener('resize', schedule);
 })();
 
-/* v0.8.9.15 — Per-user franchise resume cards and in-place playback shortcuts on Jellyfin Web's home.
+/* v0.8.9.16 — Per-user franchise resume cards and in-place playback shortcuts on Jellyfin Web's home.
  * Jellyfin regularly replaces the home DOM, including after a refresh and
  * client-side navigation. Reattach the same widget rather than waiting for the
  * next API poll, and keep a short session-scoped cache for hard refreshes.
@@ -378,16 +399,16 @@
   'use strict';
   // An older Injector script may still be running. Never let its shared v1
   // marker block the newer in-place playback actions from initializing.
-  if (window.__franchiseTimelineHomeVersion === '0.8.9.15') return;
-  window.__franchiseTimelineHomeVersion = '0.8.9.15';
+  if (window.__franchiseTimelineHomeVersion === '0.8.9.16') return;
+  window.__franchiseTimelineHomeVersion = '0.8.9.16';
   window.__franchiseTimelineHomeLoaded = true;
   const WIDGET_ID = 'franchise-timeline-resume';
   // Versioned styles take precedence if an earlier Injector script left its
   // stylesheet in the page before the new registration initialized.
-  const STYLE_ID = 'franchise-timeline-resume-style-v08915';
+  const STYLE_ID = 'franchise-timeline-resume-style-v08916';
   const NATIVE_HIDE_STYLE_ID = 'fe-native-franchise-row-filter-style';
   const NATIVE_HIDE_CLASS = 'fe-native-franchise-row-hidden';
-  const CACHE_PREFIX = 'fe-franchise-home-v08915:';
+  const CACHE_PREFIX = 'fe-franchise-home-v08916:';
   const MAX_CARDS = 8;
   const phonePortrait = () => window.matchMedia('(orientation: portrait) and (max-width: 700px)').matches;
   const GUID = /^[a-f0-9]{32}$|^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
@@ -463,19 +484,32 @@
   }
 
   function homeAnchor() {
+    // The Franchises tile is a more reliable anchor than a translated heading.
+    const tile = document.getElementById('franchise-explorer-my-media-tile');
+    const tileSection = tile?.closest('.verticalSection,.homeSection,section');
+    if (tileSection) return tileSection;
     const headings = [...document.querySelectorAll('h1,h2,h3,h4,.sectionTitle')];
     const heading = headings.find(h => (h.textContent || '').trim() === 'Continue Watching')
       || headings.find(h => (h.textContent || '').trim() === 'My Media');
-    return heading?.closest('.verticalSection,.homeSection,section') || heading?.parentElement?.parentElement || null;
+    if (heading) return heading.closest('.verticalSection,.homeSection,section') || heading.parentElement?.parentElement || null;
+    // Localized Jellyfin Web: fall back to the first home row, but never a
+    // page elsewhere in the Jellyfin UI.
+    return document.querySelector('.homeTab:not(.hide) .verticalSection, .homeTab:not(.hide) .homeSection') || null;
   }
   function nativeRowSettingKey(auth) {
     return 'fe-show-active-native-rows:' + location.origin + ':' + String(auth.UserId || '').toLowerCase();
   }
   function nativeRowSections() {
     const headings = [...document.querySelectorAll('h1,h2,h3,h4,.sectionTitle')];
-    return headings.filter(h => /^(Continue Watching|Next Up)(?:\s*[›»>→])?$/.test((h.textContent || '').replace(/\s+/g,' ').trim()))
-      .map(h => h.closest('.verticalSection,.homeSection,section') || h.parentElement?.parentElement)
+    const labels=/^(?:Continue Watching|Next Up|Weiterschauen|Weiter ansehen|Als Nächstes|Nächste Folge|Seguir viendo|A continuación|Continuer à regarder|À suivre|Continua a guardare|Prossimi episodi|Verder kijken|Volgende)(?:\s*[›»>→])?$/i;
+    const result=headings.filter(h=>labels.test((h.textContent||'').replace(/\s+/g,' ').trim()))
+      .map(h=>h.closest('.verticalSection,.homeSection,section')||h.parentElement?.parentElement)
       .filter(Boolean);
+    // Stable section attributes take priority when localized titles are not
+    // among the common translations above. Unknown rows are left untouched.
+    const structural=[...document.querySelectorAll('[data-section="continueWatching"], [data-section="nextUp"], #continueWatching, #nextUp, .continueWatchingSection, .nextUpSection')]
+      .map(el=>el.closest('.verticalSection,.homeSection,section')||el).filter(Boolean);
+    return [...new Set([...result,...structural])];
   }
   function nativeCardId(card) {
     const candidates = [card, card.querySelector('[data-id],[data-item-id],[data-itemid]')].filter(Boolean);
@@ -549,7 +583,7 @@
       // Legacy Injector registrations may leave a second tracker with the
       // exact same DOM id. Hide it so its native confirm/resume menu cannot
       // be clicked accidentally after the upgraded script becomes active.
-      '#'+WIDGET_ID+':not([data-fe-version="0.8.9.15"]){display:none!important}',
+      '#'+WIDGET_ID+':not([data-fe-version="0.8.9.16"]){display:none!important}',
       '#'+WIDGET_ID+'{box-sizing:border-box;width:100%;min-width:0;padding:10px max(16px,2.5vw) 16px;color:#fff}',
       '#'+WIDGET_ID+' h2{font-size:1.32rem;margin:8px 0 15px;font-weight:600}',
       '#'+WIDGET_ID+' .fe-resume-grid{display:flex;gap:16px;flex-wrap:wrap;align-items:stretch}',
@@ -592,8 +626,8 @@
   // TimelineManager renders the SAME list as Browse, but Jellyfin Home does
   // not load Browse's stylesheet. The modal is appended to document.body.
   function ensureHomeTimelineStyle() {
-    if (document.getElementById('fe-home-timeline-dialog-style-v08915')) return;
-    const style=document.createElement('style');style.id='fe-home-timeline-dialog-style-v08915';
+    if (document.getElementById('fe-home-timeline-dialog-style-v08916')) return;
+    const style=document.createElement('style');style.id='fe-home-timeline-dialog-style-v08916';
     style.textContent=[
       '.timeline-dialog-mask{position:fixed;inset:0;z-index:2147483630;background:#050709e8;backdrop-filter:blur(2px);display:grid;place-items:center;padding:12px;overscroll-behavior:contain}',
       '.timeline-dialog-mask.fe-home-chronological-modal .timeline-dialog{width:min(830px,100%);max-height:min(88dvh,810px)}',
@@ -820,7 +854,7 @@
       widget.id = WIDGET_ID;
       widget.setAttribute('aria-label', 'Continue Your Franchises');
     }
-    widget.setAttribute('data-fe-version','0.8.9.15');
+    widget.setAttribute('data-fe-version','0.8.9.16');
     // Jellyfin's home view can destroy and recreate this entire parent.
     // Keep our rendered widget and reattach immediately after the native row.
     if (widget.parentElement !== anchor.parentElement || anchor.nextElementSibling !== widget)
@@ -1147,7 +1181,7 @@
     } catch (error) {
       // Transient errors must not erase the user's most recent cards. Log only
       // the status/error class (never an auth header, token or user ID).
-      console.warn('[Franchise Explorer 0.8.9.15] Home tracker refresh failed:', error?.message || 'unknown error');
+      console.warn('[Franchise Explorer 0.8.9.16] Home tracker refresh failed:', error?.message || 'unknown error');
     }
     finally { busy = false; }
   }
@@ -1181,8 +1215,8 @@
   'use strict';
   // Older Injector scripts can coexist after an upgrade. A boolean-only
   // guard would silently retain their details-page/autoresume behavior.
-  if(window.__franchiseAutoplayBridgeVersion==='0.8.9.15')return;
-  window.__franchiseAutoplayBridgeVersion='0.8.9.15';
+  if(window.__franchiseAutoplayBridgeVersion==='0.8.9.16')return;
+  window.__franchiseAutoplayBridgeVersion='0.8.9.16';
   window.__franchiseAutoplayBridgeLoaded=true;
   let currentKey='',attempts=0,scheduled=false,routeSettlingSince=0;
   const MAX_ATTEMPTS=36;
@@ -1205,6 +1239,56 @@
       try{for(const track of video.textTracks||[])track.mode='disabled';}catch(_){/* Not all browsers expose tracks */}
     }
   }
+  function subtitleCode(value){
+    const aliases={eng:'en',deu:'de',ger:'de',fra:'fr',fre:'fr',spa:'es',ita:'it',por:'pt',nld:'nl',dut:'nl',jpn:'ja',zho:'zh',chi:'zh',kor:'ko',rus:'ru',pol:'pl',swe:'sv',dan:'da',fin:'fi',nor:'nb',ara:'ar',hin:'hi',tur:'tr',ukr:'uk',ces:'cs',cze:'cs',ron:'ro',rum:'ro',ell:'el',gre:'el',heb:'he',ind:'id',vie:'vi'};
+    const code=String(value||'').trim().toLowerCase().split(/[-_]/)[0];
+    return aliases[code]||code;
+  }
+  function selectPreferredBrowserSubtitle(language){
+    const preferred=subtitleCode(language);
+    if(!preferred)return;
+    for(const video of document.querySelectorAll('video')){
+      try{
+        const tracks=[...(video.textTracks||[])].filter(t=>t.kind==='subtitles'||t.kind==='captions');
+        const chosen=tracks.find(t=>subtitleCode(t.language)===preferred);
+        if(!chosen)continue; // Missing track: let Jellyfin handle its own selection.
+        for(const track of tracks)track.mode=track===chosen?'showing':'disabled';
+      }catch(_){/* Some Jellyfin players render subtitles outside HTML text tracks. */}
+    }
+  }
+  let subtitlePreferenceGeneration=0;
+  async function jellyfinPreferredSubtitleLanguage(auth){
+    if(!auth?.AccessToken||!auth?.UserId)return '';
+    // Read the current authenticated user's own Jellyfin subtitle preference.
+    // No server preference is modified and no cross-user preference is reused.
+    const prefix=((location.pathname||'').match(/^(.*?)\/web(?:\/|$)/i)||[])[1]||'';
+    try{
+      const response=await fetch(prefix+'/Users/Me',{
+        cache:'no-store',headers:{Authorization:'MediaBrowser Token="'+auth.AccessToken+'"'}
+      });
+      if(!response.ok)return '';
+      const user=await response.json();
+      return user?.Configuration?.SubtitleLanguagePreference
+        ||user?.configuration?.subtitleLanguagePreference
+        ||user?.SubtitleLanguagePreference||user?.subtitleLanguagePreference||'';
+    }catch(_){return '';}
+  }
+  function applySubtitlePreferences(options){
+    const generation=++subtitlePreferenceGeneration;
+    if(!options.subtitleEnabled){for(const delay of [800,2000,4500])setTimeout(disableBrowserTextTracks,delay);return;}
+    const auth=localCredentials();
+    const serverId=auth?.Id||auth?.ServerId||'';
+    const saved=serverId&&auth?.UserId?localStorage.getItem('fe-subtitle-language:'+serverId+':'+auth.UserId):'';
+    const scheduleLanguage=language=>{
+      if(!language||generation!==subtitlePreferenceGeneration)return;
+      for(const delay of [300,800,2000,4500])setTimeout(()=>{
+        if(generation===subtitlePreferenceGeneration)selectPreferredBrowserSubtitle(language);
+      },delay);
+    };
+    const override=options.subtitleLanguage||saved||'';
+    if(override)scheduleLanguage(override);
+    else void jellyfinPreferredSubtitleLanguage(auth).then(scheduleLanguage);
+  }
   // A local timeline intent is written by the Franchises browser. The native
   // Jellyfin Web player must start first; 204 from /Sessions/Playing is never
   // enough. This verification is scoped to the authenticated Jellyfin user.
@@ -1225,7 +1309,7 @@
     try{
       const all=JSON.parse(localStorage.getItem('jellyfin_credentials')||'{}').Servers||[];
       return all.find(x=>x.UserId&&x.AccessToken&&
-        [x.ManualAddress,x.LocalAddress,x.RemoteAddress].some(a=>{
+        [x.ManualAddress,x.LocalAddress,x.RemoteAddress,x.LastConnectionAddress].some(a=>{
           try{return new URL(a).origin===location.origin;}catch(_){return false;}
         }))||(all.length===1?all[0]:null);
     }catch(_){return null;}
@@ -1409,6 +1493,7 @@
       }
       if(!intent.replayOnly){
         const owner={rowId:intent.rowId,created:Date.now(),subtitleEnabled:intent.subtitleEnabled,
+          subtitleLanguage:intent.subtitleLanguage||'',
           sessionId:started.Id,lastItemId:expectedId,
           verifiedState:activeState};
         localStorage.setItem('fe-local-follow-v1:'+String(auth.UserId).toLowerCase(),JSON.stringify(owner));
@@ -1597,7 +1682,7 @@
   // Explicit `play` with position 0 is essential for restart-current: native
   // Jellyfin's Resume action otherwise restores its separate watched offset.
   window.FranchiseExplorerNativePlayback={
-    version:'0.8.9.15',
+    version:'0.8.9.16',
     play(id,options={}){
       if(!/^[a-f0-9-]{32,36}$/i.test(id))return false;
       const container=document.querySelector('.homeTab:not(.hide) .itemsContainer, .homeTab:not(.hide) .itemsContainerWithBorders, .homeTab .itemsContainer, .itemsContainer:not(.hide)');
@@ -1642,7 +1727,7 @@
         setTimeout(()=>wrapper.remove(),250);
         void confirmLocalTimeline(id);
       },0);
-      if(!options.subtitleEnabled)for(const delay of [800,2000,4500])setTimeout(disableBrowserTextTracks,delay);
+      applySubtitlePreferences(options);
       // A theme or Jellyfin Web variant may not expose the delegated
       // shortcut listener. Keep Home visible and report the problem instead
       // of silently navigating through the item's Details page.
@@ -1733,11 +1818,9 @@
       if(startOver)enforceStartOver(id);
       play.click();
       if(isTimeline)void confirmLocalTimeline(id);
-      if(!subs){
-        // Best-effort web text-track suppression: Jellyfin settings and
-        // separately rendered subtitle formats can override this.
-        for(const t of [800,2000,4500])setTimeout(disableBrowserTextTracks,t);
-      }
+      // Best-effort browser text-track selection. Jellyfin native clients and
+      // separately rendered subtitle formats may use their own preferences.
+      applySubtitlePreferences({subtitleEnabled:subs});
       return;
     }
     attempts++;
@@ -1787,7 +1870,8 @@
         homeOnly:true,routePending:false,navigationAttempts:0,
         state:{...state,itemId:next,sessionId:'',playbackMode:'paused',
           pendingAutoAdvanceUtc:null,pendingAutoAdvanceFromKey:'',pendingAutoAdvanceToKey:''},
-        replayOnly:false,subtitleEnabled:!!owner.subtitleEnabled};
+        replayOnly:false,subtitleEnabled:!!owner.subtitleEnabled,
+        subtitleLanguage:owner.subtitleLanguage||''};
       localStorage.setItem(handoffPrefix+String(auth.UserId).toLowerCase(),JSON.stringify(intent));
       const previousReturn=readPlaybackReturn();
       const root=((location.pathname||'').match(/^(.*?)\/web(?:\/|$)/i)||[])[1]||'';
@@ -1800,7 +1884,7 @@
       sessionStorage.setItem('fe-quickplay-v1',JSON.stringify({version:1,id:next,
         created:Date.now(),positionTicks:0,startOver:true,autoNext:true,
         homeOnly:true,type:Number(state.queueEpisodes?.[index])>0?'Episode':'Movie',
-        returnUrl,subtitleEnabled:!!owner.subtitleEnabled}));
+        returnUrl,subtitleEnabled:!!owner.subtitleEnabled,subtitleLanguage:owner.subtitleLanguage||''}));
       lastFollowKey=key; // Only mark queued after the new intent can be recovered.
       if(!/^#\/?home(?:\?|$)/i.test(location.hash||'')){
         if(location.protocol==='http:'||location.protocol==='https:')location.assign(homeUrl);
