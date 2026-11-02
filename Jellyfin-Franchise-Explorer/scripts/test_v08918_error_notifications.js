@@ -18,20 +18,21 @@ assert(from>=0&&to>from,'Playback notification handler missing');
 const handler=home.slice(from,to);
 const timers=new Map();
 const logged=[];
-let nextTimer=0,notice=null,removed=false;
+let nextTimer=0,notice=null,removed=false,nativeAndroid=false;
 const sandbox={
+  androidIntegratedPlayer:()=>nativeAndroid,
   document:{
     getElementById:()=>removed?null:notice,
     createElement:()=>({style:{},setAttribute(){},remove(){removed=true;}}),
     body:{appendChild(el){notice=el;removed=false;}}
   },
-  setTimeout:(fn,ms)=>{const id=++nextTimer;timers.set(id,{fn,ms});return id;},
+  setTimeout:(fn,ms)=>{const id=++nextTimer;timers.set(id,{fn:()=>{timers.delete(id);fn();},ms});return id;},
   clearTimeout:id=>timers.delete(id),
   window:{FranchiseExplorerReportError:(source,message)=>logged.push({source,message})},
   console:{error:(...args)=>logged.push({source:'console',message:args.join(' ')})}
 };
 vm.createContext(sandbox);
-vm.runInContext('let localNoticeTimer=null;\n'+handler+'\nshowLocalNotice("Could not verify video playback on THIS device.");',sandbox);
+vm.runInContext('let localNoticeTimer=null,lastAndroidNotice="",lastAndroidNoticeAt=0;\n'+handler+'\nshowLocalNotice("Could not verify video playback on THIS device.");',sandbox);
 assert.equal(logged.length,1,'Visible playback error must be logged');
 assert.equal(logged[0].source,'playback');
 assert.equal(timers.size,1);
@@ -43,6 +44,19 @@ assert.equal([...timers.values()][0].ms,8000,'Long warning durations capped at 8
 assert.equal(removed,true,'Notice must disappear');
 vm.runInContext('showLocalNotice("Chronological timeline tracking is active",4500);',sandbox);
 assert.equal(logged.length,2,'Success notices should not be logged as errors');
+
+// Android's 2-second Home poll must not perpetually reset the dismissal
+// timer for a recurring error, though every failure remains in the log.
+nativeAndroid=true;
+vm.runInContext('showLocalNotice("Android native handoff failed",6500);',sandbox);
+const androidTimerId=[...timers.keys()][0];
+const beforeRepeat=logged.length;
+vm.runInContext('showLocalNotice("Android native handoff failed",6500);',sandbox);
+assert.equal(logged.length,beforeRepeat+1,'Repeated Android errors must still be logged');
+assert.deepEqual([...timers.keys()],[androidTimerId],
+  'Repeated Android errors must not extend the visible notification');
+timers.get(androidTimerId).fn();
+assert.equal(removed,true,'Repeated Android notifications must still disappear');
 
 assert(home.includes("window.FranchiseExplorerReportError('home',message)"));
 assert(home.includes("fetch(base+'/FranchiseExplorer/ClientLog'"));
