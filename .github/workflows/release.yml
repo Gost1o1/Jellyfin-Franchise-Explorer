@@ -5,7 +5,7 @@ on:
       version:
         description: 'Release version; must equal csproj Version'
         required: true
-        default: '0.8.9.19'
+        default: '0.8.9.20'
         type: string
       confirm:
         description: 'Type RELEASE_EXPERIMENTAL to publish'
@@ -110,7 +110,8 @@ jobs:
           python3 scripts/test_v08916_language_and_cleanup.py
           node scripts/test_v08917_group_assignment.js
           node scripts/test_v08918_error_notifications.js
-          node scripts/test_v08919_android_integrated.js
+          node scripts/test_v08920_android_integrated.js
+          node scripts/test_v08920_android_queue.js
           python3 scripts/check_version.py "$RELEASE_VERSION"
       - name: Build release assembly
         working-directory: Jellyfin-Franchise-Explorer
