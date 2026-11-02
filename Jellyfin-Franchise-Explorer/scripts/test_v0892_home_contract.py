@@ -9,7 +9,7 @@ BROWSE = (PROJECT / "Configuration/browsePage.html").read_text(encoding="utf-8")
 README = (ROOT.parent / "README.md").read_text(encoding="utf-8")
 CS = (PROJECT / "Jellyfin.Plugin.FranchiseExplorer.csproj").read_text(encoding="utf-8")
 
-assert "<Version>0.8.9.15</Version>" in CS
+assert "<Version>0.8.9.16</Version>" in CS
 assert "Continue Your Franchises" in JS
 for marker in (
     "sessionStorage.getItem", "sessionStorage.setItem", "MutationObserver",
@@ -30,7 +30,7 @@ assert "configurationpage?name=Franchise%20Explorer" in JS
 assert 'id="fe-config-settings"' in BROWSE
 assert "configurationpage?name=Franchise%20Explorer" in BROWSE
 assert "src=\"docs/Gost1o1-logo.png\"" in README
-assert "docs/franchise-explorer-preview.png" in README
+assert "docs/screenshots/user-guide/00-franchise-explorer-full-page.png" in README
 for name in ("Gost1o1-logo.png", "franchise-explorer-preview.png"):
     file = ROOT.parent / "docs" / name
     assert file.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n", name

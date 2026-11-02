@@ -352,3 +352,11 @@ See Git history for earlier releases.
 - Prefer the existing series/movie Primary poster in both landscape and portrait Home card orientations, with the landscape art used only when no poster is available.
 - Updated the v0.8.9.15 JavaScript Injector registration and historical-script cleanup, version checks, and offline playback contracts; live host verification remains required.
 
+## v0.8.9.16 — Localized Home UI, subtitle-language preference, and import cleanup (experimental)
+
+- Removed the English-only **My Media** dependency for the Franchises tile by adding library-row structural detection. The homepage resume widget now anchors to the tile independently of the user's Jellyfin display language; common translated native headings are supported as additional fallbacks.
+- Added a per-user/per-browser **Preferred subtitle language** selector under **Playback & Home preferences**. Its default now reads the authenticated user's live Jellyfin subtitle-language preference, shows that inherited language in the dropdown when available, and tries to select a matching HTML text track during playback. An explicitly selected language overrides it without modifying Jellyfin user preferences.
+- Exposed **Manage imported virtual references** in the editor and added a confirmation-protected **Remove unassigned references** action for links that aren't used by custom rows. Disconnecting a collection still preserves imported links unless the user explicitly removes them.
+- Advanced the versioned optional JavaScript Injector registration and included v0.8.9.15 among safely retired plugin-owned script IDs. Added localized-home and cleanup regression tests.
+- Jellyfin Web/Injector compatibility and non-browser subtitle rendering remain client-dependent and require live verification.
+
