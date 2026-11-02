@@ -1,4 +1,4 @@
-/* v0.8.9.18: Home resume/artwork and chronological auto-next must stay off Details/Browse. */
+/* v0.8.9.19: Home resume/artwork and chronological auto-next must stay off Details/Browse. */
 'use strict';
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
@@ -53,6 +53,7 @@ const followEnd=script.indexOf('  const pollFollow=',followStart);
 assert(followStart>=0&&followEnd>followStart);
 const env={console,Date,location,localStorage,sessionStorage,
   document:{hidden:false},localCredentials:()=>auth,localIntent:()=>null,
+  androidIntegratedPlayer:()=>false, // Existing desktop auto-next path stays unchanged.
   params:()=>null,itemMatch,handoffPrefix:'fe-local-timeline-v1:',
   readPlaybackReturn:()=>({returnUrl:home}),
   armPlaybackReturn:()=>{},setTimeout:()=>{},consumeHomeQuickPlay:()=>{},
@@ -105,5 +106,5 @@ vm.runInNewContext(script.slice(consumeStart,consumeEnd)+'\nglobalThis.consume=c
   consumerEnv.location.hash='#/home';
   consumerEnv.consume();
   assert.equal(nativeCalls.length,2);
-  console.log('v0.8.9.18 Home resume, poster orientation, and native chronological next-episode contracts passed.');
+  console.log('v0.8.9.19 Home resume, poster orientation, and native chronological next-episode contracts passed.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

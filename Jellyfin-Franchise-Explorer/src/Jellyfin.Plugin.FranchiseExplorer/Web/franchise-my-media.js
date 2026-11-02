@@ -1,5 +1,5 @@
 /*
- * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.18).
+ * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.19).
  * Adds ONE visual link in the existing "My Media" row. It does not create a
  * Jellyfin library, alter user preferences, or modify the server's media.
  * Requires a compatible JavaScript injector to run in jellyfin-web.
@@ -9,7 +9,7 @@
   'use strict';
 
   // Programmatic registration plus a manual fallback must not create two observers.
-  window.__franchiseExplorerUiVersion = '0.8.9.18';
+  window.__franchiseExplorerUiVersion = '0.8.9.19';
   if (window.__franchiseExplorerMyMediaTileLoaded) return;
   window.__franchiseExplorerMyMediaTileLoaded = true;
   // Replaced with a data URI when registered by the plugin host service.
@@ -247,7 +247,7 @@
       }
     }
     tile.id = TILE_ID;
-    tile.setAttribute('data-fe-version','0.8.9.18');
+    tile.setAttribute('data-fe-version','0.8.9.19');
     tile.setAttribute('aria-label','Open Franchises');
     tile.setAttribute('href',browseUrl());
     // Native actions from a cloned Collections card cannot operate on the
@@ -374,7 +374,7 @@
       if (sourceScalable) observedResize.observe(sourceScalable);
     }
     tile.setAttribute('href',browseUrl());
-    tile.setAttribute('data-fe-version','0.8.9.18');
+    tile.setAttribute('data-fe-version','0.8.9.19');
   }
 
   function schedule() {
@@ -404,7 +404,7 @@
   window.addEventListener('resize', schedule);
 })();
 
-/* v0.8.9.18 — Per-user franchise resume cards and in-place playback shortcuts on Jellyfin Web's home.
+/* v0.8.9.19 — Per-user franchise resume cards and in-place playback shortcuts on Jellyfin Web's home.
  * Jellyfin regularly replaces the home DOM, including after a refresh and
  * client-side navigation. Reattach the same widget rather than waiting for the
  * next API poll, and keep a short session-scoped cache for hard refreshes.
@@ -414,16 +414,16 @@
   'use strict';
   // An older Injector script may still be running. Never let its shared v1
   // marker block the newer in-place playback actions from initializing.
-  if (window.__franchiseTimelineHomeVersion === '0.8.9.18') return;
-  window.__franchiseTimelineHomeVersion = '0.8.9.18';
+  if (window.__franchiseTimelineHomeVersion === '0.8.9.19') return;
+  window.__franchiseTimelineHomeVersion = '0.8.9.19';
   window.__franchiseTimelineHomeLoaded = true;
   const WIDGET_ID = 'franchise-timeline-resume';
   // Versioned styles take precedence if an earlier Injector script left its
   // stylesheet in the page before the new registration initialized.
-  const STYLE_ID = 'franchise-timeline-resume-style-v08918';
+  const STYLE_ID = 'franchise-timeline-resume-style-v08919';
   const NATIVE_HIDE_STYLE_ID = 'fe-native-franchise-row-filter-style';
   const NATIVE_HIDE_CLASS = 'fe-native-franchise-row-hidden';
-  const CACHE_PREFIX = 'fe-franchise-home-v08918:';
+  const CACHE_PREFIX = 'fe-franchise-home-v08919:';
   const MAX_CARDS = 8;
   const phonePortrait = () => window.matchMedia('(orientation: portrait) and (max-width: 700px)').matches;
   const GUID = /^[a-f0-9]{32}$|^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
@@ -620,7 +620,7 @@
       // Legacy Injector registrations may leave a second tracker with the
       // exact same DOM id. Hide it so its native confirm/resume menu cannot
       // be clicked accidentally after the upgraded script becomes active.
-      '#'+WIDGET_ID+':not([data-fe-version="0.8.9.18"]){display:none!important}',
+      '#'+WIDGET_ID+':not([data-fe-version="0.8.9.19"]){display:none!important}',
       '#'+WIDGET_ID+'{box-sizing:border-box;width:100%;min-width:0;padding:10px max(16px,2.5vw) 16px;color:#fff}',
       '#'+WIDGET_ID+' h2{font-size:1.32rem;margin:8px 0 15px;font-weight:600}',
       '#'+WIDGET_ID+' .fe-resume-grid{display:flex;gap:16px;flex-wrap:wrap;align-items:stretch}',
@@ -663,8 +663,8 @@
   // TimelineManager renders the SAME list as Browse, but Jellyfin Home does
   // not load Browse's stylesheet. The modal is appended to document.body.
   function ensureHomeTimelineStyle() {
-    if (document.getElementById('fe-home-timeline-dialog-style-v08918')) return;
-    const style=document.createElement('style');style.id='fe-home-timeline-dialog-style-v08918';
+    if (document.getElementById('fe-home-timeline-dialog-style-v08919')) return;
+    const style=document.createElement('style');style.id='fe-home-timeline-dialog-style-v08919';
     style.textContent=[
       '.timeline-dialog-mask{position:fixed;inset:0;z-index:2147483630;background:#050709e8;backdrop-filter:blur(2px);display:grid;place-items:center;padding:12px;overscroll-behavior:contain}',
       '.timeline-dialog-mask.fe-home-chronological-modal .timeline-dialog{width:min(830px,100%);max-height:min(88dvh,810px)}',
@@ -895,7 +895,7 @@
       widget.id = WIDGET_ID;
       widget.setAttribute('aria-label', 'Continue Your Franchises');
     }
-    widget.setAttribute('data-fe-version','0.8.9.18');
+    widget.setAttribute('data-fe-version','0.8.9.19');
     // Jellyfin's home view can destroy and recreate this entire parent.
     // Keep our rendered widget and reattach immediately after the native row.
     if (widget.parentElement !== anchor.parentElement || anchor.nextElementSibling !== widget)
@@ -1222,7 +1222,7 @@
     } catch (error) {
       // Transient errors must not erase the user's most recent cards. Log only
       // the status/error class (never an auth header, token or user ID).
-      console.warn('[Franchise Explorer 0.8.9.18] Home tracker refresh failed:', error?.message || 'unknown error');
+      console.warn('[Franchise Explorer 0.8.9.19] Home tracker refresh failed:', error?.message || 'unknown error');
     }
     finally { busy = false; }
   }
@@ -1256,8 +1256,8 @@
   'use strict';
   // Older Injector scripts can coexist after an upgrade. A boolean-only
   // guard would silently retain their details-page/autoresume behavior.
-  if(window.__franchiseAutoplayBridgeVersion==='0.8.9.18')return;
-  window.__franchiseAutoplayBridgeVersion='0.8.9.18';
+  if(window.__franchiseAutoplayBridgeVersion==='0.8.9.19')return;
+  window.__franchiseAutoplayBridgeVersion='0.8.9.19';
   window.__franchiseAutoplayBridgeLoaded=true;
   let currentKey='',attempts=0,scheduled=false,routeSettlingSince=0;
   const MAX_ATTEMPTS=36;
@@ -1374,7 +1374,22 @@
     return path.startsWith('/FranchiseExplorer/TimelineState')?timelineResponse(value):value;
   }
   function itemMatch(a,b){return String(a||'').replace(/-/g,'').toLowerCase()===String(b||'').replace(/-/g,'').toLowerCase();}
-  function deviceId(){return localStorage.getItem('_deviceId2')||localStorage.getItem('_deviceId')||'';}
+  // Jellyfin Android's Integrated Player has its own native device identity.
+  // The WebView's localStorage ID is not guaranteed to match its native session.
+  // Keep the existing desktop/Web lookup exactly as before.
+  function androidIntegratedPlayer(){
+    try{return window.NativePlayer?.isEnabled?.()===true;}catch(_){return false;}
+  }
+  const androidFollowKey=auth=>'fe-android-native-follow-v1:'+String(auth.UserId).toLowerCase();
+  function deviceId(){
+    if(androidIntegratedPlayer()){
+      try{
+        const info=JSON.parse(window.NativeInterface?.getDeviceInformation?.()||'null');
+        if(typeof info?.deviceId==='string'&&info.deviceId)return info.deviceId;
+      }catch(error){console.debug('Franchise Explorer: native Android device ID unavailable',error);}
+    }
+    return localStorage.getItem('_deviceId2')||localStorage.getItem('_deviceId')||'';
+  }
   const playbackReturnKey='fe-return-after-player-v1';
   function readPlaybackReturn(){
     try{
@@ -1439,11 +1454,16 @@
   addEventListener('hashchange',restorePlaybackOrigin);
   addEventListener('popstate',restorePlaybackOrigin);
   let localNoticeTimer=null;
+  let lastAndroidNotice='',lastAndroidNoticeAt=0;
   function showLocalNotice(message,ttl=6500){
     if(/could not|cannot|failed|failure|error|unavailable|did not/i.test(message)){
       if(window.FranchiseExplorerReportError)window.FranchiseExplorerReportError('playback',message);
       else console.error('[Franchise Explorer playback]',message);
     }
+    // Polling may repeat one failed Android handoff every two seconds. Log
+    // each failure, but allow the visible banner to expire once as requested.
+    if(androidIntegratedPlayer()&&message===lastAndroidNotice&&Date.now()-lastAndroidNoticeAt<30000)return;
+    if(androidIntegratedPlayer()){lastAndroidNotice=message;lastAndroidNoticeAt=Date.now();}
     let notice=document.getElementById('fe-local-playback-notice');
     if(!notice){
       notice=document.createElement('div');notice.id='fe-local-playback-notice';
@@ -1720,6 +1740,53 @@
     document.addEventListener('timeupdate',onVideo,true);
     const expiry=setTimeout(stop,30000);
   }
+  // The Android Integrated Player does not render an HTML <video> in Jellyfin
+  // Web. Its official ExoPlayer bridge launches the native activity and uses
+  // the user's own Jellyfin bitrate settings. The offscreen-card click below
+  // is a Web-only mechanism and must remain unchanged on desktop.
+  function playAndroidIntegrated(id,options){
+    if(!androidIntegratedPlayer())return null; // Desktop and Web Player: original path.
+    const player=window.ExoPlayer;
+    if(typeof player?.play!=='function')return false;
+    const auth=localCredentials();
+    armPlaybackReturn(id,options.returnUrl||location.href);
+    const intent=localIntent(auth);
+    try{
+      const position=Math.max(0,Number(options.positionTicks)||0);
+      // ExoPlayer.play passes these options to NativePlayer.loadPlayer and
+      // obtains maxStreamingBitrateLocal/Remote from Jellyfin's appSettings.
+      const launch=player.play({items:[{Id:id}],fullscreen:true,startIndex:0,
+        startPositionTicks:options.startOver?0:position});
+      if(intent&&itemMatch(intent.expectedId,id)){
+        if(!intent.replayOnly&&auth?.UserId){
+          // Android pauses WebView timers while its native activity is open.
+          // Jellyfin's SERVER playback listener alone activates the armed row.
+          // Keep a device-bound local marker so Home can verify its session
+          // after Android resumes the WebView; do not guess from a user ID.
+          localStorage.setItem(androidFollowKey(auth),JSON.stringify({rowId:intent.rowId,
+            itemId:id,deviceId:deviceId(),created:Date.now(),
+            subtitleEnabled:!!intent.subtitleEnabled,
+            subtitleLanguage:intent.subtitleLanguage||''}));
+          localStorage.removeItem('fe-local-follow-v1:'+String(auth.UserId).toLowerCase());
+        }
+        // The browser's timed confirmation loop cannot run in the background;
+        // don't leave this expiring intent blocking the next Home handoff.
+        localStorage.removeItem(intent.key);
+      }
+      Promise.resolve(launch).catch(error=>{
+        console.error('Franchise Explorer: Android native player launch failed',error);
+        showLocalNotice('Android Integrated Player could not start this timeline item. Open it from Franchises to retry.');
+      });
+      applySubtitlePreferences(options);
+      // No HTMLVideoElement exists in Integrated Player. The server's actual
+      // PlaybackStart and PlaybackStopped events are authoritative on Android.
+      return true;
+    }catch(error){
+      console.error('Franchise Explorer: Android native player launch failed',error);
+      showLocalNotice('Android Integrated Player could not start this timeline item. Open it from Franchises to retry.');
+      return false;
+    }
+  }
   // Jellyfin Web's own delegated shortcuts click handler understands
   // data-action=play / resume on a card inside the active items container.
   // This invokes the native PlaybackManager immediately: no /details route,
@@ -1727,9 +1794,11 @@
   // Explicit `play` with position 0 is essential for restart-current: native
   // Jellyfin's Resume action otherwise restores its separate watched offset.
   window.FranchiseExplorerNativePlayback={
-    version:'0.8.9.18',
+    version:'0.8.9.19',
     play(id,options={}){
       if(!/^[a-f0-9-]{32,36}$/i.test(id))return false;
+      const androidLaunch=playAndroidIntegrated(id,options);
+      if(androidLaunch!==null)return androidLaunch;
       const container=document.querySelector('.homeTab:not(.hide) .itemsContainer, .homeTab:not(.hide) .itemsContainerWithBorders, .homeTab .itemsContainer, .itemsContainer:not(.hide)');
       if(!container)return false;
       const wrapper=document.createElement('div');
@@ -1824,6 +1893,11 @@
         .some(v=>!v.paused&&!v.ended&&v.getClientRects().length))return;
     if(window.FranchiseExplorerNativePlayback.play(current.id,current)){
       sessionStorage.removeItem('fe-quickplay-v1');
+    }else if(androidIntegratedPlayer()){
+      // Never retry an unavailable native bridge every 300ms: that would keep
+      // refreshing the warning banner and make it appear permanent.
+      sessionStorage.removeItem('fe-quickplay-v1');
+      showLocalNotice('Android Integrated Player is not ready for automatic playback. Open the next item from Franchises to retry.');
     }
   }
   setInterval(consumeHomeQuickPlay,300);
@@ -1880,13 +1954,40 @@
   // Follow the saved timeline after Jellyfin server events advance its
   // cursor. Guard against jumping when unrelated playback is active.
   let localFollowBusy=false,lastFollowKey='';
+  async function recoverAndroidFollow(auth,owner,localKey){
+    if(!androidIntegratedPlayer()||owner?.sessionId)return owner;
+    let marker;
+    try{marker=JSON.parse(localStorage.getItem(androidFollowKey(auth))||'null');}catch(_){return owner;}
+    if(!marker?.rowId||!marker.itemId||!marker.deviceId||
+       Date.now()-Number(marker.created||0)>12*60*60*1000)return owner;
+    const states=await api('/FranchiseExplorer/TimelineState',auth);
+    const state=(states||[]).find(s=>s.rowId===marker.rowId &&
+      s.playbackMode==='playing' && s.sessionId && Array.isArray(s.queueKeys));
+    if(!state)return owner;
+    // The record can point to the launched item while playing, or to its
+    // successor after a genuine completion. Never adopt an unrelated row.
+    const key=state.pendingAutoAdvanceFromKey || state.queueKeys[state.index];
+    if(!itemMatch(String(key||'').split(':').pop(),marker.itemId))return owner;
+    const sessions=await api('/Sessions?ControllableByUserId='+encodeURIComponent(auth.UserId),auth);
+    const session=(sessions||[]).find(s=>s.Id===state.sessionId &&
+      itemMatch(s.UserId,auth.UserId) && String(s.DeviceId||'')===marker.deviceId);
+    if(!session)return owner; // A different Android/desktop device may share this user.
+    const recovered={rowId:marker.rowId,sessionId:state.sessionId,lastItemId:marker.itemId,
+      created:marker.created,subtitleEnabled:!!marker.subtitleEnabled,
+      subtitleLanguage:marker.subtitleLanguage||'',verifiedState:state};
+    localStorage.setItem(localKey,JSON.stringify(recovered));
+    localStorage.removeItem(androidFollowKey(auth));
+    console.info('Franchise Explorer: verified Android native timeline session after return to Home',marker.rowId);
+    return recovered;
+  }
   async function followLocalTimeline(){
     if(localFollowBusy||params()||document.hidden||localIntent(localCredentials()))return;
     const auth=localCredentials();if(!auth?.UserId)return;
     localFollowBusy=true;
     try{
       const localKey='fe-local-follow-v1:'+String(auth.UserId).toLowerCase();
-      const owner=JSON.parse(localStorage.getItem(localKey)||'null');
+      const storedOwner=JSON.parse(localStorage.getItem(localKey)||'null');
+      const owner=await recoverAndroidFollow(auth,storedOwner,localKey);
       if(!owner?.rowId||!owner.sessionId||Date.now()-owner.created>86400000)return;
       const states=await api('/FranchiseExplorer/TimelineState',auth);
       const state=(states||[]).find(x=>x.rowId===owner.rowId && x.playbackMode==='playing'
