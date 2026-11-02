@@ -484,14 +484,36 @@
   }
 
   function homeAnchor() {
-    // The Franchises tile is a more reliable anchor than a translated heading.
+    // Keep the resume shelf AFTER Continue Watching, as before the locale fix.
+    // The first implementation of localized anchoring used My Media directly,
+    // which inserted this extra <section> before Continue Watching and broke
+    // Jellyfin's existing home layout (and positional browser regressions).
+    const headings = [...document.querySelectorAll('h1,h2,h3,h4,.sectionTitle')];
+    const continueLabels=/^(?:Continue Watching|Weiterschauen|Weiter ansehen|Seguir viendo|Continuer à regarder|Continua a guardare|Verder kijken)(?:\s*[›»>→])?$/i;
+    const continuing=headings.find(h=>continueLabels.test((h.textContent||'').replace(/\s+/g,' ').trim()));
+    if(continuing){
+      const section=continuing.closest('.verticalSection,.homeSection,section')||continuing.parentElement?.parentElement;
+      if(section)return section;
+    }
+    // Prefer stable structural markers if the user's language is not in the
+    // translated-label list. An unknown language must never hide the widget.
+    const native=document.querySelector('[data-section="continueWatching"], #continueWatching, .continueWatchingSection');
+    if(native){
+      const section=native.closest('.verticalSection,.homeSection,section')||native;
+      if(section)return section;
+    }
+    // Fallback: the Franchises tile identifies My Media independently of
+    // display language. Its next real home shelf is the best available anchor.
     const tile = document.getElementById('franchise-explorer-my-media-tile');
     const tileSection = tile?.closest('.verticalSection,.homeSection,section');
-    if (tileSection) return tileSection;
-    const headings = [...document.querySelectorAll('h1,h2,h3,h4,.sectionTitle')];
-    const heading = headings.find(h => (h.textContent || '').trim() === 'Continue Watching')
-      || headings.find(h => (h.textContent || '').trim() === 'My Media');
-    if (heading) return heading.closest('.verticalSection,.homeSection,section') || heading.parentElement?.parentElement || null;
+    if(tileSection){
+      const next=tileSection.nextElementSibling;
+      if(next?.matches?.('.verticalSection,.homeSection,section') && next.id!==WIDGET_ID &&
+         next.querySelector('.itemsContainer,emby-itemscontainer,[is="emby-itemscontainer"]'))return next;
+      return tileSection;
+    }
+    const myMedia=headings.find(h=>(h.textContent||'').trim()==='My Media');
+    if(myMedia)return myMedia.closest('.verticalSection,.homeSection,section')||myMedia.parentElement?.parentElement||null;
     // Localized Jellyfin Web: fall back to the first home row, but never a
     // page elsewhere in the Jellyfin UI.
     return document.querySelector('.homeTab:not(.hide) .verticalSection, .homeTab:not(.hide) .homeSection') || null;
