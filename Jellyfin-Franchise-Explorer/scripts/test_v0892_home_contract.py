@@ -30,9 +30,13 @@ assert "configurationpage?name=Franchise%20Explorer" in JS
 assert 'id="fe-config-settings"' in BROWSE
 assert "configurationpage?name=Franchise%20Explorer" in BROWSE
 assert "src=\"docs/Gost1o1-logo.png\"" in README
-assert "docs/screenshots/user-guide/00-franchise-explorer-full-page.png" in README
-for name in ("Gost1o1-logo.png", "franchise-explorer-preview.png"):
-    file = ROOT.parent / "docs" / name
-    assert file.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n", name
+for path in (
+    "docs/Gost1o1-logo.png",
+    "docs/screenshots/user-guide/00-franchise-explorer-full-page.png",
+    "docs/screenshots/user-guide/01-jellyfin-home.png",
+):
+    file = ROOT.parent / path
+    assert file.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n", path
+    assert path in README, f"README must reference current image: {path}"
 
 print("v0.8.9.2 home/menu/README static contract passed.")

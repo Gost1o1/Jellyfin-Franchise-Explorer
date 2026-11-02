@@ -15,10 +15,14 @@ REPO = ROOT.parent
 assert 'id="fe-config-settings"' in BROWSE
 assert "'fe-config-settings').href" in BROWSE
 assert (REPO / "docs/Gost1o1-logo.png").is_file()
-assert (REPO / "docs/franchise-explorer-preview.png").is_file()
 README = (REPO / "README.md").read_text()
 assert 'src="docs/Gost1o1-logo.png"' in README
-assert "docs/franchise-explorer-preview.png" in README
+for screenshot in (
+    "docs/screenshots/user-guide/00-franchise-explorer-full-page.png",
+    "docs/screenshots/user-guide/01-jellyfin-home.png",
+):
+    assert screenshot in README, f"README must show current screenshot: {screenshot}"
+    assert (REPO / screenshot).is_file(), f"README screenshot is missing: {screenshot}"
 
 ORIGIN = "http://jellyfin.test"
 USER = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
