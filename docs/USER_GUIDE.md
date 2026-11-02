@@ -262,11 +262,22 @@ In **Existing Jellyfin collection**:
 3. Choose **Artwork when a collection is connected**:
    - **Preserve current artwork (recommended):** Keep current/inherited artwork priority; the collection is a fallback when necessary.
    - **Use linked collection artwork first:** Prefer artwork from the connected Jellyfin collection, unless you have a custom uploaded override.
-4. Optionally click **Import collection members** to create virtual links for its movies/shows. This is a **one-time snapshot**, not continuous sync with future Jellyfin collection edits.
-5. **Disconnect collection** removes the collection association; it **does not** automatically delete links already imported from that collection.
-6. **Save plugin configuration**.
+4. Choose **Import members into group**. The dropdown includes the current franchise and all of its subgroups, such as *Phase One* or *Phase Two*. The collection association and artwork remain on the group you connected in step 2; only the imported virtual movie/show references go to the chosen destination.
+5. Optionally click **Import collection members** to create virtual links for its movies/shows in that group. This is a **one-time snapshot**, not continuous sync with future Jellyfin collection edits.
+6. **Disconnect collection** removes the collection association; it **does not** automatically delete links already imported from that collection.
+7. **Save plugin configuration**.
 
 ![Connected Jellyfin collection, collection artwork priority, import controls and beginning of Edit Images](screenshots/user-guide/12-collection-connection.png)
+
+### Move imported references and check row membership
+
+Scroll to **Manage imported virtual references** in the selected group's editor and expand **View and remove individual virtual references**.
+
+- **Assign to group:** Each movie or TV show has a destination dropdown containing this franchise and its subgroups. Select another group to move only that virtual reference. It disappears from the current group's list; select the destination in the left sidebar to see it there.
+- **Rows using this reference:** Shows the exact browse rows where that virtual link is included, with group names to distinguish identically named rows. If a movie or show was added directly via a browse-row library search, the editor labels it separately as **Same title added separately in**. Those direct entries are not the imported link and do not count as its row assignment.
+- **Show in browse rows:** Expand this selector on the reference and tick any compatible media or timeline rows in its group or parent groups. Untick to remove it from that row. If a row already contains an independently added copy of the same title, the editor warns you before displaying a second copy.
+- **Unassigned Movies & TV Shows:** If the destination group has custom browse rows, assigning a reference to the group alone does not choose a row. Tick a media/timeline row in that group if you want it displayed there instead of the automatic Unassigned shelf. Rows higher in the hierarchy can also contain the reference, but do not count as an assignment to a row in the destination group.
+- **Save plugin configuration** after any group change. The original Jellyfin collection, films, shows, artwork, and files remain untouched. Moving a reference retains compatible ancestor browse-row assignments and drops only row assignments that cannot reference the new group.
 
 ## Add existing Jellyfin media and episode ranges
 

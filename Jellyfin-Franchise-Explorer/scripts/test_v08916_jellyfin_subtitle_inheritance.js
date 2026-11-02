@@ -55,5 +55,5 @@ vm.runInNewContext(source.slice(start,end),context);
   timers.splice(0).forEach(t=>t.fn());
   assert.equal(tracks[0].mode,'showing','Changes to the Jellyfin setting should be inherited');
 
-  console.log('v0.8.9.16 Jellyfin subtitle-language auto-default and override tests passed.');
+  console.log('v0.8.9.17 Jellyfin subtitle-language auto-default and override tests passed.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

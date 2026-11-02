@@ -33,9 +33,9 @@ assert 'subtitleLanguagePreferenceKey()' in browse
 assert 'id="fx-remove-unassigned"' in config
 assert 'id="fx-manage-links"' in config
 assert 'if(!model.Rows.some(r=>r.ParentNodeId===selected))return;' in config
-assert 'const assigned=new Set(model.Rows.flatMap' in config
+assert "const assigned=new Set(model.Rows.filter(r=>r.ParentNodeId===selected&&['Media','Timeline','Mixed'].includes(r.RowType)).flatMap" in config, 'Unassigned cleanup should count only visible media rows for the selected group'
 assert "model.MediaLinks=model.MediaLinks.filter(l=>!ids.has(l.Id));" in config
 assert 'Unassigned Movies & TV Shows' in browse
 assert 'jellyfin-franchise-explorer-my-media-v08915' in service, 'new release must retire previous Injector script'
 
-print('v0.8.9.16 subtitle-language, localized home tile, and unassigned-link safety contracts passed.')
+print('v0.8.9.17 subtitle-language, localized home tile, and unassigned-link safety contracts passed.')

@@ -352,8 +352,12 @@ See Git history for earlier releases.
 - Prefer the existing series/movie Primary poster in both landscape and portrait Home card orientations, with the landscape art used only when no poster is available.
 - Updated the v0.8.9.15 JavaScript Injector registration and historical-script cleanup, version checks, and offline playback contracts; live host verification remains required.
 
-## v0.8.9.16 — Localized Home UI, subtitle-language preference, and import cleanup (experimental)
+## v0.8.9.17 — Assign collection imports to groups and browse rows (experimental)
 
+- Added collection import destination and per-reference **Assign to group** dropdowns, limited to the selected franchise and its subgroups. Reassignment preserves valid ancestor row membership and drops incompatible old-subgroup row references. Each linked title displays rows using that exact reference and independently added direct-row copies separately. Expand **Show in browse rows** to tick existing media/timeline rows directly; duplicate standalone entries prompt before adding a second copy. Unassigned cleanup now counts only browse rows that actually show media in the current group.
+- Advanced DLL, JavaScript and optional Injector registration to `0.8.9.17`; the plugin now retires its own v0.8.9.16 Injector entry after v0.8.9.17 registration succeeds. Added group/row reassignment contract tests to both CI build and release workflows.
+
+## v0.8.9.16 — Localized Home UI, subtitle-language preference, and import cleanup (experimental)
 - Updated the historical v0.8.9.2 README browser/static checks to verify the new stitched browser and Jellyfin Home screenshots instead of requiring a removed README reference to the legacy preview image.
 - Corrected a v0.8.9.16 homepage section-order regression: the localized resume widget now mounts after Continue Watching (including common translated headings), preserving the original My Media → Continue Watching → Continue Your Franchises order and the browser positioning contract.
 - Removed the English-only **My Media** dependency for the Franchises tile by adding library-row structural detection. The homepage resume widget now anchors to the tile independently of the user's Jellyfin display language; common translated native headings are supported as additional fallbacks.
