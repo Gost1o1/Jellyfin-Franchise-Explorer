@@ -15,6 +15,7 @@ assert '[data-type="CollectionFolder"]' in home
 assert 'const first = sections[0]' in home
 assert 'sammlungen' in home, 'German Collections label should retain preferred tile placement'
 assert 'const tileSection = tile?.closest' in home, 'Home widget should anchor without English heading'
+assert 'const continueLabels=' in home and 'const continuing=' in home, 'Resume widget should mount after native Continue Watching'
 assert 'Weiterschauen' in home, 'German native row headings should be handled'
 
 assert 'id="fx-subtitle-language"' in config

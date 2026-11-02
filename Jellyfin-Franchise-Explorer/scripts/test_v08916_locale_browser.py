@@ -28,6 +28,9 @@ with sync_playwright() as p:
     assert tile.count() == 1
     assert page.locator('#libraries #franchise-explorer-my-media-tile').count() == 1
     assert page.locator('#watching #franchise-explorer-my-media-tile').count() == 0
+    page.locator('#franchise-timeline-resume').wait_for(timeout=5000)
+    assert page.locator('section').nth(1).get_attribute('id') == 'watching', 'Resume widget must follow Continue Watching, not displace it'
+    assert page.locator('#watching + #franchise-timeline-resume').count() == 1
     order = page.locator('#libraries .itemsContainer').evaluate('''el =>
       [...el.children].map(c=>c.id==='franchise-explorer-my-media-tile'?'Franchises':c.querySelector('span')?.textContent).join('|')''')
     assert order == 'Bücher|Sammlungen|Franchises|Filme', order

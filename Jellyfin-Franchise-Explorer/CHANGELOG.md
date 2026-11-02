@@ -354,6 +354,7 @@ See Git history for earlier releases.
 
 ## v0.8.9.16 — Localized Home UI, subtitle-language preference, and import cleanup (experimental)
 
+- Corrected a v0.8.9.16 homepage section-order regression: the localized resume widget now mounts after Continue Watching (including common translated headings), preserving the original My Media → Continue Watching → Continue Your Franchises order and the browser positioning contract.
 - Removed the English-only **My Media** dependency for the Franchises tile by adding library-row structural detection. The homepage resume widget now anchors to the tile independently of the user's Jellyfin display language; common translated native headings are supported as additional fallbacks.
 - Added a per-user/per-browser **Preferred subtitle language** selector under **Playback & Home preferences**. Its default now reads the authenticated user's live Jellyfin subtitle-language preference, shows that inherited language in the dropdown when available, and tries to select a matching HTML text track during playback. An explicitly selected language overrides it without modifying Jellyfin user preferences.
 - Exposed **Manage imported virtual references** in the editor and added a confirmation-protected **Remove unassigned references** action for links that aren't used by custom rows. Disconnecting a collection still preserves imported links unless the user explicitly removes them.
