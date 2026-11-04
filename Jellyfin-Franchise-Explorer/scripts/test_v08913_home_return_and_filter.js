@@ -44,7 +44,7 @@ assert(home.includes('for(const sourceId of state.queueSourceItemIds||[])'),
 assert(home.includes('for(const key of state.queueKeys||[])'),
   'All linked movie/episode IDs should be filtered, not just the current cursor');
 assert(home.includes('for(const id of nativeTimelineTargets)targets.add(id)'));
-assert(config.includes('Hide franchise titles from Continue Watching and Next Up'));
+assert(config.includes('Hide franchise Continue Watching and Next Up from main menu'));
 assert(home.includes("['Details','details']"));
 assert(home.includes("if(action==='details')"));
 assert(home.includes('window.FranchiseExplorerPlaybackReturn?.clear()'));

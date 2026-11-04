@@ -32,9 +32,6 @@ assert(browse.includes("params.delete('action')"), 'One-time restart actions mus
 assert(timeline.includes('Watch only · No franchise tracking') && timeline.includes('Watch and track from here'));
 assert(timeline.includes('this.playHere(row,queue,index,0,false,true)'), 'One-off local playback must bypass timeline tracking');
 assert(timeline.includes('this.replay(row,queue,index,select.value,false)'), 'One-off remote playback must bypass timeline tracking');
-assert(config.includes("collapse.open=rowItemsExpanded.has(r.Id)?rowItemsExpanded.get(r.Id):members.length<=8"));
-assert(config.includes('collapse.append(summary,included)'));
-assert(config.includes('fx-row-included-toggle>summary'));
 
 const begin = browse.indexOf('  function mediaCounts(root){');
 const end = browse.indexOf('  function defaultRows(', begin);

@@ -37,9 +37,6 @@ const deleted=JSON.parse(JSON.stringify(applied.model));deleted.Rows.splice(1,1)
 assert.equal(a.preview([{...result,index:2,source:{...result.source,Priority:0}},second],[movie])[0].sourceId,second.source.Id,'Source order breaks equal-priority ties');
 assert.equal(a.sources([{...source,Enabled:false}])[0].Enabled,false,'Disabled source persists');
 const unverified=a.apply(model,nodeId,a.preview([{...result,orderVerified:false}],[movie,show]),id);assert.equal(unverified.model.Rows[0].MediaLinkIds.length,0);
-assert(html.includes('AutoAddSources:autoAdd.sources(n.AutoAddSources)'));
-assert(html.includes("input.style.textDecoration='none'"));
-assert(html.includes("source.Enabled?'#edf0f3':'#9099a4'"));
 
 const episode={Id:id(),SeriesId:show.Id,Name:'Now Is Not the End',Type:'Episode',SeriesName:show.Name,ParentIndexNumber:1,IndexNumber:1,ProductionYear:2015,ProviderIds:{Imdb:'tt3976532'}};
 const episodeEntry={imdbId:'tt3976532',title:'Now Is Not the End',year:2015,type:'Episode',position:2};

@@ -8,6 +8,8 @@ public sealed class ArtworkMetadata
 {
     public string PrimaryUrl { get; set; } = string.Empty;
     public string BackdropUrl { get; set; } = string.Empty;
+    /// <summary>Existing Jellyfin video used as a muted backdrop. Playback authorization is resolved per viewer.</summary>
+    public string BackdropVideoItemId { get; set; } = string.Empty;
     public string LogoUrl { get; set; } = string.Empty;
     public string ThumbUrl { get; set; } = string.Empty;
     public string BannerUrl { get; set; } = string.Empty;

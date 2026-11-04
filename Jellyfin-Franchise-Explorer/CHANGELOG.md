@@ -1,3 +1,11 @@
+## Settings editor (development)
+
+- Integrate the approved settings UI with the existing plugin configuration: collapsed franchise tree, inline actions, nested group creation, row categories, transactional dialogs, Undo and concurrent-save protection.
+- Move library search into the plus-button media popup, restrict searches by row category, and preserve full-show and episode-range references.
+- Review IMDb additions, safe removals and missing titles from franchise, subgroup and independent row sources while preserving manual edits.
+- Add scoped poster/backdrop galleries, immutable photo uploads and authorized associated-video backdrops for groups, rows and individual references.
+- Replace obsolete settings-layout checks with production-page browser tests and model/API persistence tests. Live Jellyfin host validation remains required; the release/catalog are unchanged.
+
 ## 0.8.9.22 (unreleased)
 
 - Separate existing-franchise and new-from-IMDb workflows; preview before changing configuration, select proposed changes (all selected by default), and save through Apply selected changes.

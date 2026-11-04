@@ -20,23 +20,16 @@ jobs:
         working-directory: Jellyfin-Franchise-Explorer
         run: |
           python3 scripts/check_repo.py
+          python3 scripts/build_settings_page.py --check
+          node scripts/test_settings_core.js
           python3 scripts/check_repository_completeness.py
           python3 scripts/smoke_tests.py
           node scripts/test_autoadd.js
           node scripts/test_autoadd_grouping.js
           node scripts/test_autoadd_changes.js
-          node scripts/ui_contract_tests.js
-          python3 scripts/test_artwork_contract.py
-          node scripts/test_inheritance.js
-          node scripts/test_ranges_and_drag.js
-          node scripts/test_tv_dialog_contract.js
-          python3 scripts/test_responsive_layout.py
           node --check src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-my-media.js
           node --check src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-timeline.js
           python3 scripts/test_my_media_tile_static.py
-          python3 scripts/test_rows_contract.py
-          python3 scripts/test_full_library_row_contract.py
-          python3 scripts/test_row_search_focus_contract.py
           node scripts/test_timeline_engine.js
           node scripts/test_v089_arming.js
           node scripts/test_v0891_timeline_json.js
@@ -55,7 +48,6 @@ jobs:
           node scripts/test_v08912_player_and_dialog.js
           node scripts/test_v08913_home_return_and_filter.js
           python3 scripts/test_v08916_language_and_cleanup.py
-          node scripts/test_v08917_group_assignment.js
           node scripts/test_v08918_error_notifications.js
           node scripts/test_v08920_android_integrated.js
           node scripts/test_v08920_android_queue.js
@@ -86,15 +78,11 @@ jobs:
       - name: Run native tile geometry tests
         working-directory: Jellyfin-Franchise-Explorer
         run: |
-          python3 scripts/test_v072_regressions.py
-          python3 scripts/test_live_ui_browser.py
           python3 scripts/test_timeline_browser.py
+          python3 scripts/test_settings_v9_browser.py
           python3 scripts/test_card_navigation_v081.py
           python3 scripts/test_local_web_handoff.py
           python3 scripts/test_autonext_browser.py
-          python3 scripts/test_autoadd_browser.py
-          python3 scripts/test_autoadd_grouping_browser.py
-          python3 scripts/test_autoadd_review_browser.py
           python3 scripts/test_home_recovery_browser.py
           python3 scripts/test_my_media_tile_browser.py
           python3 scripts/test_my_media_tile_resize.py

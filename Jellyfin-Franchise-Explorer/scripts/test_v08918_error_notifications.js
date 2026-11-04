@@ -59,11 +59,9 @@ timers.get(androidTimerId).fn();
 assert.equal(removed,true,'Repeated Android notifications must still disappear');
 
 assert(home.includes("window.FranchiseExplorerReportError('home',message)"));
+assert(config.includes('function notify(message, error = false)'));
+assert(config.includes('clearTimeout(notificationTimer)'));
 assert(home.includes("fetch(base+'/FranchiseExplorer/ClientLog'"));
-assert(config.includes('function statusElement(el,message,error,color,source)'));
-assert(config.includes("if(el.textContent===message){el.textContent='';el.style.color='';}"));
-assert(config.includes("recordClientError('tv-range',message)"));
-assert(config.includes('errorTimers.set(el,setTimeout('));
 assert(browse.includes('const status = (message,error=false) =>'));
 assert(browse.includes('logBrowseError(message);'));
 assert(timeline.includes("window.FranchiseExplorerReportError?.('timeline',message)"));

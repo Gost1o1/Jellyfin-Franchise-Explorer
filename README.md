@@ -30,6 +30,8 @@ Choose an existing franchise or start from an IMDb URL, review checked-by-defaul
 
 ## Preview
 
+The settings redesign on this development branch uses the real plugin configuration and Jellyfin library. It includes nested groups, a media-management popup, reviewed IMDb changes, and poster/backdrop selection or uploads. See the [settings editor guide](Jellyfin-Franchise-Explorer/docs/SETTINGS_EDITOR.md) for the new workflow and validation limits. The screenshots below show the earlier published editor.
+
 ### Franchise Explorer in action
 
 Browse a complete franchise in one place, with a chronological watch order, phases, movies, TV shows, and collections. This is a **single vertically stitched screenshot** of the recent browser interface.

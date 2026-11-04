@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Franchise Explorer settings</title></head><body>
+<div id="FranchiseExplorerConfigPage" data-role="page" class="page type-interior pluginConfigurationPage">
+<style id="fx-live-css">
+#FranchiseExplorerConfigPage{color-scheme:dark;--bg:#101419;--panel:#191f27;--field:#11171e;--line:#303b48;--text:#edf3f8;--muted:#a8b7c6;--accent:#2cc5d3;--good:#72d8a1;--bad:#ff9d9d;--amber:#f2cf86;font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+#FranchiseExplorerConfigPage *{box-sizing:border-box}
+#FranchiseExplorerConfigPage{margin:0;min-height:100vh;background:radial-gradient(ellipse at 15% 0,#15313b70,transparent 42%),var(--bg);background-repeat:no-repeat;color:var(--text)}
+#FranchiseExplorerConfigPage button,#FranchiseExplorerConfigPage input,#FranchiseExplorerConfigPage select,#FranchiseExplorerConfigPage textarea{font:inherit}
+#FranchiseExplorerConfigPage button{cursor:pointer}
+#FranchiseExplorerConfigPage button:disabled{cursor:default;opacity:.42}
+#FranchiseExplorerConfigPage button,#FranchiseExplorerConfigPage input,#FranchiseExplorerConfigPage select,#FranchiseExplorerConfigPage textarea,#FranchiseExplorerConfigPage summary{outline-offset:4px}
+#FranchiseExplorerConfigPage button:focus-visible,#FranchiseExplorerConfigPage input:focus-visible,#FranchiseExplorerConfigPage select:focus-visible,#FranchiseExplorerConfigPage textarea:focus-visible,#FranchiseExplorerConfigPage summary:focus-visible{outline:2px solid var(--accent)}
+#FranchiseExplorerConfigPage button{color:var(--text);border:1px solid var(--line);background:#25303b;border-radius:8px;padding:9px 14px;font-weight:650;min-height:40px}
+#FranchiseExplorerConfigPage button:hover:not(:disabled){background:#303e4c;border-color:#577084}
+#FranchiseExplorerConfigPage .primary{background:var(--accent);border-color:var(--accent);color:#082128}
+#FranchiseExplorerConfigPage .primary:hover:not(:disabled){background:#78e1e9;border-color:#78e1e9}
+#FranchiseExplorerConfigPage .quiet{background:transparent}
+#FranchiseExplorerConfigPage .icon-button{width:38px;min-height:36px;padding:6px;display:inline-grid;place-items:center}
+#FranchiseExplorerConfigPage .icon{display:inline-block;width:18px;height:18px;vertical-align:middle;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#FranchiseExplorerConfigPage .label-icon{color:var(--accent);margin-right:10px}
+#FranchiseExplorerConfigPage main{max-width:1150px;margin:auto;padding:28px 28px 70px}
+#FranchiseExplorerConfigPage .top{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:12px 0 22px;position:sticky;top:0;z-index:15;background:linear-gradient(var(--bg) 65%,#101419f0 90%,transparent)}
+#FranchiseExplorerConfigPage h1{font-size:clamp(22px,3vw,29px);font-weight:700;letter-spacing:-.035em;margin:0}
+#FranchiseExplorerConfigPage .version{font:500 13px/1.2 system-ui;color:var(--muted);white-space:nowrap;letter-spacing:0;margin-left:9px}
+#FranchiseExplorerConfigPage .preview-badge{display:inline-flex;align-items:center;gap:6px;background:#24323c;color:#b6d0df;border:1px solid #374c59;border-radius:30px;font-size:11px;padding:3px 8px;letter-spacing:.035em;margin-top:7px}
+#FranchiseExplorerConfigPage .preview-badge:before{content:'';height:6px;width:6px;border-radius:50%;background:var(--accent)}
+#FranchiseExplorerConfigPage .top-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+#FranchiseExplorerConfigPage .save-state{color:var(--muted);font-size:12px;margin-right:6px}
+#FranchiseExplorerConfigPage .save-state.dirty{color:var(--amber)}
+#FranchiseExplorerConfigPage .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:clip}
+#FranchiseExplorerConfigPage .panel>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;min-height:60px;padding:16px 20px;font-weight:700;font-size:16px;user-select:none}
+#FranchiseExplorerConfigPage .panel>summary::-webkit-details-marker{display:none}
+#FranchiseExplorerConfigPage .panel>summary:hover{background:#202a34}
+#FranchiseExplorerConfigPage .panel>summary:after{content:'';border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);width:7px;height:7px;transform:rotate(45deg);margin-left:10px;transition:transform .15s}
+#FranchiseExplorerConfigPage .panel[open]>summary:after{transform:rotate(225deg)}
+#FranchiseExplorerConfigPage .panel[open]>summary{border-bottom:1px solid var(--line)}
+#FranchiseExplorerConfigPage .section-count{margin-left:auto;font-size:12px;color:var(--muted);font-weight:500}
+#FranchiseExplorerConfigPage .section-count:empty{margin-left:auto}
+#FranchiseExplorerConfigPage .panel-body{padding:20px}
+#FranchiseExplorerConfigPage .settings-grid{display:grid;gap:0}
+#FranchiseExplorerConfigPage .setting{display:flex;gap:24px;align-items:center;justify-content:space-between;padding:13px 0;min-height:60px}
+#FranchiseExplorerConfigPage .setting+.setting{border-top:1px solid #303b4866}
+#FranchiseExplorerConfigPage .setting-label{font-size:14px;max-width:620px}
+#FranchiseExplorerConfigPage .setting select{width:260px;flex-shrink:0}
+#FranchiseExplorerConfigPage .switch{display:inline-flex;align-items:center;gap:12px;min-width:100px;justify-content:flex-end;padding:6px 0;border:0;background:none!important}
+#FranchiseExplorerConfigPage .switch-label{font-size:12px;color:var(--muted);font-weight:500}
+#FranchiseExplorerConfigPage .switch-track{display:block;width:44px;height:25px;background:#3c4957;border-radius:15px;padding:3px;transition:background .15s}
+#FranchiseExplorerConfigPage .switch-track:before{content:'';display:block;width:19px;height:19px;border-radius:50%;background:#d5e0e9;transition:transform .15s}
+#FranchiseExplorerConfigPage .switch[aria-checked=true] .switch-track{background:var(--accent)}
+#FranchiseExplorerConfigPage .switch[aria-checked=true] .switch-track:before{transform:translateX(19px);background:#082128}
+#FranchiseExplorerConfigPage .button-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+#FranchiseExplorerConfigPage .field{display:grid;gap:8px;min-width:0;font-size:13px;color:#bccbd8;font-weight:600}
+#FranchiseExplorerConfigPage input:not([type=checkbox]),#FranchiseExplorerConfigPage textarea,#FranchiseExplorerConfigPage select{width:100%;min-height:43px;padding:10px 12px;border:1px solid #3c4a59;border-radius:8px;background:var(--field);color:var(--text);min-width:0}
+#FranchiseExplorerConfigPage input::placeholder,#FranchiseExplorerConfigPage textarea::placeholder{color:#718295}
+#FranchiseExplorerConfigPage textarea{resize:vertical;min-height:92px}
+#FranchiseExplorerConfigPage .setup-grid{display:grid;grid-template-columns:auto minmax(230px,1fr);gap:18px;align-items:end}
+#FranchiseExplorerConfigPage .setup-grid .field{max-width:100%}
+#FranchiseExplorerConfigPage .setup-grid .url-field{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:12px}
+#FranchiseExplorerConfigPage .setup-grid .url-field .field{min-width:0}
+#FranchiseExplorerConfigPage .mode-button[aria-pressed=true]{background:#173e47;border-color:var(--accent);color:#92e5ec}
+#FranchiseExplorerConfigPage .setup-target{font-size:12px;display:inline-block;color:#8edbe4;border:1px solid #33636a;background:#183139;border-radius:6px;padding:4px 8px;margin-bottom:12px}
+#FranchiseExplorerConfigPage .setup-target[hidden]{display:none}
+#FranchiseExplorerConfigPage .board{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:12px;align-items:start;min-height:85px}
+#FranchiseExplorerConfigPage .node-card{border:1px solid #394756;border-radius:10px;background:#131a22;min-width:0;transition:border-color .12s,box-shadow .12s}
+#FranchiseExplorerConfigPage .node-card.selected{border-color:var(--accent);box-shadow:0 0 0 1px #2cc5d323}
+#FranchiseExplorerConfigPage .node-head{display:flex;align-items:center;gap:5px;padding:10px 8px;min-height:58px}
+#FranchiseExplorerConfigPage .node-title{flex:1;min-width:0;text-align:left;border:0;background:none!important;padding:6px 3px;min-height:32px;font-size:14px;overflow-wrap:anywhere}
+#FranchiseExplorerConfigPage .expand{border:0;background:none!important;min-height:30px;width:25px;padding:3px;color:var(--muted)}
+#FranchiseExplorerConfigPage .grip{cursor:grab;touch-action:none;border:0;background:none!important;color:#7890a1;min-height:34px;width:25px;padding:3px;flex-shrink:0}
+#FranchiseExplorerConfigPage .grip:active{cursor:grabbing}
+#FranchiseExplorerConfigPage .node-menu{opacity:.55}
+#FranchiseExplorerConfigPage .node-head:hover .node-menu,#FranchiseExplorerConfigPage .node-menu:focus-visible{opacity:1}
+#FranchiseExplorerConfigPage .node-body{border-top:1px solid #303b48;padding:7px}
+#FranchiseExplorerConfigPage .tree-row{display:flex;align-items:center;gap:5px;border-radius:7px;min-height:40px;padding:3px}
+#FranchiseExplorerConfigPage .tree-row:hover{background:#222e3a}
+#FranchiseExplorerConfigPage .tree-row .tree-name{border:0;background:none!important;text-align:left;flex:1;min-width:0;min-height:32px;padding:3px;font-size:13px;font-weight:500;overflow-wrap:anywhere}
+#FranchiseExplorerConfigPage .tree-type{color:#849aaa;display:inline-flex;align-items:center}
+#FranchiseExplorerConfigPage .tree-row.highlighted{background:#24404b}
+#FranchiseExplorerConfigPage .subgroup{border-left:1px solid #374956;margin:6px 0 4px 14px;padding-left:7px}
+#FranchiseExplorerConfigPage .subgroup>.node-head{padding:3px;min-height:36px}
+#FranchiseExplorerConfigPage .subgroup .node-title{font-size:13px;font-weight:600}
+#FranchiseExplorerConfigPage .subgroup-body{padding-left:13px}
+#FranchiseExplorerConfigPage .drop-inside,#FranchiseExplorerConfigPage .board-drop{display:none}
+#FranchiseExplorerConfigPage .is-dragging .drop-inside{display:block;border:1px dashed #527583;border-radius:6px;padding:8px;margin:6px;font-size:12px;text-align:center;color:#9abfcb}
+#FranchiseExplorerConfigPage .is-dragging .board-drop{display:flex;align-items:center;justify-content:center;min-height:60px;border:1px dashed #527583;border-radius:8px;grid-column:1/-1;color:#9abfcb;font-size:12px}
+#FranchiseExplorerConfigPage .drop-before{box-shadow:-4px 0 0 var(--accent)!important}
+#FranchiseExplorerConfigPage .drop-after{box-shadow:4px 0 0 var(--accent)!important}
+#FranchiseExplorerConfigPage .tree-row.drop-before,#FranchiseExplorerConfigPage .subgroup.drop-before{box-shadow:0 -3px 0 var(--accent)!important}
+#FranchiseExplorerConfigPage .tree-row.drop-after,#FranchiseExplorerConfigPage .subgroup.drop-after{box-shadow:0 3px 0 var(--accent)!important}
+#FranchiseExplorerConfigPage .drop-into{background:#1c4d59!important;border-color:var(--accent)!important}
+#FranchiseExplorerConfigPage .drag-ghost{position:fixed;z-index:2000;pointer-events:none;background:#225965eF;border:1px solid #62d1dd;border-radius:8px;padding:10px 15px;font-size:13px;box-shadow:0 12px 40px #0008;max-width:260px}
+#FranchiseExplorerConfigPage .selection-chip{font-size:12px;font-weight:500;color:#96b8ca;margin-left:auto;max-width:50%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#FranchiseExplorerConfigPage .details-form{display:grid;gap:17px}
+#FranchiseExplorerConfigPage .rows-box{border:1px solid var(--line);border-radius:8px;overflow:clip}
+#FranchiseExplorerConfigPage .rows-box>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:13px 14px;background:#202a34;font-weight:650;font-size:14px}
+#FranchiseExplorerConfigPage .rows-box>summary:after{content:'⌄';color:var(--muted)}
+#FranchiseExplorerConfigPage .rows-box[open]>summary:after{content:'⌃'}
+#FranchiseExplorerConfigPage .rows-content{padding:14px}
+#FranchiseExplorerConfigPage .rows-toolbar{display:flex;justify-content:flex-end;margin-bottom:10px}
+#FranchiseExplorerConfigPage .row-editor{display:grid;grid-template-columns:26px minmax(0,1fr) minmax(155px,.6fr) 34px 34px;gap:8px;align-items:end;padding:10px 0;border-top:1px solid #303b4877}
+#FranchiseExplorerConfigPage .row-editor .grip,#FranchiseExplorerConfigPage .row-editor .icon-button{margin-bottom:3px}
+#FranchiseExplorerConfigPage .row-editor.highlighted{background:#2cc5d30e;outline:1px solid #2cc5d35e;border-radius:6px;padding:10px 6px}
+#FranchiseExplorerConfigPage .row-editor .field{font-size:11px}
+#FranchiseExplorerConfigPage .empty{display:flex;align-items:center;justify-content:center;color:var(--muted);min-height:70px;font-size:13px}
+#FranchiseExplorerConfigPage .danger{color:#ffadad}
+#FranchiseExplorerConfigPage .mini-badge{color:#8fa7b8;font-size:11px;border:1px solid #394c59;padding:2px 6px;border-radius:5px;margin-left:6px}
+#FranchiseExplorerConfigPage .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#23404a;border:1px solid #447483;box-shadow:0 10px 40px #0006;border-radius:10px;padding:12px 20px;z-index:3000;max-width:calc(100% - 32px);font-size:14px}
+#FranchiseExplorerConfigPage .toast.error{background:#4c292e;border-color:#90515c}
+#FranchiseExplorerConfigPage #help{position:fixed;z-index:4000;background:#e4f4f8;color:#102b36;padding:11px 13px;border-radius:8px;max-width:min(300px,calc(100vw - 20px));font-size:12px;font-weight:500;box-shadow:0 8px 35px #0007;pointer-events:none}
+#FranchiseExplorerConfigPage #help[hidden],#FranchiseExplorerConfigPage .toast[hidden],#FranchiseExplorerConfigPage [hidden]{display:none!important}
+#FranchiseExplorerConfigPage dialog{width:min(870px,calc(100% - 28px));max-height:88dvh;border:1px solid #4b6171;border-radius:14px;padding:0;background:#171f28;color:var(--text);box-shadow:0 30px 110px #000a}
+#FranchiseExplorerConfigPage dialog::backdrop{background:#070c13bd;backdrop-filter:blur(4px)}
+#FranchiseExplorerConfigPage .dialog-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:19px 22px;border-bottom:1px solid var(--line)}
+#FranchiseExplorerConfigPage .dialog-head h2{margin:0;font-size:18px;letter-spacing:-.02em}
+#FranchiseExplorerConfigPage .dialog-content{padding:18px 22px;overflow:auto;max-height:64dvh}
+#FranchiseExplorerConfigPage .dialog-footer{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;padding:15px 22px;border-top:1px solid var(--line);background:#1c2630}
+#FranchiseExplorerConfigPage .review-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:15px}
+#FranchiseExplorerConfigPage .counts{display:flex;gap:7px;flex-wrap:wrap}
+#FranchiseExplorerConfigPage .count-pill{font-size:12px;padding:4px 9px;border-radius:20px;border:1px solid #3b5361;color:#b7ccda}
+#FranchiseExplorerConfigPage .count-pill.add{color:var(--good);background:#1d352b}
+#FranchiseExplorerConfigPage .count-pill.remove{color:var(--bad);background:#38242c}
+#FranchiseExplorerConfigPage .count-pill.missing{color:var(--amber);background:#393121}
+#FranchiseExplorerConfigPage .table-scroll{overflow:auto;border:1px solid var(--line);border-radius:8px}
+#FranchiseExplorerConfigPage table{width:100%;border-collapse:collapse;font-size:13px;text-align:left}
+#FranchiseExplorerConfigPage th{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#94abbc;font-weight:700;background:#202d38;padding:12px 10px;white-space:nowrap}
+#FranchiseExplorerConfigPage td{padding:12px 10px;border-top:1px solid #303e4b;vertical-align:middle}
+#FranchiseExplorerConfigPage th:first-child,#FranchiseExplorerConfigPage td:first-child{width:36px;padding-left:14px}
+#FranchiseExplorerConfigPage input[type=checkbox]{width:17px;height:17px;accent-color:var(--accent);cursor:pointer}
+#FranchiseExplorerConfigPage .change-title{font-weight:600;min-width:170px}
+#FranchiseExplorerConfigPage .type-cell{color:#adc3d1;white-space:nowrap}
+#FranchiseExplorerConfigPage .where-cell{font-size:12px;color:#a5bdcc;min-width:150px}
+#FranchiseExplorerConfigPage .change-pill{display:inline-block;font-size:11px;border-radius:5px;padding:3px 7px;background:#203d30;color:var(--good);white-space:nowrap}
+#FranchiseExplorerConfigPage .change-pill.remove{background:#462b32;color:var(--bad)}
+#FranchiseExplorerConfigPage .change-pill.missing{background:#433a27;color:var(--amber)}
+#FranchiseExplorerConfigPage .child-change td{background:#121a22;font-size:12px}
+#FranchiseExplorerConfigPage .child-change .change-title{padding-left:30px;color:#b1c9d8}
+#FranchiseExplorerConfigPage .range-expand{border:0;background:none!important;padding:3px 5px;min-height:26px;color:#80bbc8;vertical-align:middle}
+#FranchiseExplorerConfigPage .selected-count{margin-right:auto;font-size:12px;color:var(--muted)}
+#FranchiseExplorerConfigPage .move-form{display:grid;gap:16px}
+#FranchiseExplorerConfigPage .compact-dialog{max-width:470px}
+#FranchiseExplorerConfigPage .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:660px){#FranchiseExplorerConfigPage main{padding:14px 13px 40px}
+#FranchiseExplorerConfigPage .top{align-items:flex-start;flex-wrap:wrap;gap:12px;padding-top:7px}
+#FranchiseExplorerConfigPage .top-actions{width:100%;justify-content:flex-end}
+#FranchiseExplorerConfigPage .save-state{margin-right:auto}
+#FranchiseExplorerConfigPage .panel>summary{padding:15px;min-height:56px}
+#FranchiseExplorerConfigPage .panel-body{padding:15px}
+#FranchiseExplorerConfigPage .setting{gap:12px}
+#FranchiseExplorerConfigPage .setting select{width:45%;max-width:200px}
+#FranchiseExplorerConfigPage .setting-label{font-size:13px}
+#FranchiseExplorerConfigPage .setup-grid{grid-template-columns:1fr;gap:14px}
+#FranchiseExplorerConfigPage .setup-grid .url-field{grid-column:1;grid-template-columns:1fr}
+#FranchiseExplorerConfigPage .setup-grid .url-field button{width:100%}
+#FranchiseExplorerConfigPage .board{grid-template-columns:1fr}
+#FranchiseExplorerConfigPage .row-editor{grid-template-columns:24px minmax(0,1fr) 34px 34px;gap:7px}
+#FranchiseExplorerConfigPage .row-editor .type-field{grid-column:2;grid-row:2}
+#FranchiseExplorerConfigPage .row-editor .row-move{grid-column:3;grid-row:1}
+#FranchiseExplorerConfigPage .row-editor .row-delete{grid-column:4;grid-row:1}
+#FranchiseExplorerConfigPage .dialog-head,#FranchiseExplorerConfigPage .dialog-content,#FranchiseExplorerConfigPage .dialog-footer{padding:14px}
+#FranchiseExplorerConfigPage dialog{max-height:93dvh}
+#FranchiseExplorerConfigPage .dialog-content{max-height:69dvh}
+#FranchiseExplorerConfigPage th,#FranchiseExplorerConfigPage td{padding:10px 8px}
+#FranchiseExplorerConfigPage .version{font-size:12px}
+#FranchiseExplorerConfigPage .selection-chip{max-width:45%}}
+@media(prefers-reduced-motion:reduce){#FranchiseExplorerConfigPage *{scroll-behavior:auto!important;transition:none!important}}
+#FranchiseExplorerConfigPage .setup-actions{align-self:end}
+#FranchiseExplorerConfigPage .new-franchise-fields{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:end}
+#FranchiseExplorerConfigPage .rows-toolbar{gap:10px;flex-wrap:wrap}
+#FranchiseExplorerConfigPage .row-editor:not(.custom-row)>.type-field{grid-column:2/4}
+#FranchiseExplorerConfigPage .row-editor>.type-field{grid-column:2}
+#FranchiseExplorerConfigPage .row-editor>.custom-name-field{grid-column:3}
+#FranchiseExplorerConfigPage .row-editor>.row-move{grid-column:4}
+#FranchiseExplorerConfigPage .row-editor>.row-delete{grid-column:5}
+#FranchiseExplorerConfigPage .subgroups-heading{font-size:13px;font-weight:600;margin:16px 0 8px;color:var(--muted)}
+#FranchiseExplorerConfigPage .subgroup-entry{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #303b4877}
+#FranchiseExplorerConfigPage .subgroup-entry>button[data-select]{flex:1;text-align:left;font-size:13px}
+#FranchiseExplorerConfigPage .subgroup-entry>.icon{color:var(--accent)}
+@media(max-width:660px){#FranchiseExplorerConfigPage .setup-actions>button{flex:1}
+#FranchiseExplorerConfigPage .new-franchise-fields{grid-template-columns:1fr}
+#FranchiseExplorerConfigPage .row-editor>.type-field,#FranchiseExplorerConfigPage .row-editor:not(.custom-row)>.type-field{grid-column:2;grid-row:1}
+#FranchiseExplorerConfigPage .row-editor>.custom-name-field{grid-column:2;grid-row:2}
+#FranchiseExplorerConfigPage .row-editor>.row-move{grid-column:3;grid-row:1}
+#FranchiseExplorerConfigPage .row-editor>.row-delete{grid-column:4;grid-row:1}
+#FranchiseExplorerConfigPage .rows-toolbar>button{flex:1;white-space:nowrap}}
+#FranchiseExplorerConfigPage #settings #advanced{margin:14px 0 0;background:#151c24}
+#FranchiseExplorerConfigPage #settings #advanced>summary{font-size:14px;min-height:48px;padding:13px 15px}
+#FranchiseExplorerConfigPage #settings #advanced .panel-body{padding:15px}
+#FranchiseExplorerConfigPage .node-menu{flex-shrink:0}
+#FranchiseExplorerConfigPage .node-menu.danger:hover{background:#4a2d36;border-color:#8a525c;color:#ffd1d1}
+#FranchiseExplorerConfigPage .rows-overview{font-size:13px;color:var(--muted);padding:10px 0 2px}
+#FranchiseExplorerConfigPage .editor-owner{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+#FranchiseExplorerConfigPage .delete-confirm{background:#c54d60;border-color:#c54d60;color:white}
+#FranchiseExplorerConfigPage .delete-confirm:hover:not(:disabled){background:#da6476;border-color:#da6476}
+#FranchiseExplorerConfigPage #delete-message{margin:0;overflow-wrap:anywhere;line-height:1.65}
+#FranchiseExplorerConfigPage .board{grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr))}
+#FranchiseExplorerConfigPage .node-head{display:grid;grid-template-columns:22px 24px minmax(0,1fr) auto;gap:4px}
+#FranchiseExplorerConfigPage .node-actions{display:flex;gap:3px;align-items:center}
+#FranchiseExplorerConfigPage .node-actions .icon-button{width:30px;min-height:32px;padding:5px}
+#FranchiseExplorerConfigPage .node-actions [data-add-node]{color:#88dfe8}
+#FranchiseExplorerConfigPage .node-actions [data-settings-node]{color:#b7cddd}
+#FranchiseExplorerConfigPage .node-actions .node-menu{opacity:.8}
+#FranchiseExplorerConfigPage .node-title{line-height:1.45}
+#FranchiseExplorerConfigPage .subgroup>.node-head{grid-template-columns:22px 24px minmax(0,1fr)}
+#FranchiseExplorerConfigPage .subgroup .node-actions{grid-column:3;justify-self:end}
+#FranchiseExplorerConfigPage .setup-grid{grid-template-columns:1fr}
+#FranchiseExplorerConfigPage .setup-actions{justify-content:flex-start}
+#FranchiseExplorerConfigPage .franchise-dialog{max-width:740px}
+#FranchiseExplorerConfigPage .franchise-dialog .dialog-content{max-height:62dvh}
+#FranchiseExplorerConfigPage .franchise-dialog .dialog-head h2{display:flex;align-items:center;gap:10px}
+#FranchiseExplorerConfigPage .scope-title{font-size:12px;color:var(--muted);font-weight:500;margin-top:6px;overflow-wrap:anywhere}
+#FranchiseExplorerConfigPage .franchise-fields{display:grid;gap:19px}
+#FranchiseExplorerConfigPage .franchise-setup{display:grid;gap:14px;border-top:1px solid var(--line);padding-top:18px}
+#FranchiseExplorerConfigPage .franchise-setup h3{font-size:14px;margin:0}
+#FranchiseExplorerConfigPage .franchise-auto-fields{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}
+#FranchiseExplorerConfigPage .franchise-setup>.button-row{justify-content:flex-start}
+#FranchiseExplorerConfigPage .source-list{display:grid;gap:12px}
+#FranchiseExplorerConfigPage .source-group{border:1px solid #344450;border-radius:8px;padding:13px;display:grid;gap:14px;min-width:0}
+#FranchiseExplorerConfigPage .source-heading{display:flex;align-items:center;gap:8px;font-size:12px;color:#9cc0d1;margin:0;overflow-wrap:anywhere;font-weight:600}
+#FranchiseExplorerConfigPage .source-group .field{font-size:12px}
+#FranchiseExplorerConfigPage .source-group input{font-size:13px}
+#FranchiseExplorerConfigPage .add-options{display:grid;gap:12px}
+#FranchiseExplorerConfigPage .add-options button{display:flex;align-items:center;gap:13px;text-align:left;min-height:60px;background:#1d2e39}
+#FranchiseExplorerConfigPage .add-options button .icon{color:var(--accent);width:22px;height:22px}
+#FranchiseExplorerConfigPage .subgroup-type{font-size:10px;color:#96aebb;font-weight:500}
+#FranchiseExplorerConfigPage .dialog-head>div{min-width:0}
+#FranchiseExplorerConfigPage .dialog-content{overscroll-behavior:contain}
+body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
+@media(max-width:660px){#FranchiseExplorerConfigPage .board{grid-template-columns:1fr}
+#FranchiseExplorerConfigPage .franchise-auto-fields{grid-template-columns:1fr}
+#FranchiseExplorerConfigPage .franchise-auto-fields button{width:100%}
+#FranchiseExplorerConfigPage .franchise-dialog .dialog-content{max-height:62dvh}
+#FranchiseExplorerConfigPage .source-group{padding:10px}
+#FranchiseExplorerConfigPage .node-title{font-size:13px}
+#FranchiseExplorerConfigPage .subgroup{margin-left:8px;padding-left:4px}
+#FranchiseExplorerConfigPage .subgroup-body{padding-left:5px}
+#FranchiseExplorerConfigPage .franchise-dialog .dialog-head h2{font-size:17px}}
+#FranchiseExplorerConfigPage .franchises-toolbar{display:flex;justify-content:flex-end;margin-bottom:14px}
+#FranchiseExplorerConfigPage .row-entry{min-width:0}
+#FranchiseExplorerConfigPage .tree-row{gap:3px}
+#FranchiseExplorerConfigPage .tree-row>.expand{width:22px;flex-shrink:0}
+#FranchiseExplorerConfigPage .tree-row>.tree-type{flex-shrink:0}
+#FranchiseExplorerConfigPage .row-count{color:var(--muted);font-size:10px;flex-shrink:0;margin:0 3px}
+#FranchiseExplorerConfigPage .row-contents{border-left:1px solid #38505c;margin:4px 0 12px 13px;padding:6px 0 2px 10px;min-width:0}
+#FranchiseExplorerConfigPage .library-section{border:1px solid #344956;border-radius:8px;margin:10px 0;background:#101a23;min-width:0}
+#FranchiseExplorerConfigPage .library-section>summary{cursor:pointer;padding:10px;font-size:12px;color:#9fdce4;list-style:none;display:flex;align-items:center;gap:8px}
+#FranchiseExplorerConfigPage .library-section>summary:after{content:'⌄';margin-left:auto;color:#91acbc}
+#FranchiseExplorerConfigPage .library-section[open]>summary:after{content:'⌃'}
+#FranchiseExplorerConfigPage .library-picker{min-width:0;padding:10px;border:1px solid #2f424e;border-radius:8px;background:#101a23}
+#FranchiseExplorerConfigPage .library-section .library-picker{border:0;border-top:1px solid #2f424e;border-radius:0 0 8px 8px}
+#FranchiseExplorerConfigPage .library-search-fields{display:grid;grid-template-columns:minmax(0,1fr);gap:7px;align-items:end}
+#FranchiseExplorerConfigPage .library-picker .field{font-size:11px;gap:5px}
+#FranchiseExplorerConfigPage .library-picker input:not([type=checkbox]),#FranchiseExplorerConfigPage .library-picker select{font-size:12px;padding:8px;min-height:37px}
+#FranchiseExplorerConfigPage .library-destination{margin-bottom:10px}
+#FranchiseExplorerConfigPage .library-results{max-height:330px;overflow:auto;overscroll-behavior:contain;margin-top:10px}
+#FranchiseExplorerConfigPage .library-result{display:grid;grid-template-columns:18px minmax(0,1fr);gap:7px;padding:10px 0;border-top:1px solid #2c3d49;align-items:start}
+#FranchiseExplorerConfigPage .library-result input[type=checkbox]{margin:3px 0}
+#FranchiseExplorerConfigPage .library-result-title{font-size:12px;font-weight:600;overflow-wrap:anywhere;display:block}
+#FranchiseExplorerConfigPage .library-result-meta{color:#94aebf;font-size:10px;margin-top:3px;display:block}
+#FranchiseExplorerConfigPage .library-result>button{grid-column:2;justify-self:start;font-size:11px;min-height:31px;padding:5px 8px;max-width:100%;white-space:normal}
+#FranchiseExplorerConfigPage .library-bulk{display:flex;flex-wrap:wrap;gap:6px;border-top:1px solid #2c3d49;padding-top:9px;margin-top:8px}
+#FranchiseExplorerConfigPage .library-bulk button{font-size:11px;min-height:32px;padding:6px 8px;flex:1}
+#FranchiseExplorerConfigPage .library-bulk button.primary{flex-basis:100%}
+#FranchiseExplorerConfigPage .library-status{font-size:11px;color:#93aabb;padding:8px 0 1px;overflow-wrap:anywhere}
+#FranchiseExplorerConfigPage .media-list{display:grid;gap:5px;margin-bottom:10px}
+#FranchiseExplorerConfigPage .media-entry{display:grid;grid-template-columns:16px minmax(0,1fr) auto;gap:7px;align-items:center;padding:8px;border:1px solid #344450;border-radius:7px;background:#1a2631}
+#FranchiseExplorerConfigPage .media-entry>.icon{width:15px;height:15px;color:#87acbe}
+#FranchiseExplorerConfigPage .media-title{font-size:12px;overflow-wrap:anywhere}
+#FranchiseExplorerConfigPage .media-entry .media-actions{display:flex;align-items:center;gap:3px}
+#FranchiseExplorerConfigPage .media-entry .icon-button{width:28px;min-height:30px;padding:4px}
+#FranchiseExplorerConfigPage .media-entry .edit-range{font-size:10px;padding:3px 5px;min-height:30px}
+#FranchiseExplorerConfigPage .range-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+#FranchiseExplorerConfigPage .inline-error{color:var(--bad);font-size:12px;line-height:1.5;margin:0}
+#FranchiseExplorerConfigPage .delete-note{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:0}
+#FranchiseExplorerConfigPage .delete-impact-list{max-height:24dvh;overflow:auto;margin:14px 0;padding:12px 12px 12px 28px;background:#2b2029;border:1px solid #66434e;border-radius:8px;font-size:12px;line-height:1.6}
+#FranchiseExplorerConfigPage .delete-impact-list ul{padding-left:17px}
+#FranchiseExplorerConfigPage .empty-media{font-size:11px;color:#8da8b9;padding:7px 0}
+#FranchiseExplorerConfigPage .node-body>.library-section,#FranchiseExplorerConfigPage .subgroup-body>.library-section{margin-bottom:12px}
+@media(max-width:660px){#FranchiseExplorerConfigPage .franchises-toolbar>button{width:100%}
+#FranchiseExplorerConfigPage .library-search-fields{grid-template-columns:minmax(0,1fr)}
+#FranchiseExplorerConfigPage .library-picker{padding:8px}
+#FranchiseExplorerConfigPage .row-contents{margin-left:10px;padding-left:7px}
+#FranchiseExplorerConfigPage .media-entry{padding:7px;gap:5px}
+#FranchiseExplorerConfigPage .media-entry .media-actions{flex-wrap:wrap;justify-content:flex-end;max-width:62px}
+#FranchiseExplorerConfigPage .media-entry .edit-range{font-size:9px}
+#FranchiseExplorerConfigPage .range-grid{gap:10px}}
+#FranchiseExplorerConfigPage .node-head,#FranchiseExplorerConfigPage .subgroup>.node-head,#FranchiseExplorerConfigPage .tree-row{display:grid;grid-template-columns:18px 20px minmax(0,1fr) auto;align-items:center;gap:4px;min-width:0}
+#FranchiseExplorerConfigPage .node-head{padding:10px 7px}
+#FranchiseExplorerConfigPage .subgroup>.node-head{padding:4px 0}
+#FranchiseExplorerConfigPage .tree-row{padding:4px 0}
+#FranchiseExplorerConfigPage .node-actions,#FranchiseExplorerConfigPage .row-actions{display:flex;flex-wrap:nowrap;gap:3px;align-items:center;grid-column:4;grid-row:1;justify-self:end;flex-shrink:0}
+#FranchiseExplorerConfigPage .subgroup .node-actions{grid-column:4;grid-row:1;justify-self:end}
+#FranchiseExplorerConfigPage .node-actions .icon-button,#FranchiseExplorerConfigPage .row-actions .icon-button{width:30px;min-height:32px;padding:5px;flex-shrink:0}
+#FranchiseExplorerConfigPage .row-actions [data-add-row]{color:#88dfe8}
+#FranchiseExplorerConfigPage .row-actions [data-settings-row]{color:#b7cddd}
+#FranchiseExplorerConfigPage .row-actions .node-menu{opacity:.8}
+#FranchiseExplorerConfigPage .node-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;min-width:0;line-height:1.45;min-height:32px}
+#FranchiseExplorerConfigPage .tree-row .tree-name{display:flex;align-items:center;gap:5px;min-width:0;padding:3px;white-space:nowrap}
+#FranchiseExplorerConfigPage .row-title-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#FranchiseExplorerConfigPage .tree-name .icon{width:15px;height:15px;flex-shrink:0;color:#88a7b8}
+#FranchiseExplorerConfigPage .tree-name .row-count{margin-left:auto}
+#FranchiseExplorerConfigPage .row-contents{padding-right:0}
+#FranchiseExplorerConfigPage .node-body{overflow-x:auto;overscroll-behavior-x:contain}
+#FranchiseExplorerConfigPage .subgroup,#FranchiseExplorerConfigPage .row-entry{min-width:205px}
+#FranchiseExplorerConfigPage .subgroup{margin-left:7px;padding-left:5px}
+#FranchiseExplorerConfigPage .subgroup-body{padding-left:0}
+#FranchiseExplorerConfigPage .media-dialog{max-width:840px}
+#FranchiseExplorerConfigPage .media-dialog .dialog-head>div{min-width:0}
+#FranchiseExplorerConfigPage .media-dialog .dialog-head h2{overflow-wrap:anywhere}
+#FranchiseExplorerConfigPage .media-dialog .dialog-content{max-height:64dvh}
+#FranchiseExplorerConfigPage .media-dialog .library-results{max-height:250px}
+#FranchiseExplorerConfigPage .media-dialog .library-result{grid-template-columns:18px minmax(0,1fr) auto;align-items:center;gap:10px}
+#FranchiseExplorerConfigPage .media-dialog .library-result>button{grid-column:3;grid-row:1;max-width:180px}
+#FranchiseExplorerConfigPage .media-dialog .library-bulk button.primary{flex-basis:auto}
+#FranchiseExplorerConfigPage .media-current-section{margin-top:20px;border-top:1px solid var(--line);padding-top:15px}
+#FranchiseExplorerConfigPage .media-current-section h3{font-size:14px;margin:0 0 10px}
+#FranchiseExplorerConfigPage .media-current-group+.media-current-group{margin-top:16px}
+#FranchiseExplorerConfigPage .media-current-group h4{font-size:12px;color:#9cc0d1;margin:0 0 8px}
+#FranchiseExplorerConfigPage .media-current-group .empty-media{padding:3px 0}
+#FranchiseExplorerConfigPage #media-current{max-height:270px;overflow:auto;overscroll-behavior:contain}
+#FranchiseExplorerConfigPage #media-group-tools{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+#FranchiseExplorerConfigPage #media-undo{margin-right:auto}
+#FranchiseExplorerConfigPage .media-readonly{grid-template-columns:16px minmax(0,1fr)}
+#FranchiseExplorerConfigPage .media-dialog .media-entry{grid-template-columns:16px minmax(0,1fr) auto}
+@media(max-width:660px){#FranchiseExplorerConfigPage .subgroup{margin-left:5px;padding-left:4px}
+#FranchiseExplorerConfigPage .subgroup-body{padding-left:0}
+#FranchiseExplorerConfigPage .node-head,#FranchiseExplorerConfigPage .tree-row{gap:3px}
+#FranchiseExplorerConfigPage .node-actions,#FranchiseExplorerConfigPage .row-actions{gap:2px}
+#FranchiseExplorerConfigPage .node-actions .icon-button,#FranchiseExplorerConfigPage .row-actions .icon-button{width:29px;min-height:32px}
+#FranchiseExplorerConfigPage .media-dialog .dialog-head h2{font-size:17px;line-height:1.4}
+#FranchiseExplorerConfigPage .media-dialog .dialog-content{max-height:62dvh}
+#FranchiseExplorerConfigPage .media-dialog .library-result{grid-template-columns:18px minmax(0,1fr);gap:7px}
+#FranchiseExplorerConfigPage .media-dialog .library-result>button{grid-column:2;grid-row:auto;max-width:100%}
+#FranchiseExplorerConfigPage .media-dialog .library-bulk button.primary{flex-basis:100%}
+#FranchiseExplorerConfigPage .media-dialog .media-entry .media-actions{flex-wrap:nowrap;max-width:none}
+#FranchiseExplorerConfigPage .media-dialog .media-entry .edit-range{font-size:10px}
+#FranchiseExplorerConfigPage #media-group-tools>button{flex:1;font-size:12px}}
+@media(max-width:360px){#FranchiseExplorerConfigPage .tree-name .row-count{display:none}}
+#FranchiseExplorerConfigPage .photos-section{min-width:0;margin-top:6px;padding-top:16px;border-top:1px solid var(--line)}
+#FranchiseExplorerConfigPage .photos-section h3{font-size:14px;margin:0 0 13px}
+#FranchiseExplorerConfigPage .artwork-slots{display:grid;grid-template-columns:minmax(110px,.55fr) minmax(170px,1fr);gap:18px;align-items:start}
+#FranchiseExplorerConfigPage .artwork-slot{min-width:0}
+#FranchiseExplorerConfigPage .art-slot-heading{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:600;color:#bdd0df;margin-bottom:7px}
+#FranchiseExplorerConfigPage .art-slot-heading .icon-button{width:30px;min-height:30px;padding:4px}
+#FranchiseExplorerConfigPage .art-slot-preview{display:block;width:100%;padding:0;border:1px solid #435767;border-radius:10px;overflow:hidden;background:#101a22}
+#FranchiseExplorerConfigPage .art-slot-preview.poster{aspect-ratio:2/3;max-height:230px}
+#FranchiseExplorerConfigPage .art-slot-preview.backdrop{aspect-ratio:16/9}
+#FranchiseExplorerConfigPage .art-slot-preview:hover{border-color:var(--accent)}
+#FranchiseExplorerConfigPage .art-slot-preview img,#FranchiseExplorerConfigPage .art-slot-preview video{width:100%;height:100%;object-fit:cover;display:block}
+#FranchiseExplorerConfigPage .art-empty{display:flex;align-items:center;justify-content:center;gap:9px;flex-direction:column;min-height:100%;font-size:12px;color:#93aebe;font-weight:500}
+#FranchiseExplorerConfigPage .art-empty .icon{width:28px;height:28px;color:#668e9e}
+#FranchiseExplorerConfigPage .artwork-dialog{max-width:1000px}
+#FranchiseExplorerConfigPage .artwork-dialog .dialog-content{max-height:65dvh}
+#FranchiseExplorerConfigPage .art-filters{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
+#FranchiseExplorerConfigPage .art-filters button{font-size:12px;min-height:35px;padding:7px 12px}
+#FranchiseExplorerConfigPage .art-filters button[aria-pressed=true]{background:#17434d;border-color:var(--accent);color:#9deaf0}
+#FranchiseExplorerConfigPage .art-search{margin-bottom:16px;font-size:12px}
+#FranchiseExplorerConfigPage .art-picker-layout{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:18px;align-items:start}
+#FranchiseExplorerConfigPage .artwork-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:12px;max-height:390px;overflow:auto;overscroll-behavior:contain;padding:3px}
+#FranchiseExplorerConfigPage .art-asset{padding:6px;border-radius:9px;text-align:left;min-width:0;background:#14212c;font-weight:500}
+#FranchiseExplorerConfigPage .art-asset.selected{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+#FranchiseExplorerConfigPage .art-asset>img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:5px;display:block;margin-bottom:7px}
+#FranchiseExplorerConfigPage .art-asset-name{display:block;font-size:11px;line-height:1.4;overflow-wrap:anywhere}
+#FranchiseExplorerConfigPage .art-asset-type{display:block;color:#8faeba;font-size:10px;margin-top:5px}
+#FranchiseExplorerConfigPage .art-selection{border:1px solid var(--line);border-radius:10px;padding:12px;min-width:0;background:#101922}
+#FranchiseExplorerConfigPage .art-selection h3{font-size:12px;color:#b5cbd9;margin:0 0 10px}
+#FranchiseExplorerConfigPage #artwork-preview{min-height:120px;display:grid;place-items:center;overflow:hidden;border-radius:6px;background:#09121b}
+#FranchiseExplorerConfigPage #artwork-preview img,#FranchiseExplorerConfigPage #artwork-preview video{width:100%;max-height:290px;object-fit:contain;display:block}
+#FranchiseExplorerConfigPage .art-preview-empty,#FranchiseExplorerConfigPage .art-empty-results{color:#8faaba;font-size:12px;line-height:1.6;padding:14px}
+#FranchiseExplorerConfigPage .art-empty-results{grid-column:1/-1;min-height:100px}
+#FranchiseExplorerConfigPage .art-selection-label{font-size:11px;overflow-wrap:anywhere;color:#9db6c6;margin-top:10px;line-height:1.5}
+#FranchiseExplorerConfigPage .art-upload-target{display:grid;gap:14px;background:#12232e;border:1px dashed #466776;border-radius:10px;padding:24px 16px;font-size:14px;font-weight:600}
+#FranchiseExplorerConfigPage .art-upload-target input{font-size:12px;max-width:100%;color:#abc5d4}
+#FranchiseExplorerConfigPage .art-upload-target input::file-selector-button{background:#294651;color:#ddf3f6;border:1px solid #476d79;border-radius:6px;padding:8px;margin-right:7px;cursor:pointer}
+#FranchiseExplorerConfigPage #art-upload-preview{margin-top:14px}
+#FranchiseExplorerConfigPage #art-upload-preview img{width:100%;max-height:250px;object-fit:contain;border-radius:8px}
+#FranchiseExplorerConfigPage .art-source-label{margin-right:auto;color:var(--muted);font-size:11px}
+#FranchiseExplorerConfigPage .item-settings-dialog{max-width:620px}
+#FranchiseExplorerConfigPage .item-type-label{font-size:12px;color:#93b5c7;display:block;margin-bottom:16px}
+#FranchiseExplorerConfigPage .media-actions [data-settings-item]{color:#aac9d9}
+#FranchiseExplorerConfigPage .media-dialog .media-entry .media-actions{max-width:none}
+@media(max-width:660px){#FranchiseExplorerConfigPage .artwork-slots{grid-template-columns:minmax(90px,.55fr) minmax(140px,1fr);gap:12px}
+#FranchiseExplorerConfigPage .art-slot-preview.poster{max-height:180px}
+#FranchiseExplorerConfigPage .art-picker-layout{grid-template-columns:1fr}
+#FranchiseExplorerConfigPage .artwork-gallery{grid-template-columns:repeat(2,minmax(0,1fr));max-height:300px}
+#FranchiseExplorerConfigPage .art-selection{padding:10px}
+#FranchiseExplorerConfigPage #artwork-preview img,#FranchiseExplorerConfigPage #artwork-preview video{max-height:180px}
+#FranchiseExplorerConfigPage .artwork-dialog .dialog-content{max-height:61dvh}
+#FranchiseExplorerConfigPage .artwork-dialog .dialog-head h2{font-size:17px}
+#FranchiseExplorerConfigPage .art-filters{gap:5px}
+#FranchiseExplorerConfigPage .art-filters button{font-size:11px;padding:7px 9px}
+#FranchiseExplorerConfigPage .art-source-label{flex-basis:100%}
+#FranchiseExplorerConfigPage .item-settings-dialog .dialog-content{max-height:60dvh}
+#FranchiseExplorerConfigPage .media-dialog .media-entry .media-actions{gap:2px;max-width:106px}
+#FranchiseExplorerConfigPage .media-dialog .media-entry .edit-range{font-size:9px;padding:3px}}
+@media(max-width:360px){#FranchiseExplorerConfigPage .artwork-slots{grid-template-columns:minmax(85px,.55fr) minmax(120px,1fr);gap:9px}}
+#FranchiseExplorerConfigPage .structure-tools{padding:0 0 16px;border-bottom:1px solid var(--line);min-width:0}
+#FranchiseExplorerConfigPage .structure-tools h3{font-size:14px;margin:0 0 8px}
+#FranchiseExplorerConfigPage .structure-owner{font-size:12px;color:#9cb7c8;overflow-wrap:anywhere;margin-bottom:10px}
+#FranchiseExplorerConfigPage .structure-tools .button-row{gap:8px}
+#FranchiseExplorerConfigPage .structure-tools .button-row>button{font-size:12px;min-height:37px}
+#FranchiseExplorerConfigPage .pending-structure{font-size:12px;color:#bfd8dd}
+#FranchiseExplorerConfigPage .pending-structure:empty{display:none}
+#FranchiseExplorerConfigPage .pending-caption{display:block;font-size:11px;color:var(--amber);margin-top:12px}
+#FranchiseExplorerConfigPage .pending-structure ul{margin:7px 0 0;padding-left:19px;line-height:1.8}
+#FranchiseExplorerConfigPage .pending-structure li>span{font-size:10px;color:#8ba9bb;margin-left:5px}
+#FranchiseExplorerConfigPage #media-group-tools{margin:0 0 17px;padding:0 0 16px;border-top:0;border-bottom:1px solid var(--line)}
+#FranchiseExplorerConfigPage #row-convert-subgroup,#FranchiseExplorerConfigPage #media-convert-row{flex-basis:100%;text-align:left}
+@media(max-width:660px){#FranchiseExplorerConfigPage .structure-tools .button-row>button{flex:1;white-space:normal;padding:8px;font-size:12px}
+#FranchiseExplorerConfigPage #row-convert-subgroup,#FranchiseExplorerConfigPage #media-convert-row{flex-basis:100%}}
+#FranchiseExplorerConfigPage{box-sizing:border-box;min-width:0;width:100%;max-width:100%;margin:0;overflow-wrap:anywhere}
+#FranchiseExplorerConfigPage .fx-wrap{min-width:0;box-sizing:border-box}
+</style>
+
+<svg style="display:none" aria-hidden="true"><defs>
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
+<symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="2" fill="currentColor"/><circle cx="16" cy="12" r="2" fill="currentColor"/><circle cx="10" cy="18" r="2" fill="currentColor"/></symbol>
+<symbol id="i-box" viewBox="0 0 24 24"><path d="m3 7 9-4 9 4v11l-9 4-9-4V7Zm0 0 9 4 9-4M12 11v11M7.5 5 17 9"/></symbol>
+<symbol id="i-add" viewBox="0 0 24 24"><path d="M12 4v16M4 12h16"/></symbol>
+<symbol id="i-gear" viewBox="0 0 24 24"><path d="m9 3-.6 2.5-2 1.2L4 6l-2 3.5 1.8 1.8v2L2 15l2 3.5 2.4-.7 2 1.2L9 22h4l.6-3 2-1.2 2.4.7 2-3.5-1.8-1.7v-2L20 9l-2-3.5-2.4.7-2-1.2L13 3H9Z"/><circle cx="11" cy="12.5" r="3"/></symbol>
+<symbol id="i-pencil" viewBox="0 0 24 24"><path d="m16 3 5 5-12 12-6 1 1-6L16 3ZM13 6l5 5"/></symbol>
+<symbol id="i-grip" viewBox="0 0 24 24"><path d="M9 5h.01M15 5h.01M9 12h.01M15 12h.01M9 19h.01M15 19h.01" stroke-width="3.5"/></symbol>
+<symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+<symbol id="i-move" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7"/></symbol>
+<symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 5 3 11l6 6M3 11h11a6 6 0 0 1 0 12" transform="translate(0 -3)"/></symbol>
+<symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 9a8 8 0 1 1 0 7M4 3v6h6"/></symbol>
+<symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6h7l2 3h9v11H3V6Z"/></symbol>
+<symbol id="i-film" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/></symbol>
+<symbol id="i-tv" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="m8 2 4 4 4-4M9 22h6"/></symbol>
+<symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="2"/><path d="m3 17 5-5 4 4 4-7 5 8"/></symbol>
+<symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+</defs></svg>
+<main class="fx-wrap">
+<header class="top"><div><h1>Franchise Explorer<span class="version">v{{PLUGIN_VERSION}}</span></h1></div><div class="top-actions"><span id="save-state" class="save-state" role="status">Loading configuration…</span><button class="icon-button quiet" id="undo" aria-label="Undo" data-help="Undo the most recent unsaved edit or move." disabled><svg class="icon"><use href="#i-undo"/></svg></button><button class="icon-button quiet" id="reset" aria-label="Reload saved settings" data-help="Reload the saved plugin configuration. Unsaved changes can be restored with Undo."><svg class="icon"><use href="#i-reset"/></svg></button><button class="primary" id="save" data-help="Save these changes to the Jellyfin plugin configuration.">Save changes</button></div></header>
+<details class="panel" id="settings"><summary><svg class="icon label-icon"><use href="#i-settings"/></svg>Settings<span class="section-count"></span></summary><div class="panel-body settings-grid">
+<div class="setting" data-help="Enable subtitles for franchise playback in this browser."><span class="setting-label" id="subtitles-label">Enable subtitles</span><button type="button" class="switch" role="switch" aria-checked="false" aria-labelledby="subtitles-label" id="subtitles"><span class="switch-label">Off</span><span class="switch-track"></span></button></div>
+<label class="setting" data-help="Choose the subtitle language to use when subtitles are enabled."><span class="setting-label">Subtitle language</span><select id="language" aria-label="Subtitle language"><option value="auto">Jellyfin preference</option><option value="en">English</option><option value="de">Deutsch</option><option value="es">Español</option><option value="fr">Français</option><option value="ja">日本語</option></select></label>
+<div class="setting" data-help="Hide titles managed by a franchise from the main menu's Continue Watching and Next Up rows. Their watched history is preserved."><span class="setting-label" id="hide-label">Hide franchise Continue Watching and Next Up from main menu</span><button type="button" class="switch" role="switch" aria-checked="false" aria-labelledby="hide-label" id="hide-native"><span class="switch-label">Off</span><span class="switch-track"></span></button></div>
+<details class="panel" id="advanced"><summary><svg class="icon label-icon"><use href="#i-box"/></svg>Advanced settings<span class="section-count"></span></summary><div class="panel-body button-row"><button id="export" data-help="Download a JSON backup of the plugin configuration.">Export backup</button><button id="import" data-help="Import a Franchise Explorer configuration backup for review before saving.">Import backup</button><input id="import-file" type="file" accept=".json,application/json" hidden></div></details>
+</div></details>
+<details class="panel" id="franchises"><summary><svg class="icon label-icon"><use href="#i-grid"/></svg>Franchises<span id="franchise-count" class="section-count"></span></summary><div class="panel-body"><div class="franchises-toolbar"><button id="add-franchise" data-help="Create a franchise, then use its settings icon for IMDb Auto Add and its + icon for rows or subcategories.">＋ Add franchise</button></div><div id="board" class="board"></div></div></details>
+</main>
+<div id="help" role="tooltip" hidden></div><div id="toast" class="toast" role="status" aria-live="polite" hidden></div><div id="drag-status" class="sr-only" aria-live="polite"></div>
+<dialog id="franchise-dialog" class="franchise-dialog" aria-labelledby="franchise-heading"><div class="dialog-head"><div><h2 id="franchise-heading"><svg class="icon"><use href="#i-gear"/></svg>Franchise settings</h2><div id="franchise-scope" class="scope-title"></div></div><button class="icon-button quiet" data-close="franchise-dialog" aria-label="Close franchise settings">✕</button></div><div class="dialog-content"><div class="franchise-fields"><section class="structure-tools"><h3>Groups and subgroups</h3><div id="franchise-structure-owner" class="structure-owner"></div><div class="button-row"><button id="franchise-add-row">＋ Add group / row</button><button id="franchise-add-subgroup">＋ Add subgroup</button></div><div id="franchise-pending-structure" class="pending-structure"></div></section>
+<label class="field" data-help="Rename this franchise or subgroup. Changes are staged until you save or apply selected changes."><span>Title</span><input id="detail-title" maxlength="120" required></label>
+<label class="field" data-help="Edit the description for this franchise or subgroup."><span>Description</span><textarea id="detail-description" maxlength="1500"></textarea></label>
+<section id="franchise-photos" class="photos-section"></section>
+<section class="franchise-setup"><div class="button-row"><button id="franchise-auto-add" class="mode-button" aria-expanded="false" data-help="Preview Auto Add changes for this franchise or subgroup, including its configured row and subgroup sources.">Auto Add from IMDb</button></div><div id="franchise-imdb-fields" class="franchise-auto-fields" hidden><label class="field" data-help="Set the main IMDb list for this franchise or subgroup. Specific row and subgroup sources can be set under Advanced."><span>IMDb URL</span><input id="franchise-imdb-url" type="url" maxlength="300" placeholder="https://www.imdb.com/list/ls…/"></label><button class="primary" id="franchise-preview" data-help="Review additions, removals, missing titles and their destinations. Apply only the changes you select.">Preview changes</button></div>
+<details class="rows-box" id="franchise-advanced"><summary>Advanced</summary><div class="rows-content"><div id="source-list" class="source-list"></div></div></details></section>
+</div></div><div class="dialog-footer"><button data-close="franchise-dialog">Cancel</button><button class="primary" id="save-franchise">Save franchise</button></div></dialog>
+<dialog id="new-franchise-dialog" class="compact-dialog" aria-labelledby="new-franchise-heading"><div class="dialog-head"><h2 id="new-franchise-heading">Add franchise</h2><button class="icon-button quiet" data-close="new-franchise-dialog" aria-label="Close new franchise">✕</button></div><div class="dialog-content move-form"><label class="field"><span>Title</span><input id="new-name" maxlength="120" required placeholder="Franchise name"></label><label class="field"><span>Description</span><textarea id="new-description" maxlength="1500"></textarea></label></div><div class="dialog-footer"><button data-close="new-franchise-dialog">Cancel</button><button class="primary" id="create-manual">Add franchise</button></div></dialog>
+<dialog id="library-range-dialog" class="compact-dialog" aria-labelledby="library-range-heading"><div class="dialog-head"><div><h2 id="library-range-heading">Choose TV Show range</h2><div id="library-range-title" class="scope-title"></div></div><button class="icon-button quiet" data-close="library-range-dialog" aria-label="Close TV range">✕</button></div><div class="dialog-content move-form"><label class="field" data-help="Keep the complete show together, or choose a season or episode range as a single entry."><span>Include</span><select id="library-range-mode"><option value="full">Entire TV Show</option><option value="seasons">Season to season</option><option value="episodes">Season/episode to season/episode</option></select></label><div id="library-range-endpoints" class="range-grid" hidden><label class="field" data-help="Specials use season 0."><span>Starting season</span><input id="library-from-season" type="number" min="0" max="999" step="1" value="1"></label><label class="field"><span>Ending season</span><input id="library-to-season" type="number" min="0" max="999" step="1" value="1"></label><label class="field episode-field" hidden><span>Starting episode</span><input id="library-from-episode" type="number" min="1" max="999" step="1" value="1"></label><label class="field episode-field" hidden><span>Ending episode</span><input id="library-to-episode" type="number" min="1" max="999" step="1" value="3"></label></div><p id="library-range-error" class="inline-error" role="alert" hidden></p></div><div class="dialog-footer"><button data-close="library-range-dialog">Cancel</button><button class="primary" id="confirm-library-range">Add to row</button></div></dialog>
+<dialog id="media-dialog" class="media-dialog" aria-labelledby="media-heading"><div class="dialog-head"><div><h2 id="media-heading">Add/Modify/Delete Media</h2><div id="media-scope" class="scope-title"></div></div><button class="icon-button quiet" data-close="media-dialog" aria-label="Close media manager">✕</button></div><div class="dialog-content" id="media-body"><section id="media-group-tools" class="structure-tools"><h3>Groups and subgroups</h3><div id="media-structure-owner" class="structure-owner"></div><div class="button-row"><button id="choose-add-row">＋ Add group / row</button><button id="choose-add-subgroup">＋ Add subgroup</button><button class="quiet" id="media-convert-row" hidden>Make this row a subgroup</button></div></section><div id="media-content"><div id="media-library"></div><section class="media-current-section"><h3>Current media</h3><div id="media-current"></div></section></div></div><div class="dialog-footer"><button class="quiet" id="media-undo" disabled>Undo</button><button class="primary" data-close="media-dialog">Done</button></div></dialog>
+<dialog id="review"><div class="dialog-head"><h2>Review changes</h2><button class="icon-button quiet" data-close="review" aria-label="Close review">✕</button></div><div class="dialog-content"><div class="review-bar"><div id="review-counts" class="counts"></div><div class="button-row"><button class="quiet" id="select-all">Select all</button><button class="quiet" id="clear-selection">Clear</button></div></div><div class="table-scroll"><table><thead><tr><th><input type="checkbox" id="review-all" aria-label="Select all proposed changes"></th><th>Title</th><th>TV Show / Movie</th><th>Where</th><th>Change</th></tr></thead><tbody id="review-list"></tbody></table></div></div><div class="dialog-footer"><span class="selected-count" id="selected-count"></span><button data-close="review">Cancel</button><button class="primary" id="apply-selected">Apply selected</button></div></dialog>
+<dialog id="structure-dialog" class="compact-dialog" aria-labelledby="structure-heading"><div class="dialog-head"><h2 id="structure-heading">Add group / row</h2><button class="icon-button quiet" data-close="structure-dialog" aria-label="Close group creation">✕</button></div><div class="dialog-content move-form"><div id="structure-owner" class="scope-title"></div><label class="field" id="structure-type-field"><span>Name</span><select id="structure-type"></select></label><label class="field" id="structure-name-field"><span id="structure-name-label">Custom name</span><input id="structure-name" maxlength="120"></label></div><div class="dialog-footer"><button data-close="structure-dialog">Cancel</button><button class="primary" id="confirm-structure">Add</button></div></dialog>
+<dialog id="subgroup-dialog" class="compact-dialog"><div class="dialog-head"><h2>Add subgroup</h2><button class="icon-button quiet" data-close="subgroup-dialog" aria-label="Close subgroup menu">✕</button></div><div class="dialog-content"><label class="field" data-help="The subgroup appears within the selected franchise. It can have its own rows and further subgroups."><span>Subgroup name</span><input id="subgroup-name" maxlength="120" required placeholder="e.g. Phase Two"></label></div><div class="dialog-footer"><button data-close="subgroup-dialog">Cancel</button><button class="primary" id="confirm-subgroup">Add subgroup</button></div></dialog>
+<dialog id="row-dialog" class="compact-dialog" aria-labelledby="row-heading"><div class="dialog-head"><h2 id="row-heading">Edit row</h2><button class="icon-button quiet" data-close="row-dialog" aria-label="Close row editor">✕</button></div><div class="dialog-content move-form"><span class="editor-owner" id="row-owner"></span><section class="structure-tools" id="row-structure-tools"><h3>Groups and subgroups</h3><div id="row-structure-owner" class="structure-owner"></div><div class="button-row"><button id="row-add-row">＋ Add group / row</button><button id="row-add-subgroup">＋ Add subgroup</button><button class="quiet" id="row-convert-subgroup" data-help="Turn this row into a subgroup, keeping its current media, source and artwork inside it. Save to apply.">Make this row a subgroup</button></div><div id="row-pending-structure" class="pending-structure"></div></section><label class="field" data-help="The selected option becomes the row name. Choose Custom to enter your own name."><span>Name</span><select id="edit-row-type"></select></label><label class="field" id="edit-row-group-field" hidden data-help="Create a subgroup in the rows list. When converting an existing row, that row and its titles move inside the new subgroup."><span>Subgroup name</span><input id="edit-row-group-name" maxlength="120" placeholder="e.g. Phase Two"></label><label class="field" id="edit-row-custom-field" hidden data-help="Enter the name for this custom row."><span>Custom name</span><input id="edit-row-custom" maxlength="120" placeholder="Row name"></label><section id="row-photos" class="photos-section"></section></div><div class="dialog-footer"><button data-close="row-dialog">Cancel</button><button class="primary" id="save-row">Save row</button></div></dialog>
+<dialog id="item-dialog" class="item-settings-dialog" aria-labelledby="item-art-heading"><div class="dialog-head"><div><h2 id="item-art-heading">Media settings</h2><div id="item-art-title" class="scope-title"></div></div><button class="icon-button quiet" data-close="item-dialog" aria-label="Close media settings">✕</button></div><div class="dialog-content"><span id="item-art-type" class="item-type-label"></span><section id="item-photos" class="photos-section"></section></div><div class="dialog-footer"><button data-close="item-dialog">Cancel</button><button class="primary" id="save-item-artwork">Save artwork</button></div></dialog>
+<dialog id="artwork-dialog" class="artwork-dialog" aria-labelledby="artwork-heading"><div class="dialog-head"><div><h2 id="artwork-heading">Choose Poster</h2><div id="artwork-scope" class="scope-title"></div></div><button class="icon-button quiet" data-close="artwork-dialog" aria-label="Close artwork picker">✕</button></div><div class="dialog-content"><div id="artwork-filters" class="art-filters"><button data-art-filter="all" aria-pressed="true">All</button><button data-art-filter="images" aria-pressed="false">Images</button><button data-art-filter="videos" aria-pressed="false">Videos</button><button data-art-filter="upload" aria-pressed="false">Upload photo</button></div><label class="field art-search"><span>Find media artwork</span><input id="artwork-search" type="search" placeholder="Search associated titles…" autocomplete="off"></label><div class="art-picker-layout"><div><div id="artwork-gallery" class="artwork-gallery"></div><div id="art-upload-panel" hidden><label class="art-upload-target"><span>Upload a photo</span><input id="art-upload" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></label><p id="art-upload-error" class="inline-error" role="alert" hidden></p><div id="art-upload-preview"></div></div></div><aside class="art-selection"><h3>Preview</h3><div id="artwork-preview"></div><div id="artwork-selection" class="art-selection-label"></div></aside></div></div><div class="dialog-footer"><span class="art-source-label">Associated media artwork</span><button data-close="artwork-dialog">Cancel</button><button class="primary" id="confirm-artwork" disabled>Use selected</button></div></dialog>
+<dialog id="delete-dialog" class="compact-dialog" aria-labelledby="delete-heading" aria-describedby="delete-message"><div class="dialog-head"><h2 id="delete-heading">Delete</h2><button class="icon-button quiet" data-close="delete-dialog" aria-label="Close delete confirmation">✕</button></div><div class="dialog-content"><p id="delete-message"></p><div id="delete-impact"></div><p id="delete-library-note" class="delete-note">This removes Franchise Explorer entries only. Movies, shows and collections stay in your Jellyfin library. Undo can restore these entries.</p></div><div class="dialog-footer"><button data-close="delete-dialog">Cancel</button><button class="delete-confirm" id="confirm-delete">Delete</button></div></dialog>
+<dialog id="move-dialog" class="compact-dialog"><div class="dialog-head"><h2 id="move-heading">Move</h2><button class="icon-button quiet" data-close="move-dialog" aria-label="Close move menu">✕</button></div><div class="dialog-content move-form"><label class="field"><span>Move into</span><select id="move-parent" aria-label="Move into"></select></label><label class="field"><span>Position</span><select id="move-position" aria-label="Position"></select></label></div><div class="dialog-footer"><button data-close="move-dialog">Cancel</button><button class="primary" id="confirm-move">Move</button></div></dialog>
+
+<script type="text/javascript">
+/* Generated by scripts/build_settings_page.py. Edit the source modules/template. */
+{{SETTINGS_CORE}}
+{{SETTINGS_ARTWORK}}
+{{SETTINGS_MAIN}}
+</script>
+</div></body></html>

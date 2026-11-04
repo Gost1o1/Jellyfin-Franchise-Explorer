@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using Jellyfin.Plugin.FranchiseExplorer.Models;
 using MediaBrowser.Common.Api;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -86,6 +87,16 @@ public sealed class FranchiseBrowseController : ControllerBase
         return Content(reader.ReadToEnd(), "text/javascript; charset=utf-8");
     }
 
+    private static object ArtworkPayload(ArtworkMetadata? artwork) => new
+    {
+        primaryUrl = artwork?.PrimaryUrl ?? string.Empty,
+        backdropUrl = artwork?.BackdropUrl ?? string.Empty,
+        backdropVideoItemId = artwork?.BackdropVideoItemId ?? string.Empty,
+        logoUrl = artwork?.LogoUrl ?? string.Empty,
+        thumbUrl = artwork?.ThumbUrl ?? string.Empty,
+        bannerUrl = artwork?.BannerUrl ?? string.Empty
+    };
+
     [HttpGet("Catalog")]
     [Authorize]
     public IActionResult Catalog()
@@ -111,14 +122,7 @@ public sealed class FranchiseBrowseController : ControllerBase
                 collectionId = n.CollectionId,
                 overview = n.Overview,
                 sortOrder = n.SortOrder,
-                artwork = new
-                {
-                    primaryUrl = n.Artwork?.PrimaryUrl ?? "",
-                    backdropUrl = n.Artwork?.BackdropUrl ?? "",
-                    logoUrl = n.Artwork?.LogoUrl ?? "",
-                    thumbUrl = n.Artwork?.ThumbUrl ?? "",
-                    bannerUrl = n.Artwork?.BannerUrl ?? ""
-                }
+                artwork = ArtworkPayload(n.Artwork)
             }).ToArray(),
             rows = config.Rows.Select(r => new
             {
@@ -126,6 +130,8 @@ public sealed class FranchiseBrowseController : ControllerBase
                 parentNodeId = r.ParentNodeId,
                 name = r.Name,
                 rowType = r.RowType,
+                category = r.Category,
+                artwork = ArtworkPayload(r.Artwork),
                 autoAddCategory = config.Nodes.SelectMany(n => n.AutoAddRows ?? new()).FirstOrDefault(m => m.RowId == r.Id)?.Category ?? "",
                 sortOrder = r.SortOrder,
                 nodeIds = r.NodeIds,
@@ -136,6 +142,7 @@ public sealed class FranchiseBrowseController : ControllerBase
                     id = i.Id,
                     itemId = i.JellyfinItemId,
                     itemType = i.ItemType,
+                    artwork = ArtworkPayload(i.Artwork),
                     rangeMode = i.RangeMode,
                     startSeason = i.StartSeason,
                     endSeason = i.EndSeason,
@@ -149,6 +156,7 @@ public sealed class FranchiseBrowseController : ControllerBase
                 nodeId = l.NodeId,
                 itemId = l.JellyfinItemId,
                 itemType = l.ItemType,
+                artwork = ArtworkPayload(l.Artwork),
                 rangeMode = l.RangeMode,
                 startSeason = l.StartSeason,
                 endSeason = l.EndSeason,

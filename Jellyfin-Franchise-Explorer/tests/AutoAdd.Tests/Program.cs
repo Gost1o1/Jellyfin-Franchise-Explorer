@@ -30,6 +30,7 @@ foreach(var url in new[]{"http://www.imdb.com/list/ls1/","https://evil.example/l
 Console.WriteLine("PASS IMDb parser, URL safety, XML migration and persistence");
 
 await ImdbTransportTests.Run();
+await ArtworkTests.Run();
 
 if (args.Contains("--live"))
 {

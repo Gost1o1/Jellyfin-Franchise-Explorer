@@ -26,9 +26,9 @@ assert "tile.hover()" in home_browser
 assert home_browser.index("tile.hover()") < home_browser.index('tile.locator(".fe-settings-toggle").click()')
 assert '.fe-settings-toggle[aria-expanded="true"]' in script
 assert 'id="fe-native-rows"' not in browse
-assert 'id="fx-hide-native-pref"' in config
-assert "hide.checked?'0':'1'" in config
-assert "Hide franchise titles from Continue Watching and Next Up" in config
+assert 'id="hide-native"' in config
+assert "fe-show-active-native-rows:" in config
+assert "Hide franchise Continue Watching and Next Up from main menu" in config
 assert "'fe-show-active-native-rows:'" in script and "'fe-show-active-native-rows:'" in config
 assert "itemId: id" in script and "seriesId: item?.Type === 'Episode'" in script
 assert "card.classList.toggle(NATIVE_HIDE_CLASS" in script

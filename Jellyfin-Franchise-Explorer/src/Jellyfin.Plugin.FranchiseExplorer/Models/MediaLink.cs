@@ -22,4 +22,5 @@ public sealed class MediaLink
     public int EndSeason { get; set; }
     public int StartEpisode { get; set; }
     public int EndEpisode { get; set; }
+    public ArtworkMetadata Artwork { get; set; } = new();
 }
