@@ -5,7 +5,7 @@ on:
       version:
         description: 'Release version; must equal csproj Version'
         required: true
-        default: '0.8.9.22'
+        default: '0.8.9.23'
         type: string
       confirm:
         description: 'Type RELEASE_EXPERIMENTAL to publish'
@@ -128,6 +128,7 @@ jobs:
           RELEASE_VERSION: ${{ inputs.version }}
         run: |
           gh release create "v${RELEASE_VERSION}" "dist/franchise-explorer_${RELEASE_VERSION}.zip" \
+            --target "$GITHUB_SHA" \
             --prerelease --title "Franchise Explorer ${RELEASE_VERSION} (EXPERIMENTAL)" \
             --notes "UNFINISHED EXPERIMENTAL VERSION. Virtual franchises and experimental chronological playback; back up your server and plugin data. Native-client compatibility remains unverified."
       - name: Generate Jellyfin catalog manifest from actual release ZIP
