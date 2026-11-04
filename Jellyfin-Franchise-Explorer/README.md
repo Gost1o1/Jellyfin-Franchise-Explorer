@@ -8,4 +8,6 @@ This folder contains the source and test tools for [Jellyfin Franchise Explorer]
 - `examples/` — example configuration data.
 - `CHANGELOG.md` — development history.
 
+The [settings editor development guide](docs/SETTINGS_EDITOR.md) describes the new franchise tree, nested groups, media popup, IMDb review and artwork picker, including how to generate the embedded page and validate changes.
+
 **Do not upload this folder as a Jellyfin plugin.** Use the catalog release linked in the top-level README.

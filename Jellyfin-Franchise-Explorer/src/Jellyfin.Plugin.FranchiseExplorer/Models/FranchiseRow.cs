@@ -14,6 +14,12 @@ public sealed class FranchiseRow
     public string ParentNodeId { get; set; } = string.Empty;
     public string Name { get; set; } = "Custom Row";
     public string RowType { get; set; } = "Groups";
+    /// <summary>Settings category independent of the legacy shelf renderer type.</summary>
+    public string Category { get; set; } = string.Empty;
+    /// <summary>Optional IMDb list override for this row.</summary>
+    public string SourceUrl { get; set; } = string.Empty;
+    public List<FranchiseSource> AutoAddSources { get; set; } = new();
+    public ArtworkMetadata Artwork { get; set; } = new();
     public int SortOrder { get; set; }
     public List<string> NodeIds { get; set; } = new();
     public List<string> MediaLinkIds { get; set; } = new();

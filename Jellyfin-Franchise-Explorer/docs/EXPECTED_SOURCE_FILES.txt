@@ -152,3 +152,13 @@ Jellyfin-Franchise-Explorer/scripts/test_autoadd_grouping_browser.py
 Jellyfin-Franchise-Explorer/docs/VALIDATION_V08922.md
 Jellyfin-Franchise-Explorer/scripts/test_autoadd_changes.js
 Jellyfin-Franchise-Explorer/scripts/test_autoadd_review_browser.py
+Jellyfin-Franchise-Explorer/scripts/build_settings_page.py
+Jellyfin-Franchise-Explorer/docs/SETTINGS_EDITOR.md
+Jellyfin-Franchise-Explorer/docs/VALIDATION_SETTINGS_EDITOR.md
+Jellyfin-Franchise-Explorer/scripts/test_settings_core.js
+Jellyfin-Franchise-Explorer/scripts/test_settings_v9_browser.py
+Jellyfin-Franchise-Explorer/tests/AutoAdd.Tests/ArtworkTests.cs
+Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Configuration/settingsPage.template.html
+Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Configuration/franchise-settings-core.js
+Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Configuration/franchise-settings-artwork.js
+Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Configuration/franchise-settings.js

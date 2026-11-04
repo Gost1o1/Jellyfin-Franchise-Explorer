@@ -20,6 +20,8 @@ public sealed class FranchiseAutoAddRow
 /// <summary>Ownership and edit fingerprint for reviewed Auto-Add removals.</summary>
 public sealed class FranchiseAutoAddRecord
 {
+    /// <summary>Empty for a franchise source, or the exact row owning an independent IMDb override.</summary>
+    public string ScopeRowId { get; set; } = string.Empty;
     public string ReferenceId { get; set; } = string.Empty;
     public string RowId { get; set; } = string.Empty;
     public List<string> SourceIds { get; set; } = new();
