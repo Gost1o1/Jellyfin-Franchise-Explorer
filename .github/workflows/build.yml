@@ -22,6 +22,7 @@ jobs:
           python3 scripts/check_repo.py
           python3 scripts/check_repository_completeness.py
           python3 scripts/smoke_tests.py
+          node scripts/test_autoadd.js
           node scripts/ui_contract_tests.js
           python3 scripts/test_artwork_contract.py
           node scripts/test_inheritance.js
@@ -61,6 +62,7 @@ jobs:
         run: |
           dotnet restore src/Jellyfin.Plugin.FranchiseExplorer/Jellyfin.Plugin.FranchiseExplorer.csproj
           dotnet build src/Jellyfin.Plugin.FranchiseExplorer/Jellyfin.Plugin.FranchiseExplorer.csproj --no-restore -c Release
+          dotnet run --project tests/AutoAdd.Tests -c Release
       - name: Upload build artifact (not a release)
         uses: actions/upload-artifact@v6
         with:
@@ -82,6 +84,14 @@ jobs:
       - name: Run native tile geometry tests
         working-directory: Jellyfin-Franchise-Explorer
         run: |
+          python3 scripts/test_v072_regressions.py
+          python3 scripts/test_live_ui_browser.py
+          python3 scripts/test_timeline_browser.py
+          python3 scripts/test_card_navigation_v081.py
+          python3 scripts/test_local_web_handoff.py
+          python3 scripts/test_autonext_browser.py
+          python3 scripts/test_autoadd_browser.py
+          python3 scripts/test_home_recovery_browser.py
           python3 scripts/test_my_media_tile_browser.py
           python3 scripts/test_my_media_tile_resize.py
           python3 scripts/test_v085_native_card.py

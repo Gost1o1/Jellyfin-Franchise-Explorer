@@ -135,3 +135,15 @@ Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-
 Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-timeline.js
 LICENSE
 README.md
+Jellyfin-Franchise-Explorer/docs/AUTO_ADD.md
+Jellyfin-Franchise-Explorer/docs/VALIDATION_V08921.md
+Jellyfin-Franchise-Explorer/scripts/test_autoadd.js
+Jellyfin-Franchise-Explorer/scripts/test_autoadd_browser.py
+Jellyfin-Franchise-Explorer/scripts/test_home_recovery_browser.py
+Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Api/FranchiseAutoAddController.cs
+Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Models/FranchiseSource.cs
+Jellyfin-Franchise-Explorer/tests/AutoAdd.Tests/AutoAdd.Tests.csproj
+Jellyfin-Franchise-Explorer/tests/AutoAdd.Tests/Program.cs
+Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Api/ImdbListClient.cs
+Jellyfin-Franchise-Explorer/tests/AutoAdd.Tests/ImdbTransportTests.cs
+Jellyfin-Franchise-Explorer/scripts/verify_imdb_live.py

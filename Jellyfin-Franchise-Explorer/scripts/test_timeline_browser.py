@@ -55,8 +55,10 @@ with sync_playwright() as p:
    dialog.wait_for(timeout=8000)
    dialog.get_by_text('5 playable movies/episodes').wait_for(timeout=8000)
    assert dialog.get_by_text('S1E2').count() and dialog.get_by_text('S2E2').count()
+   # The dialog defaults to local playback. Select the remote session this fixture simulates.
+   dialog.get_by_role('combobox',name='Choose a Jellyfin playback session').select_option('dev1')
    dialog.get_by_role('button',name='▶ Play from beginning').click()
-   page.wait_for_function('window.__played.length===1',timeout=4000)
+   page.wait_for_function('window.__played.length===1 && window.__state?.playbackMode==="playing"',timeout=4000)
    progress=page.evaluate('window.__state')
    assert progress['total']==5 and progress['index']==0 and progress['playbackMode']=='playing',progress
    assert progress['queueLengths'][0]>0

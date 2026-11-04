@@ -21,10 +21,12 @@ with sync_playwright() as p:
     b=p.chromium.launch(headless=True,executable_path='/usr/bin/chromium',args=['--no-sandbox'])
     page=b.new_page(viewport={'width':1280,'height':1000})
     page.set_content(fixture, wait_until='load')
-    page.locator('.fx-tree-item').filter(has_text='Phase Six').click()
-    page.locator('#fx-add-sibling').click()
+    # Create a sibling using the visible parent/Subgroup workflow. Legacy same-level control is hidden.
+    page.locator('.fx-tree-item').filter(has_text='Marvel Cinematic Universe').click()
+    page.locator('#fx-add-child').click()
+    page.locator('#fx-type').select_option('Phase')
     assert page.locator('#fx-name').input_value()=='New subgroup'
-    assert page.locator('#fx-type').input_value()=='Phase', 'sibling retains source group type'
+    assert page.locator('#fx-type').input_value()=='Phase', 'new subgroup type can be selected'
     # Unlike the old behavior, tree label and scope must change while typing.
     page.locator('#fx-name').fill('Test collection')
     assert page.locator('.fx-tree-item').filter(has_text='Test collection').count()==1

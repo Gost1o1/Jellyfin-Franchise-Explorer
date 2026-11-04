@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Simulated Web-client completion marker -> next item's native details route.
+"""Simulated Web-client completion marker stages the next native Home request, without inventing playback.
 Not a live Jellyfin client or server playback test.
 """
 from pathlib import Path
@@ -15,12 +15,13 @@ with sync_playwright() as pw:
     try:
         for case in ('completed_then_stopped','stopped_without_completion','unrelated_video_playing','wrong_session'):
             page=browser.new_page()
-            page.goto('http://127.0.0.1:8399/web/index.html') if False else page.goto('about:blank')
+            page.route('http://jellyfin.test/**',lambda r:r.fulfill(content_type='text/html',body='<main></main>'))
+            page.goto('http://jellyfin.test/web/index.html#/home')
             page.set_content('<main><h2>Test navigation</h2></main>')
             page.evaluate('''({uid,first,second,row,scenario})=>{
               const memory=new Map();
               Object.defineProperty(window,'localStorage',{value:{getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,String(v)),removeItem:k=>memory.delete(k)}});
-              localStorage.setItem('jellyfin_credentials',JSON.stringify({Servers:[{AccessToken:'TEST',UserId:uid,ManualAddress:'about:blank'}]}));
+              localStorage.setItem('jellyfin_credentials',JSON.stringify({Servers:[{AccessToken:'TEST',UserId:uid,Id:'server-id',ManualAddress:'http://jellyfin.test'}]}));
               localStorage.setItem('fe-local-follow-v1:'+uid.toLowerCase(),JSON.stringify({rowId:row,sessionId:'S1',lastItemId:first,subtitleEnabled:false,created:Date.now()}));
               const from='r1:'+first,to='r2:'+second;
               const completed=scenario!=='stopped_without_completion';
@@ -41,11 +42,16 @@ with sync_playwright() as pw:
             page.wait_for_timeout(4700)
             result=page.evaluate('''({uid,second})=>({hash:location.hash,intent:JSON.parse(localStorage.getItem('fe-local-timeline-v1:'+uid.toLowerCase())||'null')})''',{'uid':uid,'second':second})
             if case=='completed_then_stopped':
-                assert 'feAutoPlay=1' in result['hash'],result
+                assert result['hash']=='#/home',result
+                assert result['intent']['homeOnly'] is True and result['intent']['state']['playbackMode']=='paused',result
+                quick=page.evaluate("JSON.parse(sessionStorage.getItem('fe-quickplay-v1')||'null')")
+                assert quick['id']==second and quick['autoNext'] is True,quick
                 assert result['intent']['expectedId']==second,result
             else:
                 assert result['intent'] is None,result
                 assert 'feAutoPlay' not in result['hash'],result
+            assert not page.evaluate("window.requests.some(u=>u.includes('/Activate')||u.includes('/Complete'))"),'No actual playback/completion was observed'
+            assert '/details' not in result['hash']
             print('PASS',case)
             page.close()
     finally:

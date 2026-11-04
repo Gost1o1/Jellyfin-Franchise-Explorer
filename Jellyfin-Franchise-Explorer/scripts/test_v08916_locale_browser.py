@@ -19,7 +19,7 @@ body{background:#101114;color:white}.itemsContainer{display:flex;gap:12px}
 </div></body></html>'''
 
 with sync_playwright() as p:
-    browser = p.chromium.launch(headless=True)
+    browser = p.chromium.launch(headless=True, executable_path="/usr/bin/chromium" if Path("/usr/bin/chromium").exists() else None, args=["--no-sandbox"])
     page = browser.new_page()
     page.set_content(html)
     page.add_script_tag(content=js)

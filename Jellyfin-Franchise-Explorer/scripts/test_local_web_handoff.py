@@ -1,67 +1,46 @@
 #!/usr/bin/env python3
-"""Offline native-web handoff regression. Uses a simulated web player.
-Does not establish Jellyfin 12.2 client compatibility.
-"""
+"""Mock native Web handoff: activate only after local video and session progress agree."""
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 base=Path(__file__).resolve().parents[1]
 script=(base/'src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-my-media.js').read_text()
-engine=(base/'src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-timeline.js').read_text()
-assert 'This browser (local playback' in engine
-assert 'feLocalTimeline=1' in engine
-uid='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
-movie='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
-row='cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+uid='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';movie='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';row='cccccccc-cccc-4ccc-8ccc-cccccccccccc'
 with sync_playwright() as pw:
-    browser=pw.chromium.launch(headless=True,executable_path='/usr/bin/chromium',args=['--no-sandbox'])
-    try:
-        for supports in (True,False):
-            page=browser.new_page()
-            page.goto('about:blank#/details?id='+movie+'&feAutoPlay=1&feLocalTimeline=1&feSubs=0')
-            page.set_content('<div class="page"><button class="btnPlay">Play</button></div>')
-            page.evaluate('''({uid,movie,row,supports})=>{
-                const dict=new Map();
-                Object.defineProperty(window,'localStorage',{value:{
-                    getItem:k=>dict.has(k)?dict.get(k):null,
-                    setItem:(k,v)=>dict.set(k,String(v)),
-                    removeItem:k=>dict.delete(k)
-                }});
-                const auth={Servers:[{UserId:uid,AccessToken:'TESTTOKEN',ManualAddress:'http://localhost'}]};
-                localStorage.setItem('jellyfin_credentials',JSON.stringify(auth));
-                const state={rowId:row,name:'Demo',index:0,itemId:movie,sessionId:'',total:1,
-                    playbackMode:'paused',completedKeys:[],queueKeys:['ref:'+movie],queueLengths:[10000],
-                    queueSourceItemIds:[movie],queueSeasons:[0],queueEpisodes:[0],positionTicks:0};
-                localStorage.setItem('fe-local-timeline-v1:'+uid,JSON.stringify({version:1,created:Date.now(),
-                    rowId:row,expectedId:movie,subtitleEnabled:false,replayOnly:false,state}));
-                window.saved=[];window.playClicked=false;window.tick=0;
-                localStorage.setItem('_deviceId2','THIS-DEVICE');
-                const pretendVideo={paused:false,ended:false,readyState:4,currentTime:0,getClientRects:()=>[{}]};
-                const originalQuery=document.querySelectorAll.bind(document);
-                document.querySelectorAll=(selector)=>selector==='video' && window.playClicked ? [pretendVideo] : originalQuery(selector);
-                setInterval(()=>{if(window.playClicked)pretendVideo.currentTime+=1;},200);
-                document.querySelector('.btnPlay').addEventListener('click',()=>window.playClicked=!!supports);
-                window.fetch=async(path,options={})=>{
-                    if(String(path).includes('/Sessions'))return {ok:true,status:200,json:async()=>[{
-                      Id:'SESSION1',UserId:uid,DeviceId:'THIS-DEVICE',Client:'Jellyfin Web',DeviceName:'Chrome',
-                      PlayState:{PositionTicks:window.playClicked?(window.tick+=20000000):0,IsPaused:false},
-                      NowPlayingItem:window.playClicked?{Id:movie}:null}]};
-                    if(String(path).includes('/FranchiseExplorer/TimelineState/')&&options.method==='PUT'){
-                      window.saved.push(JSON.parse(options.body));
-                      return {ok:true,status:200,json:async()=>JSON.parse(options.body)};
-                    }
-                    return {ok:true,status:200,json:async()=>[]};
-                };
-            }''',{'uid':uid,'movie':movie,'row':row,'supports':supports})
-            page.evaluate(script)
-            page.wait_for_timeout(5000)
-            was_clicked=page.evaluate('window.playClicked')
-            saved=page.evaluate('window.saved')
-            if supports:
-                assert was_clicked and len(saved)==1,(supports,saved)
-                assert saved[0]['playbackMode']=='playing' and saved[0]['sessionId']=='SESSION1'
-            else:
-                assert not was_clicked and not saved
-            assert 'feAutoPlay' not in page.url
-            print('Web handoff', 'verified success' if supports else 'unconfirmed playback: state unchanged')
-            page.close()
-    finally:browser.close()
+ browser=pw.chromium.launch(headless=True,executable_path='/usr/bin/chromium',args=['--no-sandbox'])
+ try:
+  for supports in (True,False):
+   page=browser.new_page();page.route('http://jellyfin.test/**',lambda r:r.fulfill(content_type='text/html',body='<div class="itemsContainer"></div><video style="width:320px;height:180px"></video>'))
+   page.goto('http://jellyfin.test/web/index.html#/home')
+   page.evaluate('''({uid,movie,row,supports})=>{
+    localStorage.setItem('jellyfin_credentials',JSON.stringify({Servers:[{Id:'testserver',UserId:uid,AccessToken:'mock',ManualAddress:location.origin}]}));
+    localStorage.setItem('_deviceId2','THIS-DEVICE');
+    localStorage.setItem('fe-local-timeline-v1:'+uid,JSON.stringify({version:1,created:Date.now(),rowId:row,expectedId:movie,homeOnly:true,subtitleEnabled:false,replayOnly:false,state:{rowId:row,index:0,itemId:movie,playbackMode:'paused'}}));
+    window.saved=[];window.clicked=0;window.started=false;window.ticks=0;
+    const video=document.querySelector('video');
+    Object.defineProperties(video,{paused:{get:()=>!window.started},readyState:{get:()=>4},currentTime:{get:()=>window.ticks}});
+    setInterval(()=>{if(window.started)window.ticks+=1;},200);
+    document.addEventListener('click',e=>{if(e.target.closest('.itemAction')){window.clicked++;window.started=supports;}});
+    window.fetch=async(path,options={})=>{
+     const ok=v=>new Response(JSON.stringify(v),{status:200,headers:{'Content-Type':'application/json'}});
+     if(String(path).includes('/Sessions'))return ok([{Id:'SESSION1',UserId:uid,DeviceId:'THIS-DEVICE',Client:'Jellyfin Web',PlayState:{PositionTicks:window.ticks*10000000,IsPaused:false},NowPlayingItem:window.started?{Id:movie}:null}]);
+     if(String(path).endsWith('/Activate')&&options.method==='POST'){window.saved.push(JSON.parse(options.body));return ok({rowId:row,index:0,itemId:movie,playbackMode:'playing',sessionId:'SESSION1'});}
+     if(options.method==='PUT'||String(path).includes('/Complete'))throw new Error('Unexpected history mutation');
+     return ok([]);
+    };
+   }''',{'uid':uid,'movie':movie,'row':row,'supports':supports})
+   page.add_script_tag(content=script)
+   assert page.evaluate('(id)=>window.FranchiseExplorerNativePlayback.play(id,{type:"Movie",startOver:true})',movie)
+   page.wait_for_function('window.clicked===1')
+   if supports:
+    page.wait_for_function('window.saved.length===1',timeout=7000)
+    assert page.evaluate('window.saved[0]')=={'sessionId':'SESSION1','itemId':movie}
+    assert page.evaluate('(uid)=>JSON.parse(localStorage.getItem("fe-local-follow-v1:"+uid)).lastItemId',uid)==movie
+    assert page.evaluate('(uid)=>localStorage.getItem("fe-local-timeline-v1:"+uid)',uid) is None
+   else:
+    page.wait_for_timeout(2500);assert page.evaluate('window.saved.length')==0
+    assert page.evaluate('(uid)=>localStorage.getItem("fe-local-follow-v1:"+uid)',uid) is None
+    assert page.evaluate('(uid)=>JSON.parse(localStorage.getItem("fe-local-timeline-v1:"+uid)).expectedId',uid)==movie
+   assert page.evaluate('location.hash')=='#/home'
+   print('PASS native handoff:', 'verified local progress activates once' if supports else 'unverified playback leaves history unchanged')
+   page.close()
+ finally:browser.close()

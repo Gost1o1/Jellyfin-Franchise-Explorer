@@ -88,5 +88,5 @@ assert.equal(webElementQueried,0);
     deviceId:'android-device-id',created:Date.now()});
   const foreign=await vm.runInContext('recoverAndroidFollow',context)(auth,null,'fe-local-follow-v1:u');
   assert.equal(foreign,null,'Never adopt another device\'s matching user/title session');
-  console.log('PASS v0.8.9.20 Android launch, native-session recovery, other-device refusal, and desktop isolation (simulated)');
+  console.log('PASS v0.8.9.21 Android launch, native-session recovery, other-device refusal, and desktop isolation (simulated)');
 })().catch(error=>{console.error(error);process.exitCode=1;});

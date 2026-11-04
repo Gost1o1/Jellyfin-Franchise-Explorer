@@ -14,7 +14,7 @@ function section(begin,end){
   return source.slice(from,to);
 }
 const deviceCode=section('  function androidIntegratedPlayer(){','  const playbackReturnKey=');
-const nativeCode=section('  function playAndroidIntegrated(id,options){','  // Jellyfin Web\'s own delegated shortcuts');
+const nativeCode=section('  function nativeAndroidQueue(id,intent){','  // Jellyfin Web\'s own delegated shortcuts');
 const bridgeCode=section('  window.FranchiseExplorerNativePlayback={','  // A click in the standalone Franchises browser');
 const recoveryCode=section('  async function recoverAndroidFollow(auth,owner,localKey){','  async function followLocalTimeline(){');
 

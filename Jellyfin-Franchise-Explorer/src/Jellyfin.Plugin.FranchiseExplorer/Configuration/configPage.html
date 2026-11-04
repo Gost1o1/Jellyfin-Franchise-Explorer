@@ -270,11 +270,13 @@
   #FranchiseExplorerConfigPage .fx-row-included-item {flex-wrap:wrap !important;}
   #FranchiseExplorerConfigPage .fx-row-included-item>span {flex:1 1 100%;width:100%;}
 }
+#FranchiseExplorerConfigPage .fx-auto-source {display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0;padding:12px;border:1px solid #596471;border-radius:8px}
+#FranchiseExplorerConfigPage .fx-auto-source input[type=url] {flex:1 1 300px;min-width:0;text-decoration:none!important}
 </style>
 <div data-role="content" class="fx-wrap">
   <div class="fx-heading">
     <div>
-      <h1>Franchise Explorer <small>v0.8.9.20 preview</small></h1>
+      <h1>Franchise Explorer <small>v0.8.9.21 preview</small></h1>
       <p class="fx-muted">Organize virtual franchises, eras, phases and viewing references without moving media files.</p>
     </div>
   </div>
@@ -309,6 +311,20 @@
     <label class="fx-field"><span><input id="fx-hide-native-pref" type="checkbox"> Hide franchise titles from Continue Watching and Next Up</span>
       <small class="fx-muted">On hides movies and episodes included in your active franchise timelines from these native rows, even after a timeline reset. Off shows them normally. Continue Your Franchises stays visible. This per-user, per-browser setting never alters watched history.</small></label>
   </section>
+
+  <details class="fx-panel" id="fx-auto-panel">
+    <summary>Auto-Add Franchise (IMDb)</summary>
+    <p>Sources are saved with plugin configuration. Lower priority numbers run first; source order breaks ties. Only matched existing titles are applied. No library files, original artwork, or native collections are changed.</p>
+    <label>Franchise <select id="fx-auto-target" class="fx-input"></select></label>
+    <label>New franchise name <input id="fx-auto-name" class="fx-input" value="Marvel Cinematic Universe"></label>
+    <button type="button" class="fx-btn" id="fx-auto-create">Create franchise with MCU source</button>
+    <div id="fx-auto-sources"></div>
+    <button type="button" class="fx-btn" id="fx-auto-add-source">Add IMDb URL</button>
+    <button type="button" class="fx-btn" id="fx-auto-preview">Preview matches</button>
+    <button type="button" class="fx-btn" id="fx-auto-apply" disabled>Apply matched titles locally</button>
+    <p>Chronological Timeline uses explicit IMDb list positions for movies only. Whole shows require manual episode ranges and chronology. Individual episodes match by exact IMDb ID only. All list pages must be retrieved successfully. Review every preview before applying.</p>
+    <div id="fx-auto-results" role="status" aria-live="polite" style="max-height:400px;overflow:auto"></div>
+  </details>
   <div id="fx-status" class="fx-status" role="status" aria-live="polite"></div>
   <div class="fx-grid">
     <aside class="fx-panel fx-sticky" aria-label="Virtual franchise hierarchy">
@@ -577,6 +593,91 @@
   const validGuid = s => /^[0-9a-f]{32}$|^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
   const guid = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.floor(Math.random() * 16); return (c === 'x' ? r : (r & 3 | 8)).toString(16); });
   const emptyArt = () => ({ PrimaryUrl:'', BackdropUrl:'', LogoUrl:'', ThumbUrl:'', BannerUrl:'' });
+  // AUTOADD_ENGINE_BEGIN — pure functions shared by the editor and offline regression tests.
+  const autoAdd = (() => {
+    const categories=['Chronological Timeline','Movies','TV Shows','Collections','Other'];
+    const url=value=>{
+      const u=new URL(String(value).trim());
+      if(u.protocol!=='https:'||!['imdb.com','www.imdb.com'].includes(u.hostname)||u.port||u.username||u.password||!/^\/list\/ls\d+\/?$/.test(u.pathname)||u.search||u.hash)throw new Error('Use an HTTPS IMDb list URL without query or fragment.');
+      return 'https://www.imdb.com'+u.pathname.replace(/\/?$/,'/');
+    };
+    function sources(raw){
+      if(raw==null)return [];
+      if(!Array.isArray(raw)||raw.length>30)throw new Error('Maximum 30 IMDb sources per franchise.');
+      const seen=new Set(),ids=new Set();
+      return raw.map(s=>{
+        const canonical=url(s.Url);
+        if(seen.has(canonical))throw new Error('Duplicate IMDb source URL. Assign several categories to one source.');seen.add(canonical);
+        if(!/^(?:[a-f\d]{32}|[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12})$/i.test(s.Id)||ids.has(s.Id.toLowerCase()))throw new Error('Invalid or duplicate source ID.');ids.add(s.Id.toLowerCase());
+        const cats=categories.filter(c=>(s.Categories||[]).includes(c));
+        if(!cats.length)throw new Error('Assign at least one category to each source.');
+        return {Id:s.Id,Url:canonical,Enabled:s.Enabled!==false,Priority:Math.max(0,Math.min(100000,Math.trunc(Number(s.Priority)||0))),Categories:cats};
+      });
+    }
+    const itemId=value=>String(value||'').replace(/-/g,'').toLowerCase();
+    const key=s=>String(s||'').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+    function match(entry,library){
+      const compatible=library.filter(i=>['Movie','Series','Episode','BoxSet'].includes(i.Type)&&(entry.type==='Other'||i.Type===entry.type));
+      const exact=compatible.filter(i=>String(i.ProviderIds?.Imdb||i.ProviderIds?.imdb||'').toLowerCase()===entry.imdbId.toLowerCase());
+      // Conflicting known provider IDs must never fall back to title matching.
+      const candidates=exact.length?exact:compatible.filter(i=>!['Other','Episode'].includes(entry.type)&&!i.ProviderIds?.Imdb&&!i.ProviderIds?.imdb&&entry.year&&i.ProductionYear===entry.year&&key(i.Name)===key(entry.title));
+      return {status:candidates.length===1?'matched':candidates.length?'ambiguous':'unmatched',item:candidates.length===1?candidates[0]:null,candidates,method:exact.length?'IMDb ID':'title/year'};
+    }
+    function preview(sourceResults,library){
+      const seen=new Set(),out=[];
+      // Priority first, configured order breaks ties. Earlier source owns duplicate titles.
+      sourceResults.slice().sort((a,b)=>a.source.Priority-b.source.Priority||a.index-b.index).forEach(result=>{
+        if(!result.source.Enabled||result.error)return;
+        for(const entry of result.entries){
+          if(!/^tt\d+$/.test(entry.imdbId)||seen.has(entry.imdbId))continue;seen.add(entry.imdbId);
+          out.push({...entry,...match(entry,library),sourceId:result.source.Id,categories:result.source.Categories.slice(),orderVerified:result.orderVerified===true});
+        }
+      });return out;
+    }
+    function apply(model,nodeId,entries,id){
+      // Work on a copy; caller validates before replacing its model. Never reorder existing links or rows.
+      const next=JSON.parse(JSON.stringify(model));
+      const node=next.Nodes.find(n=>n.Id===nodeId);if(!node)throw new Error('Select an existing franchise.');
+      const descendant=new Set([nodeId]);let changed=true;
+      while(changed){changed=false;for(const n of next.Nodes)if(descendant.has(n.ParentId)&&!descendant.has(n.Id)){descendant.add(n.Id);changed=true;}}
+      const existing=new Map();for(const l of next.MediaLinks)if(descendant.has(l.NodeId)&&!existing.has(itemId(l.JellyfinItemId)))existing.set(itemId(l.JellyfinItemId),l);
+      const rowMap=new Map();
+      const configured=Array.isArray(node.AutoAddRows)&&node.AutoAddRows.length>0;
+      if(!configured)node.AutoAddRows=[];
+      categories.forEach((name,index)=>{
+        const mapping=node.AutoAddRows.find(m=>m.Category===name);
+        let row=next.Rows.find(r=>r.ParentNodeId===nodeId&&(configured?r.Id===mapping?.RowId:r.Name===name));
+        if(configured&&!row)return; // A manually removed category stays removed.
+        if(!row){row={Id:id(),ParentNodeId:nodeId,Name:name,RowType:index===0?'Timeline':'Media',SortOrder:Math.max(-1,...next.Rows.filter(r=>r.ParentNodeId===nodeId).map(r=>r.SortOrder))+1,NodeIds:[],MediaLinkIds:[],Items:[],MediaOrder:[]};next.Rows.push(row);}
+        if(!configured)node.AutoAddRows.push({Category:name,RowId:row.Id});
+        rowMap.set(name,row);
+      });
+      const episodeSeries=new Map(entries.filter(e=>e.item?.Type==='Episode'&&e.item.SeriesId).map(e=>[itemId(e.item.Id),itemId(e.item.SeriesId)]));
+      let added=0;
+      for(const e of entries){
+        if(e.status!=='matched'||!e.item||!['Movie','Series','Episode','BoxSet'].includes(e.item.Type))continue;
+        const itemKey=itemId(e.item.Id);
+        // A pre-existing reference is deliberately untouched, even if moved to another subgroup/range/row.
+        if(existing.has(itemKey))continue;
+        // A manually assigned whole show or episode range already owns these episodes.
+        if(e.item.Type==='Episode'&&e.item.SeriesId&&existing.has(itemId(e.item.SeriesId)))continue;
+        if(e.item.Type==='Series'&&next.MediaLinks.some(l=>descendant.has(l.NodeId)&&episodeSeries.get(itemId(l.JellyfinItemId))===itemKey))continue;
+        const link={Id:id(),NodeId:nodeId,JellyfinItemId:e.item.Id,DisplayName:e.item.Name,ItemType:e.item.Type,ViewingOrder:'Custom',Position:Math.max(0,...next.MediaLinks.filter(l=>l.NodeId===nodeId).map(l=>l.Position))+1,RangeMode:'Full',StartSeason:0,EndSeason:0,StartEpisode:0,EndEpisode:0};
+        next.MediaLinks.push(link);existing.set(itemKey,link);added++;
+        for(const category of e.categories){
+          // Explicit IMDb episode IDs and positions can queue exact library episodes; whole series still need manual ranges.
+          if(category==='Chronological Timeline'&&(!e.orderVerified||!['Movie','Episode'].includes(e.item.Type)))continue;
+          if(category==='Movies'&&e.item.Type!=='Movie'||category==='TV Shows'&&!['Series','Episode'].includes(e.item.Type)||category==='Collections'&&e.item.Type!=='BoxSet')continue;
+          const row=rowMap.get(category);if(!row||!['Media','Timeline','Mixed'].includes(row.RowType))continue;
+          row.MediaLinkIds.push(link.Id);row.MediaOrder.push(link.Id);
+        }
+      }
+      return {model:next,added};
+    }
+    return {categories,url,sources,match,preview,apply};
+  })();
+  // AUTOADD_ENGINE_END
+
   let model = { NavigationLabel:'Franchises', Nodes:[], MediaLinks:[], Rows:[] };
   let selected = '';
   let dirty = false;
@@ -601,7 +702,7 @@
       errorTimers.set(el,setTimeout(()=>{
         if(el.textContent===message){el.textContent='';el.style.color='';}
         errorTimers.delete(el);
-      },6500));
+      },5000));
     }
   }
   const setStatus = (message, error) => statusElement(byId('fx-status'),message,error,'#f2a49d','settings');
@@ -641,7 +742,7 @@
       // Old v0.7.1 configuration omitted this setting; default to its original
       // collection-first behavior so upgrading doesn't change existing art.
       const mode=n.CollectionArtworkMode==='Preserve'?'Preserve':'Collection';
-      return {Id:String(n.Id), ParentId:String(n.ParentId || ''), Name:String(n.Name || '').trim().slice(0,120), NodeType:String(n.NodeType || 'Custom').slice(0,40), CollectionId:collectionId, CollectionArtworkMode:mode, Overview:String(n.Overview || '').slice(0,1500), SortOrder:num(n.SortOrder),Artwork:{PrimaryUrl:artRef(a.PrimaryUrl),BackdropUrl:artRef(a.BackdropUrl),LogoUrl:artRef(a.LogoUrl),ThumbUrl:artRef(a.ThumbUrl),BannerUrl:artRef(a.BannerUrl)}};
+      return {Id:String(n.Id), ParentId:String(n.ParentId || ''), Name:String(n.Name || '').trim().slice(0,120), NodeType:String(n.NodeType || 'Custom').slice(0,40), CollectionId:collectionId, CollectionArtworkMode:mode, Overview:String(n.Overview || '').slice(0,1500), SortOrder:num(n.SortOrder),AutoAddSources:autoAdd.sources(n.AutoAddSources),AutoAddRows:(Array.isArray(n.AutoAddRows)?n.AutoAddRows:[]).filter(m=>autoAdd.categories.includes(m.Category)&&validGuid(String(m.RowId||''))).map(m=>({Category:m.Category,RowId:String(m.RowId)})),Artwork:{PrimaryUrl:artRef(a.PrimaryUrl),BackdropUrl:artRef(a.BackdropUrl),LogoUrl:artRef(a.LogoUrl),ThumbUrl:artRef(a.ThumbUrl),BannerUrl:artRef(a.BannerUrl)}};
     });
     const ids = new Set(safeNodes.map(n => n.Id.toLowerCase()));
     if (ids.size !== safeNodes.length) throw new Error('Duplicate group IDs.');
@@ -1084,6 +1185,7 @@
     finally{button.disabled=false;}
   });
   function render() {
+    renderAuto();
     renderTree();
     const node = model.Nodes.find(n=>n.Id===selected);
     byId('fx-selected').classList.toggle('fx-hidden',!node);
@@ -1385,7 +1487,7 @@
       state.results=[];state.busy=false;state.status='Search error: '+(err.message||err);
       recordClientError('row-search',state.status);
       const failingMessage=state.status;
-      setTimeout(()=>{if(state.searchId===sequence&&state.status===failingMessage){state.status='';refreshRowSearchResults(rowId);}},6500);
+      setTimeout(()=>{if(state.searchId===sequence&&state.status===failingMessage){state.status='';refreshRowSearchResults(rowId);}},5000);
     }
     // Do not rerender the input or other row controls when an async search finishes.
     refreshRowSearchResults(rowId);
@@ -1547,7 +1649,7 @@
       const cfg=await ApiClient.getPluginConfiguration(pluginId);
       cfg.NavigationLabel=data.NavigationLabel;cfg.Nodes=data.Nodes;cfg.MediaLinks=data.MediaLinks;cfg.Rows=data.Rows;
       const result=await ApiClient.updatePluginConfiguration(pluginId,cfg);
-      model=data;savedNodes.clear();model.Nodes.forEach(n=>savedNodes.add(n.Id.toLowerCase()));setDirty(false);setStatus('Saved plugin-owned virtual data only.');
+      model=data;savedNodes.clear();model.Nodes.forEach(n=>savedNodes.add(n.Id.toLowerCase()));setDirty(false);renderAuto();setStatus('Saved plugin-owned virtual data only.');
       if (typeof Dashboard !== 'undefined' && Dashboard.processPluginConfigurationUpdateResult) Dashboard.processPluginConfigurationUpdateResult(result);
     }catch(e){setStatus('Save failed: '+(e.message||e),true);}
   });
@@ -1647,7 +1749,7 @@
     errorTimers.set(el,setTimeout(()=>{
       if(el.textContent===message){el.textContent='';el.classList.add('fx-hidden');}
       errorTimers.delete(el);
-    },6500));
+    },5000));
   }
   byId('fx-cancel-range').addEventListener('click',closeRangeEditor);
   byId('fx-close-range').addEventListener('click',closeRangeEditor);
@@ -1762,6 +1864,84 @@
     if(query.length<2){showSearchStatus('Enter at least two characters to search.');return;}
     searchTimer=setTimeout(()=>searchMedia(query,seq),380);
   });
+
+  let autoPreview=null,autoGeneration=0;
+  function invalidateAuto(){autoPreview=null;autoGeneration++;byId('fx-auto-apply').disabled=true;byId('fx-auto-results').replaceChildren();}
+  function autoNode(){return model.Nodes.find(n=>n.Id===byId('fx-auto-target').value);}
+  function renderAutoSources(){
+    const list=byId('fx-auto-sources');list.replaceChildren();const node=autoNode();if(!node)return;
+    (node.AutoAddSources||[]).forEach((source,index)=>{
+      const row=document.createElement('div');row.className='fx-auto-source';
+      const enabled=document.createElement('input');enabled.type='checkbox';enabled.checked=source.Enabled;enabled.setAttribute('aria-label','Enable source');
+      const input=document.createElement('input');input.type='url';input.value=source.Url;input.className='fx-input';input.setAttribute('aria-label','IMDb source URL');input.style.setProperty('color',source.Enabled?'#edf0f3':'#9099a4','important');input.style.textDecoration='none';
+      const priority=document.createElement('input');priority.type='number';priority.min='0';priority.value=source.Priority;priority.setAttribute('aria-label','Source priority (lower first)');priority.style.width='90px';
+      const edit=()=>{invalidateAuto();setDirty(true);};
+      enabled.onchange=()=>{source.Enabled=enabled.checked;edit();renderAutoSources();};
+      input.onchange=()=>{source.Url=input.value;edit();};priority.onchange=()=>{source.Priority=num(priority.value);edit();};
+      row.append(enabled,input,priority);
+      autoAdd.categories.forEach(category=>{const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.checked=source.Categories.includes(category);check.onchange=()=>{source.Categories=source.Categories.filter(c=>c!==category);if(check.checked)source.Categories.push(category);edit();};label.append(check,document.createTextNode(category));row.append(label);});
+      for(const [text,offset] of [['↑',-1],['↓',1],['Remove',0]]){const button=document.createElement('button');button.type='button';button.className='fx-btn fx-btn-small';button.textContent=text;button.onclick=()=>{const sources=node.AutoAddSources;if(!offset)sources.splice(index,1);else if(sources[index+offset])[sources[index],sources[index+offset]]=[sources[index+offset],sources[index]];edit();renderAutoSources();};row.append(button);}
+      list.append(row);
+    });
+  }
+  function renderAuto(){
+    invalidateAuto();const select=byId('fx-auto-target'),previous=select.value;select.replaceChildren();
+    for(const n of model.Nodes.filter(n=>!n.ParentId)){const option=document.createElement('option');option.value=n.Id;option.textContent=n.Name;select.append(option);}
+    if(model.Nodes.some(n=>n.Id===previous))select.value=previous;renderAutoSources();
+  }
+  byId('fx-auto-target').onchange=()=>{invalidateAuto();renderAutoSources();};
+  byId('fx-auto-create').onclick=()=>{
+    try{
+      const name=byId('fx-auto-name').value.trim();if(!name)throw new Error('Enter a franchise name.');
+      if(model.Nodes.some(n=>!n.ParentId&&n.Name.toLowerCase()===name.toLowerCase()))throw new Error('Franchise already exists. Select it above.');
+      if(model.Nodes.length>=250)throw new Error('Group limit reached.');
+      const node=addNode('',name,'Franchise');node.AutoAddSources=[{Id:guid(),Url:'https://www.imdb.com/list/ls539646485/',Enabled:true,Priority:0,Categories:['Chronological Timeline','Movies','TV Shows','Other']}];
+      const result=autoAdd.apply(model,node.Id,[],guid);model=normalize(result.model);setDirty(true);render();byId('fx-auto-target').value=node.Id;renderAutoSources();setStatus('Created virtual franchise locally. Edit sources, preview, then Save configuration.');
+    }catch(e){setStatus(e.message,true);}
+  };
+  byId('fx-auto-add-source').onclick=()=>{const node=autoNode();if(!node)return;node.AutoAddSources??=[];node.AutoAddSources.push({Id:guid(),Url:'https://www.imdb.com/list/ls123456789/',Enabled:true,Priority:node.AutoAddSources.length,Categories:['Movies','TV Shows']});invalidateAuto();setDirty(true);renderAutoSources();};
+  async function fetchAutoSource(source){
+    const token=typeof ApiClient.accessToken==='function'?ApiClient.accessToken():'';
+    const response=await fetch(ApiClient.getUrl('FranchiseExplorer/AutoAdd/Source',{url:source.Url}),{headers:{Authorization:'MediaBrowser Token="'+token+'"'},signal:AbortSignal.timeout(45000)});
+    const data=await response.json();if(!response.ok)throw new Error(data.error||data.Error||'Source HTTP '+response.status);
+    // Jellyfin hosts can serialize DTO properties in PascalCase or camelCase.
+    const lower=record=>Object.fromEntries(Object.entries(record).map(([k,v])=>[k[0].toLowerCase()+k.slice(1),v]));
+    const result=lower(data);result.entries=(result.entries||[]).map(lower);return result;
+  }
+  byId('fx-auto-preview').onclick=async()=>{
+    const button=byId('fx-auto-preview');button.disabled=true;invalidateAuto();const generation=autoGeneration;
+    try{
+      const node=autoNode();if(!node)throw new Error('Create or select a franchise first.');const sources=autoAdd.sources(node.AutoAddSources);
+      if(!sources.some(s=>s.Enabled))throw new Error('Enable at least one source.');
+      const fingerprint=JSON.stringify(sources),results=[];
+      byId('fx-auto-results').textContent='Fetching enabled IMDb sources and matching visible Jellyfin titles…';
+      for(const [index,source] of sources.entries())if(source.Enabled){
+        try{const data=await fetchAutoSource(source);results.push({source,index,...data});}
+        catch(e){recordClientError('auto-add',e.message);results.push({source,index,error:e.message});}
+      }
+      const library=[];
+      for(let start=0;;start+=200){
+        let timer;
+        const page=await Promise.race([jellyfinItems({recursive:true,includeItemTypes:results.some(r=>r.entries?.some(e=>e.type==='Episode'))?'Movie,Series,Episode,BoxSet':'Movie,Series,BoxSet',fields:'ProviderIds,ProductionYear',startIndex:start,limit:200,enableTotalRecordCount:true}),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Jellyfin library scan timed out. Retry preview.')),30000);})]).finally(()=>clearTimeout(timer));
+        const items=page.Items||[];library.push(...items);if(items.length<200||library.length>=page.TotalRecordCount)break;
+        if(start>=100000)throw new Error('Library scan limit exceeded.');
+      }
+      if(generation!==autoGeneration||autoNode()?.Id!==node.Id)return;
+      const entries=autoAdd.preview(results,library);autoPreview={nodeId:node.Id,fingerprint,entries};
+      const box=byId('fx-auto-results');box.replaceChildren();
+      for(const result of results){const line=document.createElement('p');line.textContent=result.source.Url+' — '+(result.error||result.warning||'Loaded');box.append(line);}
+      for(const entry of entries){const line=document.createElement('p');line.textContent=entry.title+(entry.year?' ('+entry.year+')':'')+' — '+entry.status+(entry.status==='matched'?' / '+entry.method:'')+' — '+entry.categories.join(', ')+(entry.type==='Series'?' · Set episode ranges/order manually.':'');box.append(line);}
+      const summary=document.createElement('strong');summary.textContent=entries.filter(e=>e.status==='matched').length+' matched, '+entries.filter(e=>e.status==='unmatched').length+' unmatched, '+entries.filter(e=>e.status==='ambiguous').length+' ambiguous. Missing/ambiguous titles remain preview-only. Existing references are preserved.';box.prepend(summary);
+      byId('fx-auto-apply').disabled=!entries.some(e=>e.status==='matched');
+    }catch(e){byId('fx-auto-results').textContent='Preview failed: '+e.message;setStatus(e.message,true);}
+    finally{button.disabled=false;}
+  };
+  byId('fx-auto-apply').onclick=()=>{
+    try{
+      const node=autoNode();if(!autoPreview||node?.Id!==autoPreview.nodeId||JSON.stringify(autoAdd.sources(node.AutoAddSources))!==autoPreview.fingerprint)throw new Error('Sources changed. Preview again.');
+      const result=autoAdd.apply(model,node.Id,autoPreview.entries,guid);model=normalize(result.model);invalidateAuto();setDirty(true);render();setStatus('Added '+result.added+' new virtual references. Existing customizations preserved. Click Save configuration to persist.');
+    }catch(e){setStatus(e.message,true);}
+  };
 
   try { byId('fx-open-browser').href=ApiClient.getUrl('FranchiseExplorer/Browse'); } catch(_) {}
   page.addEventListener('pageshow',load);
