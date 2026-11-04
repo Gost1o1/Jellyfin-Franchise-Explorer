@@ -67,4 +67,4 @@ win.NativePlayer.isEnabled=()=>false;
 assert.equal(play(movie,{}),null,
   'Desktop and Jellyfin Web player must stay on their existing playback path');
 assert.equal(calls.length,4);
-console.log('PASS v0.8.9.21 Android native mixed-media queue, resume, one-off safety, desktop isolation');
+console.log('PASS v0.8.9.22 Android native mixed-media queue, resume, one-off safety, desktop isolation');

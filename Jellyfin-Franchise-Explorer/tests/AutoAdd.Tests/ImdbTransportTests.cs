@@ -28,6 +28,8 @@ internal static class ImdbTransportTests
             catch(InvalidOperationException) { return; }
             throw new Exception("Unsafe or incomplete IMDb response was accepted");
         }
+        using var emptyClient=new HttpClient(new Handler(_=>Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK){Content=new StringContent(Page(0,false,null))})));
+        if((await ImdbListClient.ReadAsync(emptyClient,"ls1",default)).Count!=0)throw new Exception("Verified empty list must be accepted");
         await Reject("blocked",HttpStatusCode.Forbidden);
         await Reject("rate limited",HttpStatusCode.TooManyRequests);
         await Reject("{\"errors\":[{\"message\":\"PersistedQueryNotFound\"}],\"data\":null}");

@@ -1,4 +1,17 @@
-## 0.8.9.21 (unreleased)
+## 0.8.9.22 (unreleased)
+
+- Separate existing-franchise and new-from-IMDb workflows; preview before changing configuration, select proposed changes (all selected by default), and save through Apply selected changes.
+- Show additions, safe Auto-Add removals, missing/ambiguous titles and individual episode choices; protect manual edits and prior imports lacking ownership records.
+- Persist Auto-Add ownership through XML/backups; source errors, disabling/removing sources and missing library items do not trigger deletions.
+- Use valid Jellyfin 12.2 item-field parameters for library scans.
+
+- Show one full-series card per TV show in Auto-Add presentation rows; opening it displays the normal Jellyfin seasons/episodes page.
+- Combine adjacent verified episodes of the same show and season into chronological ranges, splitting at movies, gaps, season/show/source changes, and unmatched titles.
+- Group older flat Auto-Add rows for display while retaining their original saved references, playback queue keys, watched progress and ordering.
+- Require existing parent-show and episode-number metadata before importing episode ranges; preserve manual range/group/artwork customizations.
+- Add grouping, exact queue-resolution, save/reload, legacy progress and show-browsing regression tests.
+
+## 0.8.9.21
 
 - Add per-franchise IMDb source configuration, matching preview, and idempotent virtual imports with five presentation rows.
 - Retrieve complete public IMDb lists through paginated GraphQL; verify explicit positions and match individual library episodes by exact IMDb ID.

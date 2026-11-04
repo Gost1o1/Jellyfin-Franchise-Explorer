@@ -11,6 +11,8 @@ public sealed class FranchiseNode
 
     public System.Collections.Generic.List<FranchiseAutoAddRow> AutoAddRows { get; set; } = new();
 
+    public System.Collections.Generic.List<FranchiseAutoAddRecord> AutoAddRecords { get; set; } = new();
+
     public string Id { get; set; } = Guid.NewGuid().ToString("D");
     public string ParentId { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;

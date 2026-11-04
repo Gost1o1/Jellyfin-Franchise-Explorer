@@ -26,7 +26,6 @@ public sealed class FranchiseAutoAddController(ILogger<FranchiseAutoAddControlle
         {
             var listId = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries)[1];
             var entries = await ImdbListClient.ReadAsync(Client, listId, cancellationToken);
-            if (entries.Count == 0) throw new InvalidOperationException("IMDb list contains no usable titles. No items were imported.");
             var verified = entries.All(e => e.Position > 0) && entries.Select(e => e.Position).Distinct().Count() == entries.Count;
             return Ok(new { entries = verified ? entries.OrderBy(e => e.Position).ToList() : entries, orderVerified = verified,
                 warning = "All IMDb list pages were retrieved in explicit list order. Individual episodes require exact IMDb IDs in Jellyfin. Source order is not independent verification of in-universe chronology." });

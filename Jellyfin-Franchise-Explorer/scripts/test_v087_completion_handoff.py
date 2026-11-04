@@ -20,7 +20,7 @@ uid='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 item='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
 row='cccccccc-cccc-4ccc-8ccc-cccccccccccc'
 with sync_playwright() as pw:
-    browser=pw.chromium.launch(headless=True,executable_path='/usr/bin/chromium',args=['--no-sandbox'])
+    browser=pw.chromium.launch(headless=True,executable_path='/usr/bin/chromium' if Path('/usr/bin/chromium').exists() else None,args=['--no-sandbox'])
     try:
         for case in ('natural_end_frames','pause_near_end','seek_to_end','different_media'):
             page=browser.new_page()

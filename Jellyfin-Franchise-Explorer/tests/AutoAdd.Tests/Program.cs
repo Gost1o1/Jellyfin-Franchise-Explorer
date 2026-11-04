@@ -15,13 +15,15 @@ Check(FranchiseAutoAddController.Parse("<html>blocked</html>").Count==0,"Blocked
 var serializer=new XmlSerializer(typeof(FranchiseNode));
 using var oldReader=new StringReader("<FranchiseNode><Name>MCU</Name></FranchiseNode>");
 var legacy=(FranchiseNode)serializer.Deserialize(oldReader)!;
-Check(legacy.AutoAddSources.Count==0,"Legacy configuration default");
+Check(legacy.AutoAddSources.Count==0 && legacy.AutoAddRecords.Count==0,"Legacy configuration default");
 legacy.AutoAddSources.Add(new(){Url="https://www.imdb.com/list/ls539646485/",Enabled=false,Priority=3,Categories=new(){"Movies","Other"}});
 legacy.AutoAddRows.Add(new(){Category="Movies",RowId=Guid.NewGuid().ToString("D")});
+legacy.AutoAddRecords.Add(new(){ReferenceId=Guid.NewGuid().ToString("D"),SourceIds=new(){"source"},ImdbIds=new(){"tt1"},Signature="{\"name\":\"A&B\"}"});
 using var writer=new StringWriter();serializer.Serialize(writer,legacy);
 using var reader=new StringReader(writer.ToString());var restored=(FranchiseNode)serializer.Deserialize(reader)!;
 Check(!restored.AutoAddSources[0].Enabled && restored.AutoAddSources[0].Categories.Count==2 && restored.AutoAddSources[0].Priority==3,"XML source persistence");
 Check(restored.AutoAddRows[0].Category=="Movies","Stable category row identity persistence");
+Check(restored.AutoAddRecords[0].ImdbIds[0]=="tt1" && restored.AutoAddRecords[0].Signature==legacy.AutoAddRecords[0].Signature,"Auto-Add removal ownership XML roundtrip");
 var controller=new FranchiseAutoAddController(NullLogger<FranchiseAutoAddController>.Instance);
 foreach(var url in new[]{"http://www.imdb.com/list/ls1/","https://evil.example/list/ls1/","https://www.imdb.com/list/ls1/?x=1","https://www.imdb.com:444/list/ls1/"})
     Check(await controller.Source(url,default) is BadRequestObjectResult,"URL must be rejected before network access");

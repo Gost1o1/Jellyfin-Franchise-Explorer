@@ -5,7 +5,7 @@ from playwright.sync_api import sync_playwright
 script=(Path(__file__).resolve().parents[1]/'src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-my-media.js').read_text()
 user='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';item='bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';row='cccccccccccccccccccccccccccccccc'
 with sync_playwright() as p:
- browser=p.chromium.launch(headless=True,executable_path='/usr/bin/chromium',args=['--no-sandbox']);page=browser.new_page();mode=['failure']
+ browser=p.chromium.launch(headless=True,executable_path='/usr/bin/chromium' if Path('/usr/bin/chromium').exists() else None,args=['--no-sandbox']);page=browser.new_page();mode=['failure']
  def route(r):
   url=r.request.url
   if url.endswith('/web/index.html'):r.fulfill(content_type='text/html',body='<section class="verticalSection"><h2>Continue Watching</h2><div class="itemsContainer"></div></section>');return

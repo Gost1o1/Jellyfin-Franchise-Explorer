@@ -100,7 +100,7 @@ public sealed class FranchiseBrowseController : ControllerBase
         // titles that a particular user isn't allowed to browse.
         return Ok(new
         {
-            version = "0.8.9.21",
+            version = "0.8.9.22",
             title = string.IsNullOrWhiteSpace(config.NavigationLabel) ? "Franchises" : config.NavigationLabel,
             nodes = config.Nodes.Select(n => new
             {
@@ -126,6 +126,7 @@ public sealed class FranchiseBrowseController : ControllerBase
                 parentNodeId = r.ParentNodeId,
                 name = r.Name,
                 rowType = r.RowType,
+                autoAddCategory = config.Nodes.SelectMany(n => n.AutoAddRows ?? new()).FirstOrDefault(m => m.RowId == r.Id)?.Category ?? "",
                 sortOrder = r.SortOrder,
                 nodeIds = r.NodeIds,
                 mediaLinkIds = r.MediaLinkIds,

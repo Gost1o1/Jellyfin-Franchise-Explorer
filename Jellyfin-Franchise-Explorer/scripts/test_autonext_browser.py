@@ -11,7 +11,7 @@ first='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
 second='cccccccc-cccc-4ccc-8ccc-cccccccccccc'
 row='dddddddd-dddd-4ddd-8ddd-dddddddddddd'
 with sync_playwright() as pw:
-    browser=pw.chromium.launch(headless=True,executable_path='/usr/bin/chromium',args=['--no-sandbox'])
+    browser=pw.chromium.launch(headless=True,executable_path='/usr/bin/chromium' if Path('/usr/bin/chromium').exists() else None,args=['--no-sandbox'])
     try:
         for case in ('completed_then_stopped','stopped_without_completion','unrelated_video_playing','wrong_session'):
             page=browser.new_page()

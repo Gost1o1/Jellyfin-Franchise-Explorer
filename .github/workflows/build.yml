@@ -23,6 +23,8 @@ jobs:
           python3 scripts/check_repository_completeness.py
           python3 scripts/smoke_tests.py
           node scripts/test_autoadd.js
+          node scripts/test_autoadd_grouping.js
+          node scripts/test_autoadd_changes.js
           node scripts/ui_contract_tests.js
           python3 scripts/test_artwork_contract.py
           node scripts/test_inheritance.js
@@ -91,6 +93,8 @@ jobs:
           python3 scripts/test_local_web_handoff.py
           python3 scripts/test_autonext_browser.py
           python3 scripts/test_autoadd_browser.py
+          python3 scripts/test_autoadd_grouping_browser.py
+          python3 scripts/test_autoadd_review_browser.py
           python3 scripts/test_home_recovery_browser.py
           python3 scripts/test_my_media_tile_browser.py
           python3 scripts/test_my_media_tile_resize.py

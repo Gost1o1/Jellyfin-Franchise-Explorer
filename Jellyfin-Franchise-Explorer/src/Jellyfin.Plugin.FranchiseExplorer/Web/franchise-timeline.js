@@ -388,14 +388,17 @@
       }
       const related=possible.filter(s=>family.has(s.parentNodeId)||s.rowId===row?.id)
         .sort((a,b)=>new Date(b.updatedUtc||0)-new Date(a.updatedUtc||0));
-      const sameItem=s=>(s.queueSourceItemIds||[]).some(x=>String(x).replace(/-/g,'').toLowerCase()===String(ref.itemId).replace(/-/g,'').toLowerCase());
+      // Older flat episode references may be grouped only for display. Match
+      // their original episode IDs without changing any saved playback keys.
+      const sourceIds=new Set((ref._episodeSources||[ref.itemId]).map(x=>String(x).replace(/-/g,'').toLowerCase()));
+      const sameItem=s=>(s.queueSourceItemIds||[]).some(x=>sourceIds.has(String(x).replace(/-/g,'').toLowerCase()));
       const closest=related.find(s=>s.rowId===row?.id&&sameItem(s))||related.find(sameItem);
       if(!closest){this.decorateFallback(tile,item,ref);return;}
       const update=()=>{
         const state=this.getState(closest.rowId)||closest;
         const keys=[];
         state.queueSourceItemIds?.forEach((source,i)=>{
-          if(String(source).replace(/-/g,'').toLowerCase()!==String(ref.itemId).replace(/-/g,'').toLowerCase())return;
+          if(!sourceIds.has(String(source).replace(/-/g,'').toLowerCase()))return;
           if((ref.rangeMode==='Episodes'||ref.rangeMode==='Seasons')&&
              !inRange({Id:state.queueKeys[i],ParentIndexNumber:state.queueSeasons?.[i],IndexNumber:state.queueEpisodes?.[i]},ref))return;
           keys.push({key:state.queueKeys[i],index:i});

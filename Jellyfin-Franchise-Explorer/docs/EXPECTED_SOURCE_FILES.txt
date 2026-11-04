@@ -147,3 +147,8 @@ Jellyfin-Franchise-Explorer/tests/AutoAdd.Tests/Program.cs
 Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Api/ImdbListClient.cs
 Jellyfin-Franchise-Explorer/tests/AutoAdd.Tests/ImdbTransportTests.cs
 Jellyfin-Franchise-Explorer/scripts/verify_imdb_live.py
+Jellyfin-Franchise-Explorer/scripts/test_autoadd_grouping.js
+Jellyfin-Franchise-Explorer/scripts/test_autoadd_grouping_browser.py
+Jellyfin-Franchise-Explorer/docs/VALIDATION_V08922.md
+Jellyfin-Franchise-Explorer/scripts/test_autoadd_changes.js
+Jellyfin-Franchise-Explorer/scripts/test_autoadd_review_browser.py

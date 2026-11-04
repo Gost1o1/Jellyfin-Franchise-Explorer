@@ -43,7 +43,7 @@ window.fetch=async function(input,options={{}}){{
 </script>'''
 html=html.replace("<script>\n'use strict';",setup+"\n<script>\n'use strict';")
 with sync_playwright() as p:
- browser=p.chromium.launch(headless=True,executable_path='/usr/bin/chromium',args=['--no-sandbox'])
+ browser=p.chromium.launch(headless=True,executable_path='/usr/bin/chromium' if Path('/usr/bin/chromium').exists() else None,args=['--no-sandbox'])
  try:
   for width in [390,900,1920]:
    page=browser.new_page(viewport={'width':width,'height':920})

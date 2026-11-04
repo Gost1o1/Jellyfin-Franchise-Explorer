@@ -6,7 +6,7 @@ base=Path(__file__).resolve().parents[1]
 script=(base/'src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-my-media.js').read_text()
 uid='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';movie='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';row='cccccccc-cccc-4ccc-8ccc-cccccccccccc'
 with sync_playwright() as pw:
- browser=pw.chromium.launch(headless=True,executable_path='/usr/bin/chromium',args=['--no-sandbox'])
+ browser=pw.chromium.launch(headless=True,executable_path='/usr/bin/chromium' if Path('/usr/bin/chromium').exists() else None,args=['--no-sandbox'])
  try:
   for supports in (True,False):
    page=browser.new_page();page.route('http://jellyfin.test/**',lambda r:r.fulfill(content_type='text/html',body='<div class="itemsContainer"></div><video style="width:320px;height:180px"></video>'))

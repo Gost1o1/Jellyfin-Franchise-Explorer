@@ -17,7 +17,7 @@ mock_js='''() => {
   };
 }'''.replace('NODE_ID',node).replace('LINK_ID',link).replace('SHOW_ID',show)
 with sync_playwright() as p:
-    browser=p.chromium.launch(headless=True,executable_path='/usr/bin/chromium',args=['--no-sandbox'])
+    browser=p.chromium.launch(headless=True,executable_path='/usr/bin/chromium' if Path('/usr/bin/chromium').exists() else None,args=['--no-sandbox'])
     for viewport,hostLeft,hostWidth in [(1600,90,1300),(1150,90,1100),(800,110,1170),(620,90,1100),(390,8,700)]:
         page=browser.new_page(viewport={'width':viewport,'height':860})
         
