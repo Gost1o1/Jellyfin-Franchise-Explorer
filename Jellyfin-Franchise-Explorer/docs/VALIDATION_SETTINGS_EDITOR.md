@@ -1,6 +1,6 @@
 # Settings editor integration validation
 
-This change integrates the approved settings UI with the production plugin. It does not publish a release, change the plugin version or update the catalog manifest.
+The approved settings UI is integrated with the production plugin. Source is now prepared as version 0.8.9.23; a successful manual release workflow is still required to publish its ZIP and update the catalog manifest.
 
 ## Passed checks
 
@@ -41,4 +41,4 @@ Historical settings-only scripts target the earlier editor's selectors. Their wo
 
 No running Jellyfin server was available for this integration. Dashboard page insertion, real plugin configuration persistence, library access policies, uploads into a real server data directory and browser video decoding still need testing on the target Jellyfin 12.2 installation. The live IMDb check verifies external retrieval while simulating Jellyfin's library and configuration endpoints. Browser mocks and controller tests do not establish end-to-end playback compatibility.
 
-Associated video backdrops support accessible local MP4/WebM files without transcoding. Clearing an uploaded artwork override leaves the immutable asset on disk. The existing release version is retained for review builds; deployment should replace the existing test DLL in an isolated installation rather than install two copies of the same plugin assembly.
+Associated video backdrops support accessible local MP4/WebM files without transcoding. Clearing an uploaded artwork override leaves the immutable asset on disk. The release version is 0.8.9.23; test installations should replace the existing plugin DLL rather than load two copies of the plugin assembly.

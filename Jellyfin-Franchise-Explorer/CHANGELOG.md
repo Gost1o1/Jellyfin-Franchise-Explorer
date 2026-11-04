@@ -1,12 +1,14 @@
-## Settings editor (development)
+## 0.8.9.23 (unreleased)
+
+- Align project, assembly, settings, catalog API and Injector versions with the 0.8.9.23 release request; retire the previous plugin-owned Injector script after registration.
 
 - Integrate the approved settings UI with the existing plugin configuration: collapsed franchise tree, inline actions, nested group creation, row categories, transactional dialogs, Undo and concurrent-save protection.
 - Move library search into the plus-button media popup, restrict searches by row category, and preserve full-show and episode-range references.
 - Review IMDb additions, safe removals and missing titles from franchise, subgroup and independent row sources while preserving manual edits.
 - Add scoped poster/backdrop galleries, immutable photo uploads and authorized associated-video backdrops for groups, rows and individual references.
-- Replace obsolete settings-layout checks with production-page browser tests and model/API persistence tests. Live Jellyfin host validation remains required; the release/catalog are unchanged.
+- Replace obsolete settings-layout checks with production-page browser tests and model/API persistence tests. Live Jellyfin host validation remains required.
 
-## 0.8.9.22 (unreleased)
+## 0.8.9.22
 
 - Separate existing-franchise and new-from-IMDb workflows; preview before changing configuration, select proposed changes (all selected by default), and save through Apply selected changes.
 - Show additions, safe Auto-Add removals, missing/ambiguous titles and individual episode choices; protect manual edits and prior imports lacking ownership records.

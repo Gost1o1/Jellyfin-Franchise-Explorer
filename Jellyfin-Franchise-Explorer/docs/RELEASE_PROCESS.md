@@ -3,10 +3,10 @@
 The repository ZIP contains source code, not an installable Jellyfin DLL. It is intended to replace files in your existing GitHub repository; Jellyfin installs releases through the generated `manifest.json` catalog entry.
 
 1. Preserve your currently published `manifest.json` if it is newer than the packaged one. Export a backup of your plugin configuration and back up uploaded image files.
-2. Copy source files and `.github/workflows` into your GitHub clone; commit and push to `main`.
-3. Check **Actions → Build and validate (no release)** for a successful compilation and static tests. This is not a host integration test.
-4. When ready, run **Actions → Publish experimental release (manual approval only)** on `main` using version **`0.6.2.0`** and confirmation **`RELEASE_EXPERIMENTAL`**.
-5. The workflow checks the project version, builds the plugin, packages the DLL, creates a GitHub prerelease, computes the ZIP checksum, and updates the manifest. Verify the release and manifest manually.
+2. Prepare the source version before releasing. `Version`, `AssemblyVersion` and `FileVersion` in `src/Jellyfin.Plugin.FranchiseExplorer/Jellyfin.Plugin.FranchiseExplorer.csproj` must match the requested version. Keep the catalog API, Injector runtime markers/current script ID, release-workflow default and version assertions aligned. Retain the previous plugin-owned Injector ID in the legacy list.
+3. Run `python3 scripts/build_settings_page.py` to update the embedded settings version, then `python3 scripts/check_version.py 0.8.9.23` from the source folder. Merge the prepared source into `main` and check **Actions → Build and validate (no release)** for successful build and browser jobs. These checks are not a host integration test.
+4. When ready, start a **new** **Actions → Publish experimental release (manual approval only)** run on `main` using version **`0.8.9.23`** and confirmation **`RELEASE_EXPERIMENTAL`**. Use the version declared by the source for future releases. Rerunning a failed job uses its original commit, so a version fix merged afterward requires a new workflow run.
+5. The workflow checks the project version, builds the plugin, packages the DLL, creates a GitHub prerelease targeting the validated commit, computes the ZIP checksum, and updates the manifest. Verify the release and manifest manually. Keep the published manifest unchanged while preparing source; the workflow updates it from the actual release ZIP.
 6. Use the existing catalog URL in Jellyfin and restart the service after updating. Validate your saved groups before importing collections.
 
 Catalog URL: `https://raw.githubusercontent.com/Gost1o1/Jellyfin-Franchise-Explorer/main/manifest.json`
