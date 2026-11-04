@@ -38,4 +38,4 @@ assert "model.MediaLinks=model.MediaLinks.filter(l=>!ids.has(l.Id));" in config
 assert 'Unassigned Movies & TV Shows' in browse
 assert 'jellyfin-franchise-explorer-my-media-v08915' in service, 'new release must retire previous Injector script'
 
-print('v0.8.9.20 subtitle-language, localized home tile, and unassigned-link safety contracts passed.')
+print('v0.8.9.21 subtitle-language, localized home tile, and unassigned-link safety contracts passed.')

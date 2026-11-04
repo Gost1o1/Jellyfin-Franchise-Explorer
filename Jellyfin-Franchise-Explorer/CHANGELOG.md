@@ -1,3 +1,13 @@
+## 0.8.9.21 (unreleased)
+
+- Add per-franchise IMDb source configuration, matching preview, and idempotent virtual imports with five presentation rows.
+- Retrieve complete public IMDb lists through paginated GraphQL; verify explicit positions and match individual library episodes by exact IMDb ID.
+- Modernize six historical regression fixtures for visible editor controls, explicit remote-session selection, native Home playback, and activation only after verified local progress.
+- Preserve manual references, group/row assignments, artwork overrides, and existing XML configuration.
+- Bound Home tracker requests and render recoverable failure states; dismiss transient notices after approximately five seconds.
+- Update release identifiers and legacy isolated-test dependencies; retain desktop playback and Android-only native queue behavior.
+- Add JavaScript, Chromium editor/recovery, and .NET parser/XML regression tests.
+
 ## v0.8.9.20 — Native Android chronological queue (experimental)
 
 - Android Integrated Player launches the selected movie plus the remaining chronological movies and episodes as a single native ExoPlayer queue. v0.8.9.19 launched only one item, which made Android exit to Home after the movie ended.

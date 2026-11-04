@@ -12,7 +12,7 @@ const config=fs.readFileSync(path.join(root,'Configuration/configPage.html'),'ut
 const browse=fs.readFileSync(path.join(root,'Configuration/browsePage.html'),'utf8');
 const server=fs.readFileSync(path.join(root,'Api/FranchiseBrowseController.cs'),'utf8');
 
-const from=home.indexOf('  function showLocalNotice(message,ttl=6500){');
+const from=home.indexOf('  function showLocalNotice(message,ttl=5000){');
 const to=home.indexOf('  function localVideoAdvancing(',from);
 assert(from>=0&&to>from,'Playback notification handler missing');
 const handler=home.slice(from,to);
@@ -36,7 +36,7 @@ vm.runInContext('let localNoticeTimer=null,lastAndroidNotice="",lastAndroidNotic
 assert.equal(logged.length,1,'Visible playback error must be logged');
 assert.equal(logged[0].source,'playback');
 assert.equal(timers.size,1);
-assert.equal([...timers.values()][0].ms,6500,'Default error expires in 6.5 seconds');
+assert.equal([...timers.values()][0].ms,5000,'Default error expires in 5 seconds');
 vm.runInContext('showLocalNotice("Could not start video",30000);',sandbox);
 assert.equal(timers.size,1,'Replacing a warning cancels its former timer');
 assert.equal([...timers.values()][0].ms,8000,'Long warning durations capped at 8 seconds');
@@ -48,10 +48,10 @@ assert.equal(logged.length,2,'Success notices should not be logged as errors');
 // Android's 2-second Home poll must not perpetually reset the dismissal
 // timer for a recurring error, though every failure remains in the log.
 nativeAndroid=true;
-vm.runInContext('showLocalNotice("Android native handoff failed",6500);',sandbox);
+vm.runInContext('showLocalNotice("Android native handoff failed",5000);',sandbox);
 const androidTimerId=[...timers.keys()][0];
 const beforeRepeat=logged.length;
-vm.runInContext('showLocalNotice("Android native handoff failed",6500);',sandbox);
+vm.runInContext('showLocalNotice("Android native handoff failed",5000);',sandbox);
 assert.equal(logged.length,beforeRepeat+1,'Repeated Android errors must still be logged');
 assert.deepEqual([...timers.keys()],[androidTimerId],
   'Repeated Android errors must not extend the visible notification');
@@ -72,4 +72,4 @@ assert(server.includes('[HttpPost("ClientLog")]'));
 assert(server.includes('[Authorize]'));
 assert(server.includes('_logger.LogWarning("Franchise Explorer client notification'));
 assert(server.includes('[REDACTED]'));
-console.log('PASS v0.8.9.20 timed playback notices, Home, browse, settings, timeline and Jellyfin logging contracts');
+console.log('PASS v0.8.9.21 timed playback notices, Home, browse, settings, timeline and Jellyfin logging contracts');

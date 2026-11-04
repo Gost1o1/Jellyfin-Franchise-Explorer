@@ -34,7 +34,7 @@ with sync_playwright() as pw:
    page.locator('#fx-new-row-type').select_option('Media')
    page.locator('#fx-create-row').click()
    row=page.locator('.fx-row-card').last
-   assert row.locator('summary').count()==0, 'media row unexpectedly limited to existing main links'
+   assert row.get_by_role('searchbox',name='Search Jellyfin library for Custom Marvel Order').count()==1, 'row must support searching the whole library'
    field=row.get_by_role('searchbox',name='Search Jellyfin library for Custom Marvel Order')
    field.fill('Thor')
    row.get_by_role('button',name='+ Add').wait_for(timeout=5000)

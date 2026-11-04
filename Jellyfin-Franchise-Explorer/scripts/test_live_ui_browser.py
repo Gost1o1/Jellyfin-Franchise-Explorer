@@ -37,9 +37,13 @@ with sync_playwright() as p:
         print('responsive',viewport,'ok',result['cols'])
         if viewport==800:
             page.locator('.fx-tree-item').filter(has_text='Marvel Cinematic Universe').click()
-            page.locator('#fx-media-search').fill('Agent')
+            page.locator('#fx-new-row-name').fill('Range checks')
+            page.locator('#fx-new-row-type').select_option('Media')
+            page.locator('#fx-create-row').click()
+            row=page.locator('.fx-row-card').last
+            row.get_by_role('searchbox').fill('Agent')
             page.wait_for_timeout(600)
-            page.get_by_role('button',name='+ Choose TV Show range').click()
+            row.get_by_role('button',name='Choose TV Show range').click()
             overlay=page.locator('#fx-tv-range')
             assert overlay.is_visible(),'TV show chooser should open'
             page.locator('#fx-range-mode').select_option('Episodes')
@@ -51,7 +55,7 @@ with sync_playwright() as p:
             page.locator('#fx-save-range').click()
             assert not overlay.is_visible(),'dialog should close after saving'
             assert page.get_by_text('S1E5 – S2E8').count()>0,'new link should show range'
-            page.get_by_role('button',name='Edit TV Show range').last.click()
+            row.get_by_role('button',name='Edit range').last.click()
             assert overlay.is_visible(),'existing link should be editable'
             assert page.locator('#fx-range-mode').input_value()=='Episodes'
             page.locator('#fx-range-mode').select_option('Seasons')
@@ -59,7 +63,7 @@ with sync_playwright() as p:
             page.locator('#fx-end-season').fill('3')
             page.locator('#fx-save-range').click()
             assert page.get_by_text('Seasons 1–3').count()>0,'edited range should render'
-            page.get_by_role('button',name='Edit TV Show range').first.click()
+            row.get_by_role('button',name='Edit range').first.click()
             assert overlay.is_visible()
             page.keyboard.press('Escape')
             assert not overlay.is_visible()

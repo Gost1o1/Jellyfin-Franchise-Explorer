@@ -1,5 +1,5 @@
 /*
- * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.20).
+ * Jellyfin Franchise Explorer — opt-in Jellyfin Web integration (v0.8.9.21).
  * Adds ONE visual link in the existing "My Media" row. It does not create a
  * Jellyfin library, alter user preferences, or modify the server's media.
  * Requires a compatible JavaScript injector to run in jellyfin-web.
@@ -9,7 +9,7 @@
   'use strict';
 
   // Programmatic registration plus a manual fallback must not create two observers.
-  window.__franchiseExplorerUiVersion = '0.8.9.20';
+  window.__franchiseExplorerUiVersion = '0.8.9.21';
   if (window.__franchiseExplorerMyMediaTileLoaded) return;
   window.__franchiseExplorerMyMediaTileLoaded = true;
   // Replaced with a data URI when registered by the plugin host service.
@@ -247,7 +247,7 @@
       }
     }
     tile.id = TILE_ID;
-    tile.setAttribute('data-fe-version','0.8.9.20');
+    tile.setAttribute('data-fe-version','0.8.9.21');
     tile.setAttribute('aria-label','Open Franchises');
     tile.setAttribute('href',browseUrl());
     // Native actions from a cloned Collections card cannot operate on the
@@ -374,7 +374,7 @@
       if (sourceScalable) observedResize.observe(sourceScalable);
     }
     tile.setAttribute('href',browseUrl());
-    tile.setAttribute('data-fe-version','0.8.9.20');
+    tile.setAttribute('data-fe-version','0.8.9.21');
   }
 
   function schedule() {
@@ -404,7 +404,7 @@
   window.addEventListener('resize', schedule);
 })();
 
-/* v0.8.9.20 — Per-user franchise resume cards and in-place playback shortcuts on Jellyfin Web's home.
+/* v0.8.9.21 — Per-user franchise resume cards and in-place playback shortcuts on Jellyfin Web's home.
  * Jellyfin regularly replaces the home DOM, including after a refresh and
  * client-side navigation. Reattach the same widget rather than waiting for the
  * next API poll, and keep a short session-scoped cache for hard refreshes.
@@ -414,16 +414,16 @@
   'use strict';
   // An older Injector script may still be running. Never let its shared v1
   // marker block the newer in-place playback actions from initializing.
-  if (window.__franchiseTimelineHomeVersion === '0.8.9.20') return;
-  window.__franchiseTimelineHomeVersion = '0.8.9.20';
+  if (window.__franchiseTimelineHomeVersion === '0.8.9.21') return;
+  window.__franchiseTimelineHomeVersion = '0.8.9.21';
   window.__franchiseTimelineHomeLoaded = true;
   const WIDGET_ID = 'franchise-timeline-resume';
   // Versioned styles take precedence if an earlier Injector script left its
   // stylesheet in the page before the new registration initialized.
-  const STYLE_ID = 'franchise-timeline-resume-style-v08920';
+  const STYLE_ID = 'franchise-timeline-resume-style-v08921';
   const NATIVE_HIDE_STYLE_ID = 'fe-native-franchise-row-filter-style';
   const NATIVE_HIDE_CLASS = 'fe-native-franchise-row-hidden';
-  const CACHE_PREFIX = 'fe-franchise-home-v08920:';
+  const CACHE_PREFIX = 'fe-franchise-home-v08921:';
   const MAX_CARDS = 8;
   const phonePortrait = () => window.matchMedia('(orientation: portrait) and (max-width: 700px)').matches;
   const GUID = /^[a-f0-9]{32}$|^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
@@ -431,6 +431,7 @@
   const serverPath = path => serverPrefix() + path;
   let lastFetch = 0, busy = false, queuedMount = false, cards = [], authScope = '', renderedSignature = '';
   let confirmedEmpty = false;
+  let trackerError = '';
   let widget = null;
   let activeResumeMenu = null;
   const images = new Map();
@@ -461,6 +462,7 @@
   async function request(path, auth) {
     const response = await fetch(serverPath(path), {
       cache: 'no-store',
+      signal: AbortSignal.timeout(15000),
       headers: { Authorization: 'MediaBrowser Token="' + auth.AccessToken + '"' }
     });
     if (!response.ok) throw Error('HTTP ' + response.status);
@@ -479,6 +481,7 @@
     cards = [];
     nativeTimelineTargets = new Set();
     confirmedEmpty = false;
+    trackerError = '';
     renderedSignature = '';
     if (widget) { widget.remove(); widget = null; }
     for (const url of images.values()) if (typeof url === 'string') URL.revokeObjectURL(url);
@@ -620,7 +623,7 @@
       // Legacy Injector registrations may leave a second tracker with the
       // exact same DOM id. Hide it so its native confirm/resume menu cannot
       // be clicked accidentally after the upgraded script becomes active.
-      '#'+WIDGET_ID+':not([data-fe-version="0.8.9.20"]){display:none!important}',
+      '#'+WIDGET_ID+':not([data-fe-version="0.8.9.21"]){display:none!important}',
       '#'+WIDGET_ID+'{box-sizing:border-box;width:100%;min-width:0;padding:10px max(16px,2.5vw) 16px;color:#fff}',
       '#'+WIDGET_ID+' h2{font-size:1.32rem;margin:8px 0 15px;font-weight:600}',
       '#'+WIDGET_ID+' .fe-resume-grid{display:flex;gap:16px;flex-wrap:wrap;align-items:stretch}',
@@ -663,8 +666,8 @@
   // TimelineManager renders the SAME list as Browse, but Jellyfin Home does
   // not load Browse's stylesheet. The modal is appended to document.body.
   function ensureHomeTimelineStyle() {
-    if (document.getElementById('fe-home-timeline-dialog-style-v08920')) return;
-    const style=document.createElement('style');style.id='fe-home-timeline-dialog-style-v08920';
+    if (document.getElementById('fe-home-timeline-dialog-style-v08921')) return;
+    const style=document.createElement('style');style.id='fe-home-timeline-dialog-style-v08921';
     style.textContent=[
       '.timeline-dialog-mask{position:fixed;inset:0;z-index:2147483630;background:#050709e8;backdrop-filter:blur(2px);display:grid;place-items:center;padding:12px;overscroll-behavior:contain}',
       '.timeline-dialog-mask.fe-home-chronological-modal .timeline-dialog{width:min(830px,100%);max-height:min(88dvh,810px)}',
@@ -743,7 +746,7 @@
     notice.style.cssText='position:fixed;bottom:24px;left:16px;right:16px;margin:auto;max-width:620px;z-index:2147483635;padding:14px 18px;border-radius:10px;box-shadow:0 10px 30px #0009;font:600 14px/1.5 system-ui,sans-serif;background:'+(error?'#532c2c':'#173c39')+';border:1px solid '+(error?'#e49c9c':'#5bc6bb')+';color:#fff';
     notice.textContent=message;
     clearTimeout(homeFeedback.timer);
-    homeFeedback.timer=setTimeout(()=>notice.remove(),6500);
+    homeFeedback.timer=setTimeout(()=>notice.remove(),5000);
   }
 
   function playbackManager(auth,catalog={nodes:[],links:[],rows:[]}) {
@@ -895,13 +898,13 @@
       widget.id = WIDGET_ID;
       widget.setAttribute('aria-label', 'Continue Your Franchises');
     }
-    widget.setAttribute('data-fe-version','0.8.9.20');
+    widget.setAttribute('data-fe-version','0.8.9.21');
     // Jellyfin's home view can destroy and recreate this entire parent.
     // Keep our rendered widget and reattach immediately after the native row.
     if (widget.parentElement !== anchor.parentElement || anchor.nextElementSibling !== widget)
       anchor.parentElement.insertBefore(widget, anchor.nextSibling);
     const portrait = phonePortrait();
-    const signature = JSON.stringify({cards,confirmedEmpty,portrait});
+    const signature = JSON.stringify({cards,confirmedEmpty,portrait,trackerError});
     if (signature === renderedSignature && widget.childElementCount) return;
     renderedSignature = signature;
     if (activeResumeMenu) activeResumeMenu.close();
@@ -911,7 +914,8 @@
     grid.className = 'fe-resume-grid';
     if (!cards.length) {
       const waiting = document.createElement('div');waiting.className='fe-resume-wait';
-      waiting.textContent = auth ? 'Loading your franchise watch orders…' : 'Waiting for your Jellyfin session…';
+      waiting.textContent = trackerError || (auth ? 'Loading your franchise watch orders…' : 'Waiting for your Jellyfin session…');
+      if(trackerError){const retry=document.createElement('button');retry.type='button';retry.textContent='Retry';retry.addEventListener('click',()=>void tick(true));grid.append(retry);}
       grid.append(waiting);
       widget.replaceChildren(heading,grid);
       return;
@@ -1214,6 +1218,7 @@
       const resolved = await Promise.all(active.map(state => cardFor(state, catalog, auth)));
       if (startedScope !== authScope) return;
       nativeTimelineTargets=nextTargets;
+      trackerError = '';
       cards = resolved;
       confirmedEmpty = active.length === 0;
       saveCache();
@@ -1222,7 +1227,10 @@
     } catch (error) {
       // Transient errors must not erase the user's most recent cards. Log only
       // the status/error class (never an auth header, token or user ID).
-      console.warn('[Franchise Explorer 0.8.9.20] Home tracker refresh failed:', error?.message || 'unknown error');
+      console.warn('[Franchise Explorer 0.8.9.21] Home tracker refresh failed:', error?.message || 'unknown error');
+      window.FranchiseExplorerReportError?.('home', error?.message || 'Home tracker refresh failed');
+      trackerError = 'Could not load franchise watch orders. Retrying automatically…';
+      scheduleMount();
     }
     finally { busy = false; }
   }
@@ -1256,8 +1264,8 @@
   'use strict';
   // Older Injector scripts can coexist after an upgrade. A boolean-only
   // guard would silently retain their details-page/autoresume behavior.
-  if(window.__franchiseAutoplayBridgeVersion==='0.8.9.20')return;
-  window.__franchiseAutoplayBridgeVersion='0.8.9.20';
+  if(window.__franchiseAutoplayBridgeVersion==='0.8.9.21')return;
+  window.__franchiseAutoplayBridgeVersion='0.8.9.21';
   window.__franchiseAutoplayBridgeLoaded=true;
   let currentKey='',attempts=0,scheduled=false,routeSettlingSince=0;
   const MAX_ATTEMPTS=36;
@@ -1455,7 +1463,7 @@
   addEventListener('popstate',restorePlaybackOrigin);
   let localNoticeTimer=null;
   let lastAndroidNotice='',lastAndroidNoticeAt=0;
-  function showLocalNotice(message,ttl=6500){
+  function showLocalNotice(message,ttl=5000){
     if(/could not|cannot|failed|failure|error|unavailable|did not/i.test(message)){
       if(window.FranchiseExplorerReportError)window.FranchiseExplorerReportError('playback',message);
       else console.error('[Franchise Explorer playback]',message);
@@ -1822,7 +1830,7 @@
   // Explicit `play` with position 0 is essential for restart-current: native
   // Jellyfin's Resume action otherwise restores its separate watched offset.
   window.FranchiseExplorerNativePlayback={
-    version:'0.8.9.20',
+    version:'0.8.9.21',
     play(id,options={}){
       if(!/^[a-f0-9-]{32,36}$/i.test(id))return false;
       const androidLaunch=playAndroidIntegrated(id,options);

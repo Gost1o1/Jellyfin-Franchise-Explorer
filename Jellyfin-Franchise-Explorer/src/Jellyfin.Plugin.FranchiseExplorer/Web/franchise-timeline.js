@@ -345,7 +345,7 @@
       const feedback=panel?.querySelector('.timeline-feedback');
       if(!feedback)return;
       feedback.textContent=message;
-      setTimeout(()=>{if(this.activeDialog===panel&&feedback.textContent===message)feedback.textContent='';},6500);
+      setTimeout(()=>{if(this.activeDialog===panel&&feedback.textContent===message)feedback.textContent='';},5000);
     }
     progressLabel(percent){
       return percent>0 && percent<0.1 ? percent.toFixed(2)+'%' :
@@ -448,7 +448,7 @@
           const message=warnings.join(' · ');
           feedback.textContent=message;
           window.FranchiseExplorerReportError?.('timeline-warning',message);
-          setTimeout(()=>{if(this.activeDialog===panel&&feedback.textContent===message)feedback.textContent='';},6500);
+          setTimeout(()=>{if(this.activeDialog===panel&&feedback.textContent===message)feedback.textContent='';},5000);
         }else feedback.textContent='';
         if(action==='restart-history' && queue.length){
           const agreed=await this.confirmAction('Restart the entire chronological history for '+row.name+'? All completed entries in THIS franchise timeline will be cleared. Jellyfin watched history will not change.','Restart history');
@@ -470,7 +470,7 @@
           feedback.textContent+=(feedback.textContent?' · ':'')+message;
           window.FranchiseExplorerReportError?.('timeline-device',message+' '+(e.message||e));
           const displayed=feedback.textContent;
-          setTimeout(()=>{if(this.activeDialog===panel&&feedback.textContent===displayed)feedback.textContent='';},6500);
+          setTimeout(()=>{if(this.activeDialog===panel&&feedback.textContent===displayed)feedback.textContent='';},5000);
         }
         if(this.activeDialog!==panel)return;
         const localChoice=this.make('option','','This browser (local playback — recommended)');

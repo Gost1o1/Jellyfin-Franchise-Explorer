@@ -17,7 +17,7 @@ assert "fe-resume-portrait" in js and "object-fit:contain" in js
 assert "feArtworkKind = usesPoster ? 'poster' : 'landscape'" in js
 assert "window.addEventListener('resize', scheduleMount)" in js
 assert "window.addEventListener('orientationchange', scheduleMount)" in js
-assert "const signature = JSON.stringify({cards,confirmedEmpty,portrait})" in js
+assert "const signature = JSON.stringify({cards,confirmedEmpty,portrait,trackerError})" in js
 assert '"ImageTags": {"Primary": "poster-tag"}' in browser
 assert 'page.set_viewport_size({"width": 950, "height": 430})' in browser
 assert 'page.set_viewport_size({"width": 390, "height": 900})' in browser

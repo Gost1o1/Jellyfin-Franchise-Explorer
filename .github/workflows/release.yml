@@ -5,7 +5,7 @@ on:
       version:
         description: 'Release version; must equal csproj Version'
         required: true
-        default: '0.8.9.20'
+        default: '0.8.9.21'
         type: string
       confirm:
         description: 'Type RELEASE_EXPERIMENTAL to publish'
@@ -77,6 +77,7 @@ jobs:
           python3 scripts/check_repo.py
           python3 scripts/check_repository_completeness.py
           python3 scripts/smoke_tests.py
+          node scripts/test_autoadd.js
           node scripts/ui_contract_tests.js
           python3 scripts/test_artwork_contract.py
           node scripts/test_inheritance.js
@@ -118,6 +119,7 @@ jobs:
         run: |
           dotnet restore src/Jellyfin.Plugin.FranchiseExplorer/Jellyfin.Plugin.FranchiseExplorer.csproj
           dotnet build src/Jellyfin.Plugin.FranchiseExplorer/Jellyfin.Plugin.FranchiseExplorer.csproj --no-restore -c Release
+          dotnet run --project tests/AutoAdd.Tests -c Release
       - name: Package compiled DLL only
         env:
           RELEASE_VERSION: ${{ inputs.version }}
