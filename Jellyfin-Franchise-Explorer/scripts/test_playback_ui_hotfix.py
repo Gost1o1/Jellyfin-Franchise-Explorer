@@ -17,7 +17,7 @@ window.ApiClient={{getPluginConfiguration:async()=>JSON.parse(JSON.stringify(win
 window.Dashboard={{processPluginConfigurationUpdateResult:()=>{{}}}};
 </script>'''
 with sync_playwright() as pw:
-    browser=pw.chromium.launch(headless=True, executable_path='/usr/bin/chromium',args=['--no-sandbox'])
+    browser=pw.chromium.launch(headless=True, executable_path='/usr/bin/chromium' if Path('/usr/bin/chromium').exists() else None,args=['--no-sandbox'])
     try:
         for width in [390,900,1920]:
             page=browser.new_page(viewport={'width':width,'height':900})

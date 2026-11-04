@@ -16,3 +16,13 @@ public sealed class FranchiseAutoAddRow
     public string Category { get; set; } = string.Empty;
     public string RowId { get; set; } = string.Empty;
 }
+
+/// <summary>Ownership and edit fingerprint for reviewed Auto-Add removals.</summary>
+public sealed class FranchiseAutoAddRecord
+{
+    public string ReferenceId { get; set; } = string.Empty;
+    public string RowId { get; set; } = string.Empty;
+    public List<string> SourceIds { get; set; } = new();
+    public List<string> ImdbIds { get; set; } = new();
+    public string Signature { get; set; } = string.Empty;
+}

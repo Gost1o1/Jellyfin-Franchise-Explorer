@@ -371,7 +371,7 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
     if(ticket!==renderSerial||!item||filter&&!String(item.Name||'').toLocaleLowerCase().includes(filter))return false;
     const range=mediaRange(l);
     const type=item.Type==='Series'?'TV Show':(item.Type==='BoxSet'?'Collection':(item.Type==='Movie'?'Movie':item.Type||'Video'));
-    const tile=makeTile(item.Name||'Untitled', [type,item.ProductionYear||'',range].filter(Boolean).join(' · '),range||type,()=>void playMediaItem(item,l),type);
+    const tile=makeTile(item.Name||'Untitled', [type,item.ProductionYear||'',range].filter(Boolean).join(' · '),range||type,()=>{if(row?.autoAddCategory==='TV Shows'&&item.Type==='Series')openJellyfinItem(item,false);else void playMediaItem(item,l);},type);
     const info=document.createElement('button');info.className='tile-info';info.type='button';
     info.textContent='ⓘ';info.title='Information about '+(item.Name||'this title');
     info.setAttribute('aria-label','Information about '+(item.Name||'this title'));
@@ -451,6 +451,33 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
     tools.append(count,prev,next);header.append(heading,tools);shelf.append(header,track);
     return {shelf,count,track};
   }
+  // Read-only grouping also supports older flat Auto-Add rows. Saved references,
+  // row order and timeline queue keys remain untouched.
+  async function groupedPresentation(row,refs,ticket){
+    const tv=row.autoAddCategory==='TV Shows',chronological=row.autoAddCategory==='Chronological Timeline';
+    if(!tv&&!chronological)return refs;
+    const output=[],seenShows=new Set();let pending=null;
+    const items=[];
+    for(let i=0;i<refs.length;i+=6){items.push(...await Promise.all(refs.slice(i,i+6).map(ref=>getItem(ref.itemId))));if(ticket!==renderSerial)return [];}
+    const parentIds=[...new Set(items.map(item=>item?.Type==='Episode'?item.SeriesId:item?.Type==='Series'?item.Id:'').filter(Boolean))],parents=new Map();
+    for(let i=0;i<parentIds.length;i+=6){const ids=parentIds.slice(i,i+6),values=await Promise.all(ids.map(getItem));ids.forEach((id,index)=>parents.set(id,values[index]));if(ticket!==renderSerial)return [];}
+    const canonical=value=>String(value||'').replace(/-/g,'').toLowerCase();
+    for(const [index,ref] of refs.entries()){
+      const item=items[index];
+      if(!item){pending=null;output.push(ref);continue;}
+      const episode=item.Type==='Episode',showId=episode?item.SeriesId:item.Type==='Series'?item.Id:'';
+      const show=parents.get(showId);
+      if(tv&&show?.Type==='Series'){
+        const key=canonical(show.Id);if(seenShows.has(key))continue;seenShows.add(key);
+        output.push({...ref,itemId:show.Id,itemType:'Series',rangeMode:'Full',startSeason:0,endSeason:0,startEpisode:0,endEpisode:0});continue;
+      }
+      const season=item.ParentIndexNumber,number=item.IndexNumber,last=item.IndexNumberEnd??number;
+      if(!chronological||!episode||show?.Type!=='Series'||!Number.isInteger(season)||season<0||!Number.isInteger(number)||number<1||!Number.isInteger(last)||last<number){pending=null;output.push(ref);continue;}
+      if(pending&&canonical(pending.itemId)===canonical(show.Id)&&pending.endSeason===season&&pending.endEpisode+1===number){pending.endEpisode=last;pending._episodeSources.push(item.Id);}
+      else{pending={...ref,itemId:show.Id,itemType:'Series',rangeMode:'Episodes',startSeason:season,endSeason:season,startEpisode:number,endEpisode:last,_episodeSources:[item.Id]};output.push(pending);}
+    }
+    return output;
+  }
   async function renderShelf(r,ticket,filter){
     if(ticket!==renderSerial)return 0;
     const frame=shelfElement(r),root=$('rows-container');root.append(frame.shelf);
@@ -465,7 +492,8 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
     const combined=[...inherited,...own];
     const order=Array.isArray(r.mediaOrder)?r.mediaOrder:[];
     const mediaRank=new Map(order.map((id,i)=>[id,i]));
-    const rowMedia=order.length?[...combined].sort((a,b)=>(mediaRank.get(a.id)??99999)-(mediaRank.get(b.id)??99999) || (combined.indexOf(a)-combined.indexOf(b))):combined;
+    const orderedMedia=order.length?[...combined].sort((a,b)=>(mediaRank.get(a.id)??99999)-(mediaRank.get(b.id)??99999) || (combined.indexOf(a)-combined.indexOf(b))):combined;
+    const rowMedia=await groupedPresentation(r,orderedMedia,ticket);
     const groupMatches=rowGroups.filter(n=>!filter||n.name.toLocaleLowerCase().includes(filter));
     const orderedGroups=$('sort').value==='alpha'?groupMatches.sort(compare):groupMatches;
     for(const n of orderedGroups)void showNode(n,frame.track,ticket);

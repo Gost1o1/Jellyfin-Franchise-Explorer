@@ -18,7 +18,7 @@ js="""() => {
 }"""
 fixture=html.replace('<script type="text/javascript">','<script>('+js+')()</script><script type="text/javascript">')
 with sync_playwright() as p:
-    b=p.chromium.launch(headless=True,executable_path='/usr/bin/chromium',args=['--no-sandbox'])
+    b=p.chromium.launch(headless=True,executable_path='/usr/bin/chromium' if Path('/usr/bin/chromium').exists() else None,args=['--no-sandbox'])
     page=b.new_page(viewport={'width':1280,'height':1000})
     page.set_content(fixture, wait_until='load')
     # Create a sibling using the visible parent/Subgroup workflow. Legacy same-level control is hidden.

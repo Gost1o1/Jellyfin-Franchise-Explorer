@@ -72,4 +72,4 @@ assert(server.includes('[HttpPost("ClientLog")]'));
 assert(server.includes('[Authorize]'));
 assert(server.includes('_logger.LogWarning("Franchise Explorer client notification'));
 assert(server.includes('[REDACTED]'));
-console.log('PASS v0.8.9.21 timed playback notices, Home, browse, settings, timeline and Jellyfin logging contracts');
+console.log('PASS v0.8.9.22 timed playback notices, Home, browse, settings, timeline and Jellyfin logging contracts');

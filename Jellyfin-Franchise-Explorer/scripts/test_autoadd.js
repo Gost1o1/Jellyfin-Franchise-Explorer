@@ -26,7 +26,7 @@ assert.equal(a.preview([{...result,source:{...source,Enabled:false}}],[movie]).l
 assert.equal(a.preview([{...result,error:'HTTP 403'}],[movie]).length,0);
 const preview=a.preview([result,result],[movie,show]);assert.equal(preview.length,3);
 const nodeId=id();const model={NavigationLabel:'Franchises',Nodes:[{Id:nodeId,ParentId:'',Name:'MCU',AutoAddSources:normalized,Artwork:{PrimaryUrl:'/custom'}}],MediaLinks:[],Rows:[]};
-const applied=a.apply(model,nodeId,preview,id);assert.equal(applied.added,2);assert.equal(applied.model.Rows.length,5);assert.equal(applied.model.MediaLinks.length,2);assert.equal(model.MediaLinks.length,0);
+const applied=a.apply(model,nodeId,preview,id);assert.equal(applied.added,3);assert.equal(applied.model.Rows.length,5);assert.equal(applied.model.MediaLinks.length,2);assert.equal(model.MediaLinks.length,0);
 assert.equal(applied.model.Rows[0].MediaLinkIds.length,1,'Never invent episode-level chronology');
 assert.equal(a.apply(applied.model,nodeId,preview,id).added,0);
 assert.equal(JSON.stringify(a.apply(applied.model,nodeId,preview,id).model),JSON.stringify(applied.model),'Idempotent rerun');
@@ -41,16 +41,16 @@ assert(html.includes('AutoAddSources:autoAdd.sources(n.AutoAddSources)'));
 assert(html.includes("input.style.textDecoration='none'"));
 assert(html.includes("source.Enabled?'#edf0f3':'#9099a4'"));
 
-const episode={Id:id(),SeriesId:show.Id,Name:'Now Is Not the End',Type:'Episode',ProductionYear:2015,ProviderIds:{Imdb:'tt3976532'}};
+const episode={Id:id(),SeriesId:show.Id,Name:'Now Is Not the End',Type:'Episode',SeriesName:show.Name,ParentIndexNumber:1,IndexNumber:1,ProductionYear:2015,ProviderIds:{Imdb:'tt3976532'}};
 const episodeEntry={imdbId:'tt3976532',title:'Now Is Not the End',year:2015,type:'Episode',position:2};
 assert.equal(a.match(episodeEntry,[{...episode,ProviderIds:{}}]).status,'unmatched','Episodes require exact provider ID');
-const exactEpisodes=a.preview([{...result,entries:[entries[0],episodeEntry]}],[movie,episode]);
+const exactEpisodes=a.preview([{...result,entries:[entries[0],episodeEntry]}],[movie,episode,show]);
 const withEpisodes=a.apply(model,nodeId,exactEpisodes,id);
 assert.equal(withEpisodes.model.Rows[0].MediaLinkIds.length,2,'Explicit source episodes preserve list order');
-assert.equal(withEpisodes.model.MediaLinks[1].JellyfinItemId,episode.Id,'Reference the actual existing episode, not a placeholder');
+assert.equal(withEpisodes.model.MediaLinks[1].JellyfinItemId,show.Id,'Episode ranges reference the existing parent show');
 assert.equal(a.apply(withEpisodes.model,nodeId,exactEpisodes,id).added,0);
 const manual=JSON.parse(JSON.stringify(model));manual.MediaLinks.push({Id:id(),NodeId:nodeId,JellyfinItemId:show.Id,Position:1,ItemType:'Series',RangeMode:'Episodes',StartSeason:1,EndSeason:1,StartEpisode:1,EndEpisode:2});
-assert.equal(a.apply(manual,nodeId,exactEpisodes.slice(1),id).added,0,'Existing manual show/range assignments remain untouched');
+assert.equal(a.apply(manual,nodeId,exactEpisodes.slice(1),id).model.MediaLinks.length,1,'Existing manual show/range assignments remain untouched');
 
 const portable=JSON.parse(JSON.stringify(withEpisodes.model));portable.MediaLinks=portable.MediaLinks.map(l=>({...l,JellyfinItemId:l.JellyfinItemId.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/,'$1-$2-$3-$4-$5')}));
 assert.equal(a.apply(portable,nodeId,exactEpisodes,id).added,0,'Compact and dashed Jellyfin GUIDs identify the same item');
