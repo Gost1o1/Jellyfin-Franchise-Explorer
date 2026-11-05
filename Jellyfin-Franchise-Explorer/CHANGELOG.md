@@ -1,4 +1,9 @@
-## 0.8.9.23 (unreleased)
+## 0.8.9.24 (unreleased)
+
+- Fix media reordering within rows in the settings editor and preserve the selected order through Save changes.
+- Advance source, assembly, settings, catalog API, Injector and release-workflow markers to 0.8.9.24; retain the published 0.8.9.23 release and retire its plugin-owned Injector script after registration.
+
+## 0.8.9.23
 
 - Align project, assembly, settings, catalog API and Injector versions with the 0.8.9.23 release request; retire the previous plugin-owned Injector script after registration.
 

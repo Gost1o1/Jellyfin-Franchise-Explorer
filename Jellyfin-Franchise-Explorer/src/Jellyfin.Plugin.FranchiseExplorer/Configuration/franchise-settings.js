@@ -310,15 +310,20 @@
     render();
   }
 
-  function grip(kind, id, name) {
+  function grip(kind, id, name, parent = '') {
     return (
       '<button class="grip" data-drag-kind="' +
       kind +
       '" data-drag-id="' +
       id +
+      (parent ? '" data-drag-parent="' + esc(parent) : '') +
       '" aria-label="Move ' +
       esc(name) +
-      '" data-help="Drag to rearrange, or press Enter for placement options.">' +
+      '" data-help="' +
+      (kind === 'item'
+        ? 'Drag up or down within this row. Press Enter for position choices, or Alt+Up/Down to move one place.'
+        : 'Drag to rearrange, or press Enter for placement options.') +
+      '">' +
       icon('grip') +
       '</button>'
     );
@@ -368,9 +373,12 @@
     return name;
   }
   function mediaList(row, manage) {
-    const refs = references(row);
+    const refs = references(row),
+      reorderable = !!getRow(row.Id);
     return refs.length
-      ? '<div class="media-list">' +
+      ? '<div class="media-list"' +
+          (reorderable ? ' data-media-list="' + row.Id + '"' : '') +
+          '>' +
           refs
             .map(
               (ref) =>
@@ -378,7 +386,10 @@
                 (manage ? '' : 'media-readonly') +
                 '" data-media-item="' +
                 ref.Id +
-                '">' +
+                '"' +
+                (reorderable ? ' data-drop="media" data-media-row="' + row.Id + '"' : '') +
+                '>' +
+                (reorderable ? grip('item', ref.Id, refName(ref), row.Id) : '') +
                 icon(
                   ref.ItemType === 'Series' ? 'tv' : ref.ItemType === 'BoxSet' ? 'box' : 'film',
                 ) +
@@ -1886,6 +1897,7 @@
     });
 
   function move(kind, id, parent, index) {
+    if (kind === 'item') return moveMedia(id, parent, index);
     if (kind === 'row') {
       const row = getRow(id),
         branch = descendants(parent);
@@ -1919,10 +1931,65 @@
       if (parent) expandPath(parent);
     });
   }
-  function openMove(kind, id) {
+  function mediaEntries(rowId) {
+    const row = getRow(rowId);
+    return row ? references(row) : [];
+  }
+  function focusMedia(id, rowId, reveal = false) {
+    if ($('move-dialog').open) return;
+    const scope = $('media-dialog').open ? $('media-current') : $('board');
+    const handle = [...scope.querySelectorAll('[data-drag-kind="item"]')].find(
+      (el) => el.dataset.dragId === id && el.dataset.dragParent === rowId,
+    );
+    if (reveal)
+      handle?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+    handle?.focus({ preventScroll: true });
+  }
+  function moveMedia(id, rowId, index, reveal = false) {
+    const row = getRow(rowId),
+      entries = mediaEntries(rowId);
+    const previous = entries.findIndex((ref) => ref.Id === id);
+    if (!row || previous < 0) throw Error('This media reference no longer exists in the row.');
+    if (!Number.isInteger(index)) throw Error('Choose a valid position.');
+    index = Math.max(0, Math.min(index, entries.length));
+    if (previous < index) index--;
+    if (previous === index) return;
+    const order = entries.map((ref) => ref.Id);
+    order.splice(previous, 1);
+    order.splice(index, 0, id);
+    // Memberships and reference IDs remain stable, including shared links and
+    // separate ranges of the same show. Only this row's presentation order changes.
+    change(() => {
+      row.MediaOrder = order;
+    });
+    $('drag-status').textContent =
+      refName(entries[previous]) +
+      ' moved to position ' +
+      (index + 1) +
+      ' of ' +
+      entries.length +
+      ' in ' +
+      row.Name;
+    focusMedia(id, rowId, reveal);
+  }
+  function openMove(kind, id, parent = '') {
+    if (kind === 'item') {
+      const found = reference(parent, id);
+      if (!found?.row) return;
+      movePayload = { kind, id, parent };
+      $('move-heading').textContent = 'Move ' + refName(found.ref);
+      $('move-parent').closest('label').hidden = true;
+      $('move-scope').hidden = false;
+      $('move-scope').textContent = path(found.row.ParentNodeId) + ' / ' + found.row.Name;
+      movePositions();
+      show('move-dialog');
+      return;
+    }
     const entry = kind === 'node' ? getNode(id) : getRow(id);
     if (!entry) return;
     movePayload = { kind, id };
+    $('move-parent').closest('label').hidden = false;
+    $('move-scope').hidden = true;
     $('move-heading').textContent = 'Move ' + entry.Name;
     const blocked = kind === 'node' ? descendants(id) : new Set();
     $('move-parent').innerHTML =
@@ -1936,6 +2003,23 @@
   }
   function movePositions() {
     if (!movePayload) return;
+    if (movePayload.kind === 'item') {
+      const entries = mediaEntries(movePayload.parent);
+      $('move-position').innerHTML =
+        entries
+          .map((ref, i) =>
+            ref.Id === movePayload.id
+              ? ''
+              : '<option value="' + i + '">Before ' + esc(refName(ref)) + '</option>',
+          )
+          .join('') +
+        '<option value="' +
+        entries.length +
+        '">Last</option>';
+      const current = entries.findIndex((ref) => ref.Id === movePayload.id);
+      $('move-position').value = String(current + 1);
+      return;
+    }
     const list =
       movePayload.kind === 'node' ? children($('move-parent').value) : rows($('move-parent').value);
     $('move-position').innerHTML =
@@ -1951,11 +2035,15 @@
       move(
         movePayload.kind,
         movePayload.id,
-        $('move-parent').value,
+        movePayload.kind === 'item' ? movePayload.parent : $('move-parent').value,
         Number($('move-position').value),
       );
       $('move-dialog').close();
     });
+  $('move-dialog').addEventListener('close', () => {
+    if (movePayload?.kind === 'item') focusMedia(movePayload.id, movePayload.parent, true);
+    movePayload = null;
+  });
   let drag = null;
   function clearDrop() {
     page
@@ -1963,7 +2051,35 @@
       .forEach((el) => el.classList.remove('drop-before', 'drop-after', 'drop-into'));
   }
   function dropAt(x, y) {
-    const el = document.elementFromPoint(x, y)?.closest('[data-drop]');
+    const point = document.elementFromPoint(x, y);
+    if (drag?.kind === 'item') {
+      let el = point?.closest('[data-media-row]');
+      if (!el) {
+        const list = point?.closest('[data-media-list]');
+        if (list?.dataset.mediaList === drag.parent) {
+          const entries = [...list.querySelectorAll(':scope > [data-media-row]')];
+          el = entries.find((entry) => y <= entry.getBoundingClientRect().bottom) || entries.at(-1);
+        }
+      }
+      if (
+        !el ||
+        !page.contains(el) ||
+        el.dataset.mediaRow !== drag.parent ||
+        el.closest('dialog') !== drag.dialog
+      )
+        return null;
+      const target = mediaEntries(drag.parent).findIndex((ref) => ref.Id === el.dataset.mediaItem);
+      if (target < 0) return null;
+      const box = el.getBoundingClientRect(),
+        before = y < box.top + box.height / 2;
+      return {
+        parent: drag.parent,
+        index: target + (before ? 0 : 1),
+        style: before ? 'drop-before' : 'drop-after',
+        el,
+      };
+    }
+    const el = point?.closest('[data-drop]:not([data-drop="media"])');
     if (!el || !page.contains(el) || !drag) return null;
     let parent, index, style;
     if (el.dataset.drop === 'root') {
@@ -2009,10 +2125,17 @@
   }
   function dragScroll() {
     if (!drag?.active) return;
-    const top = Math.max(70, page.querySelector('.top').getBoundingClientRect().bottom + 12),
-      delta = drag.y < top ? -10 : drag.y > innerHeight - 60 ? 10 : 0;
+    const scroller = drag.scroller;
+    const bounds = drag.dialog ? scroller.getBoundingClientRect() : null;
+    const visible = drag.dialog?.querySelector('.dialog-content').getBoundingClientRect();
+    const top = bounds
+      ? Math.max(bounds.top, visible.top, 0) + 40
+      : Math.max(70, page.querySelector('.top').getBoundingClientRect().bottom + 12);
+    const bottom = bounds
+      ? Math.min(bounds.bottom, visible.bottom, innerHeight) - 40
+      : innerHeight - 60;
+    const delta = drag.y < top ? -10 : drag.y > bottom ? 10 : 0;
     if (delta) {
-      const scroller = page.closest('.scrollY') || document.scrollingElement;
       scroller.scrollBy(0, delta);
       clearDrop();
       drag.target = dropAt(drag.x, drag.y);
@@ -2020,15 +2143,38 @@
     }
     drag.frame = requestAnimationFrame(dragScroll);
   }
+  function dragScroller(handle, dialog) {
+    for (let el = handle.parentElement; el && el !== page; el = el.parentElement) {
+      if (/(auto|scroll)/.test(getComputedStyle(el).overflowY) && el.scrollHeight > el.clientHeight)
+        return el;
+    }
+    return (
+      dialog?.querySelector('.dialog-content') ||
+      page.closest('.scrollY') ||
+      document.scrollingElement
+    );
+  }
   page.addEventListener('pointerdown', (e) => {
     const handle = e.target.closest('[data-drag-id]');
-    if (!handle || e.button !== 0 || page.querySelector('dialog[open]')) return;
+    if (!handle || e.button !== 0 || drag || e.isPrimary === false) return;
+    const dialog = handle.closest('dialog');
+    if (
+      page.querySelector('dialog[open]') &&
+      (handle.dataset.dragKind !== 'item' ||
+        dialog !== $('media-dialog') ||
+        page.querySelector('dialog[open]:not(#media-dialog)'))
+    )
+      return;
     e.preventDefault();
     hideHelp();
     handle.setPointerCapture?.(e.pointerId);
     drag = {
       kind: handle.dataset.dragKind,
       id: handle.dataset.dragId,
+      parent: handle.dataset.dragParent || '',
+      dialog,
+      scroller: dragScroller(handle, dialog),
+      pointerId: e.pointerId,
       startX: e.clientX,
       startY: e.clientY,
       x: e.clientX,
@@ -2039,7 +2185,7 @@
   page.addEventListener(
     'pointermove',
     (e) => {
-      if (!drag) return;
+      if (!drag || e.pointerId !== drag.pointerId) return;
       drag.x = e.clientX;
       drag.y = e.clientY;
       if (!drag.active && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < 5) return;
@@ -2047,11 +2193,14 @@
       if (!drag.active) {
         drag.active = true;
         page.classList.add('is-dragging');
+        page.classList.toggle('is-dragging-media', drag.kind === 'item');
         drag.ghost = document.createElement('div');
         drag.ghost.className = 'drag-ghost';
         drag.ghost.textContent =
-          (drag.kind === 'node' ? getNode(drag.id) : getRow(drag.id))?.Name || 'Moving';
-        page.append(drag.ghost);
+          drag.kind === 'item'
+            ? refName(reference(drag.parent, drag.id)?.ref || {})
+            : (drag.kind === 'node' ? getNode(drag.id) : getRow(drag.id))?.Name || 'Moving';
+        (drag.dialog || page).append(drag.ghost);
         drag.frame = requestAnimationFrame(dragScroll);
       }
       drag.ghost.style.left = e.clientX + 16 + 'px';
@@ -2068,18 +2217,42 @@
     drag = null;
     cancelAnimationFrame(old.frame);
     old.ghost?.remove();
-    page.classList.remove('is-dragging');
+    page.classList.remove('is-dragging', 'is-dragging-media');
     clearDrop();
     if (old.active && !cancel && old.target)
       void attempt(() => move(old.kind, old.id, old.target.parent, old.target.index));
   }
-  page.addEventListener('pointerup', () => endDrag());
-  page.addEventListener('pointercancel', () => endDrag(true));
+  page.addEventListener('pointerup', (e) => {
+    if (drag?.pointerId === e.pointerId) endDrag();
+  });
+  page.addEventListener('pointercancel', (e) => {
+    if (drag?.pointerId === e.pointerId) endDrag(true);
+  });
+  page.addEventListener('lostpointercapture', (e) => {
+    if (drag?.pointerId === e.pointerId) endDrag(true);
+  });
+  $('media-dialog').addEventListener('close', () => endDrag(true));
   page.addEventListener('keydown', (e) => {
     const handle = e.target.closest('[data-drag-id]');
-    if (handle && ['Enter', ' '].includes(e.key)) {
+    if (
+      handle?.dataset.dragKind === 'item' &&
+      e.altKey &&
+      ['ArrowUp', 'ArrowDown'].includes(e.key)
+    ) {
       e.preventDefault();
-      openMove(handle.dataset.dragKind, handle.dataset.dragId);
+      const entries = mediaEntries(handle.dataset.dragParent);
+      const index = entries.findIndex((ref) => ref.Id === handle.dataset.dragId);
+      void attempt(() =>
+        moveMedia(
+          handle.dataset.dragId,
+          handle.dataset.dragParent,
+          index + (e.key === 'ArrowUp' ? -1 : 2),
+          true,
+        ),
+      );
+    } else if (handle && ['Enter', ' '].includes(e.key)) {
+      e.preventDefault();
+      openMove(handle.dataset.dragKind, handle.dataset.dragId, handle.dataset.dragParent);
     }
     if (e.key === 'Escape') {
       endDrag(true);

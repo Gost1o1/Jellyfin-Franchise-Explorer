@@ -81,8 +81,9 @@
 #FranchiseExplorerConfigPage .subgroup .node-title{font-size:13px;font-weight:600}
 #FranchiseExplorerConfigPage .subgroup-body{padding-left:13px}
 #FranchiseExplorerConfigPage .drop-inside,#FranchiseExplorerConfigPage .board-drop{display:none}
-#FranchiseExplorerConfigPage .is-dragging .drop-inside{display:block;border:1px dashed #527583;border-radius:6px;padding:8px;margin:6px;font-size:12px;text-align:center;color:#9abfcb}
-#FranchiseExplorerConfigPage .is-dragging .board-drop{display:flex;align-items:center;justify-content:center;min-height:60px;border:1px dashed #527583;border-radius:8px;grid-column:1/-1;color:#9abfcb;font-size:12px}
+#FranchiseExplorerConfigPage.is-dragging:not(.is-dragging-media) .drop-inside{display:block;border:1px dashed #527583;border-radius:6px;padding:8px;margin:6px;font-size:12px;text-align:center;color:#9abfcb}
+#FranchiseExplorerConfigPage.is-dragging:not(.is-dragging-media) .board{position:relative;padding-bottom:72px}
+#FranchiseExplorerConfigPage.is-dragging:not(.is-dragging-media) .board-drop{display:flex;position:absolute;bottom:0;left:0;right:0;align-items:center;justify-content:center;min-height:60px;border:1px dashed #527583;border-radius:8px;color:#9abfcb;font-size:12px}
 #FranchiseExplorerConfigPage .drop-before{box-shadow:-4px 0 0 var(--accent)!important}
 #FranchiseExplorerConfigPage .drop-after{box-shadow:4px 0 0 var(--accent)!important}
 #FranchiseExplorerConfigPage .tree-row.drop-before,#FranchiseExplorerConfigPage .subgroup.drop-before{box-shadow:0 -3px 0 var(--accent)!important}
@@ -409,6 +410,11 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
 #FranchiseExplorerConfigPage #row-convert-subgroup,#FranchiseExplorerConfigPage #media-convert-row{flex-basis:100%}}
 #FranchiseExplorerConfigPage{box-sizing:border-box;min-width:0;width:100%;max-width:100%;margin:0;overflow-wrap:anywhere}
 #FranchiseExplorerConfigPage .fx-wrap{min-width:0;box-sizing:border-box}
+#FranchiseExplorerConfigPage .media-entry[data-media-row]{grid-template-columns:22px 16px minmax(0,1fr) auto}
+#FranchiseExplorerConfigPage .media-entry.media-readonly[data-media-row]{grid-template-columns:22px 16px minmax(0,1fr)}
+#FranchiseExplorerConfigPage .media-entry>.grip{width:22px;min-height:32px;margin:0}
+#FranchiseExplorerConfigPage .media-entry.drop-before{box-shadow:0 -3px 0 var(--accent)!important}
+#FranchiseExplorerConfigPage .media-entry.drop-after{box-shadow:0 3px 0 var(--accent)!important}
 </style>
 
 <svg style="display:none" aria-hidden="true"><defs>
@@ -431,7 +437,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
 <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
 </defs></svg>
 <main class="fx-wrap">
-<header class="top"><div><h1>Franchise Explorer<span class="version">v0.8.9.23</span></h1></div><div class="top-actions"><span id="save-state" class="save-state" role="status">Loading configuration…</span><button class="icon-button quiet" id="undo" aria-label="Undo" data-help="Undo the most recent unsaved edit or move." disabled><svg class="icon"><use href="#i-undo"/></svg></button><button class="icon-button quiet" id="reset" aria-label="Reload saved settings" data-help="Reload the saved plugin configuration. Unsaved changes can be restored with Undo."><svg class="icon"><use href="#i-reset"/></svg></button><button class="primary" id="save" data-help="Save these changes to the Jellyfin plugin configuration.">Save changes</button></div></header>
+<header class="top"><div><h1>Franchise Explorer<span class="version">v0.8.9.24</span></h1></div><div class="top-actions"><span id="save-state" class="save-state" role="status">Loading configuration…</span><button class="icon-button quiet" id="undo" aria-label="Undo" data-help="Undo the most recent unsaved edit or move." disabled><svg class="icon"><use href="#i-undo"/></svg></button><button class="icon-button quiet" id="reset" aria-label="Reload saved settings" data-help="Reload the saved plugin configuration. Unsaved changes can be restored with Undo."><svg class="icon"><use href="#i-reset"/></svg></button><button class="primary" id="save" data-help="Save these changes to the Jellyfin plugin configuration.">Save changes</button></div></header>
 <details class="panel" id="settings"><summary><svg class="icon label-icon"><use href="#i-settings"/></svg>Settings<span class="section-count"></span></summary><div class="panel-body settings-grid">
 <div class="setting" data-help="Enable subtitles for franchise playback in this browser."><span class="setting-label" id="subtitles-label">Enable subtitles</span><button type="button" class="switch" role="switch" aria-checked="false" aria-labelledby="subtitles-label" id="subtitles"><span class="switch-label">Off</span><span class="switch-track"></span></button></div>
 <label class="setting" data-help="Choose the subtitle language to use when subtitles are enabled."><span class="setting-label">Subtitle language</span><select id="language" aria-label="Subtitle language"><option value="auto">Jellyfin preference</option><option value="en">English</option><option value="de">Deutsch</option><option value="es">Español</option><option value="fr">Français</option><option value="ja">日本語</option></select></label>
@@ -458,7 +464,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
 <dialog id="item-dialog" class="item-settings-dialog" aria-labelledby="item-art-heading"><div class="dialog-head"><div><h2 id="item-art-heading">Media settings</h2><div id="item-art-title" class="scope-title"></div></div><button class="icon-button quiet" data-close="item-dialog" aria-label="Close media settings">✕</button></div><div class="dialog-content"><span id="item-art-type" class="item-type-label"></span><section id="item-photos" class="photos-section"></section></div><div class="dialog-footer"><button data-close="item-dialog">Cancel</button><button class="primary" id="save-item-artwork">Save artwork</button></div></dialog>
 <dialog id="artwork-dialog" class="artwork-dialog" aria-labelledby="artwork-heading"><div class="dialog-head"><div><h2 id="artwork-heading">Choose Poster</h2><div id="artwork-scope" class="scope-title"></div></div><button class="icon-button quiet" data-close="artwork-dialog" aria-label="Close artwork picker">✕</button></div><div class="dialog-content"><div id="artwork-filters" class="art-filters"><button data-art-filter="all" aria-pressed="true">All</button><button data-art-filter="images" aria-pressed="false">Images</button><button data-art-filter="videos" aria-pressed="false">Videos</button><button data-art-filter="upload" aria-pressed="false">Upload photo</button></div><label class="field art-search"><span>Find media artwork</span><input id="artwork-search" type="search" placeholder="Search associated titles…" autocomplete="off"></label><div class="art-picker-layout"><div><div id="artwork-gallery" class="artwork-gallery"></div><div id="art-upload-panel" hidden><label class="art-upload-target"><span>Upload a photo</span><input id="art-upload" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></label><p id="art-upload-error" class="inline-error" role="alert" hidden></p><div id="art-upload-preview"></div></div></div><aside class="art-selection"><h3>Preview</h3><div id="artwork-preview"></div><div id="artwork-selection" class="art-selection-label"></div></aside></div></div><div class="dialog-footer"><span class="art-source-label">Associated media artwork</span><button data-close="artwork-dialog">Cancel</button><button class="primary" id="confirm-artwork" disabled>Use selected</button></div></dialog>
 <dialog id="delete-dialog" class="compact-dialog" aria-labelledby="delete-heading" aria-describedby="delete-message"><div class="dialog-head"><h2 id="delete-heading">Delete</h2><button class="icon-button quiet" data-close="delete-dialog" aria-label="Close delete confirmation">✕</button></div><div class="dialog-content"><p id="delete-message"></p><div id="delete-impact"></div><p id="delete-library-note" class="delete-note">This removes Franchise Explorer entries only. Movies, shows and collections stay in your Jellyfin library. Undo can restore these entries.</p></div><div class="dialog-footer"><button data-close="delete-dialog">Cancel</button><button class="delete-confirm" id="confirm-delete">Delete</button></div></dialog>
-<dialog id="move-dialog" class="compact-dialog"><div class="dialog-head"><h2 id="move-heading">Move</h2><button class="icon-button quiet" data-close="move-dialog" aria-label="Close move menu">✕</button></div><div class="dialog-content move-form"><label class="field"><span>Move into</span><select id="move-parent" aria-label="Move into"></select></label><label class="field"><span>Position</span><select id="move-position" aria-label="Position"></select></label></div><div class="dialog-footer"><button data-close="move-dialog">Cancel</button><button class="primary" id="confirm-move">Move</button></div></dialog>
+<dialog id="move-dialog" class="compact-dialog"><div class="dialog-head"><h2 id="move-heading">Move</h2><button class="icon-button quiet" data-close="move-dialog" aria-label="Close move menu">✕</button></div><div class="dialog-content move-form"><span id="move-scope" class="editor-owner" hidden></span><label class="field"><span>Move into</span><select id="move-parent" aria-label="Move into"></select></label><label class="field"><span>Position</span><select id="move-position" aria-label="Position"></select></label></div><div class="dialog-footer"><button data-close="move-dialog">Cancel</button><button class="primary" id="confirm-move">Move</button></div></dialog>
 
 <script type="text/javascript">
 /* Generated by scripts/build_settings_page.py. Edit the source modules/template. */
@@ -2536,15 +2542,20 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     render();
   }
 
-  function grip(kind, id, name) {
+  function grip(kind, id, name, parent = '') {
     return (
       '<button class="grip" data-drag-kind="' +
       kind +
       '" data-drag-id="' +
       id +
+      (parent ? '" data-drag-parent="' + esc(parent) : '') +
       '" aria-label="Move ' +
       esc(name) +
-      '" data-help="Drag to rearrange, or press Enter for placement options.">' +
+      '" data-help="' +
+      (kind === 'item'
+        ? 'Drag up or down within this row. Press Enter for position choices, or Alt+Up/Down to move one place.'
+        : 'Drag to rearrange, or press Enter for placement options.') +
+      '">' +
       icon('grip') +
       '</button>'
     );
@@ -2594,9 +2605,12 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     return name;
   }
   function mediaList(row, manage) {
-    const refs = references(row);
+    const refs = references(row),
+      reorderable = !!getRow(row.Id);
     return refs.length
-      ? '<div class="media-list">' +
+      ? '<div class="media-list"' +
+          (reorderable ? ' data-media-list="' + row.Id + '"' : '') +
+          '>' +
           refs
             .map(
               (ref) =>
@@ -2604,7 +2618,10 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
                 (manage ? '' : 'media-readonly') +
                 '" data-media-item="' +
                 ref.Id +
-                '">' +
+                '"' +
+                (reorderable ? ' data-drop="media" data-media-row="' + row.Id + '"' : '') +
+                '>' +
+                (reorderable ? grip('item', ref.Id, refName(ref), row.Id) : '') +
                 icon(
                   ref.ItemType === 'Series' ? 'tv' : ref.ItemType === 'BoxSet' ? 'box' : 'film',
                 ) +
@@ -4112,6 +4129,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     });
 
   function move(kind, id, parent, index) {
+    if (kind === 'item') return moveMedia(id, parent, index);
     if (kind === 'row') {
       const row = getRow(id),
         branch = descendants(parent);
@@ -4145,10 +4163,65 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       if (parent) expandPath(parent);
     });
   }
-  function openMove(kind, id) {
+  function mediaEntries(rowId) {
+    const row = getRow(rowId);
+    return row ? references(row) : [];
+  }
+  function focusMedia(id, rowId, reveal = false) {
+    if ($('move-dialog').open) return;
+    const scope = $('media-dialog').open ? $('media-current') : $('board');
+    const handle = [...scope.querySelectorAll('[data-drag-kind="item"]')].find(
+      (el) => el.dataset.dragId === id && el.dataset.dragParent === rowId,
+    );
+    if (reveal)
+      handle?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+    handle?.focus({ preventScroll: true });
+  }
+  function moveMedia(id, rowId, index, reveal = false) {
+    const row = getRow(rowId),
+      entries = mediaEntries(rowId);
+    const previous = entries.findIndex((ref) => ref.Id === id);
+    if (!row || previous < 0) throw Error('This media reference no longer exists in the row.');
+    if (!Number.isInteger(index)) throw Error('Choose a valid position.');
+    index = Math.max(0, Math.min(index, entries.length));
+    if (previous < index) index--;
+    if (previous === index) return;
+    const order = entries.map((ref) => ref.Id);
+    order.splice(previous, 1);
+    order.splice(index, 0, id);
+    // Memberships and reference IDs remain stable, including shared links and
+    // separate ranges of the same show. Only this row's presentation order changes.
+    change(() => {
+      row.MediaOrder = order;
+    });
+    $('drag-status').textContent =
+      refName(entries[previous]) +
+      ' moved to position ' +
+      (index + 1) +
+      ' of ' +
+      entries.length +
+      ' in ' +
+      row.Name;
+    focusMedia(id, rowId, reveal);
+  }
+  function openMove(kind, id, parent = '') {
+    if (kind === 'item') {
+      const found = reference(parent, id);
+      if (!found?.row) return;
+      movePayload = { kind, id, parent };
+      $('move-heading').textContent = 'Move ' + refName(found.ref);
+      $('move-parent').closest('label').hidden = true;
+      $('move-scope').hidden = false;
+      $('move-scope').textContent = path(found.row.ParentNodeId) + ' / ' + found.row.Name;
+      movePositions();
+      show('move-dialog');
+      return;
+    }
     const entry = kind === 'node' ? getNode(id) : getRow(id);
     if (!entry) return;
     movePayload = { kind, id };
+    $('move-parent').closest('label').hidden = false;
+    $('move-scope').hidden = true;
     $('move-heading').textContent = 'Move ' + entry.Name;
     const blocked = kind === 'node' ? descendants(id) : new Set();
     $('move-parent').innerHTML =
@@ -4162,6 +4235,23 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
   }
   function movePositions() {
     if (!movePayload) return;
+    if (movePayload.kind === 'item') {
+      const entries = mediaEntries(movePayload.parent);
+      $('move-position').innerHTML =
+        entries
+          .map((ref, i) =>
+            ref.Id === movePayload.id
+              ? ''
+              : '<option value="' + i + '">Before ' + esc(refName(ref)) + '</option>',
+          )
+          .join('') +
+        '<option value="' +
+        entries.length +
+        '">Last</option>';
+      const current = entries.findIndex((ref) => ref.Id === movePayload.id);
+      $('move-position').value = String(current + 1);
+      return;
+    }
     const list =
       movePayload.kind === 'node' ? children($('move-parent').value) : rows($('move-parent').value);
     $('move-position').innerHTML =
@@ -4177,11 +4267,15 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       move(
         movePayload.kind,
         movePayload.id,
-        $('move-parent').value,
+        movePayload.kind === 'item' ? movePayload.parent : $('move-parent').value,
         Number($('move-position').value),
       );
       $('move-dialog').close();
     });
+  $('move-dialog').addEventListener('close', () => {
+    if (movePayload?.kind === 'item') focusMedia(movePayload.id, movePayload.parent, true);
+    movePayload = null;
+  });
   let drag = null;
   function clearDrop() {
     page
@@ -4189,7 +4283,35 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       .forEach((el) => el.classList.remove('drop-before', 'drop-after', 'drop-into'));
   }
   function dropAt(x, y) {
-    const el = document.elementFromPoint(x, y)?.closest('[data-drop]');
+    const point = document.elementFromPoint(x, y);
+    if (drag?.kind === 'item') {
+      let el = point?.closest('[data-media-row]');
+      if (!el) {
+        const list = point?.closest('[data-media-list]');
+        if (list?.dataset.mediaList === drag.parent) {
+          const entries = [...list.querySelectorAll(':scope > [data-media-row]')];
+          el = entries.find((entry) => y <= entry.getBoundingClientRect().bottom) || entries.at(-1);
+        }
+      }
+      if (
+        !el ||
+        !page.contains(el) ||
+        el.dataset.mediaRow !== drag.parent ||
+        el.closest('dialog') !== drag.dialog
+      )
+        return null;
+      const target = mediaEntries(drag.parent).findIndex((ref) => ref.Id === el.dataset.mediaItem);
+      if (target < 0) return null;
+      const box = el.getBoundingClientRect(),
+        before = y < box.top + box.height / 2;
+      return {
+        parent: drag.parent,
+        index: target + (before ? 0 : 1),
+        style: before ? 'drop-before' : 'drop-after',
+        el,
+      };
+    }
+    const el = point?.closest('[data-drop]:not([data-drop="media"])');
     if (!el || !page.contains(el) || !drag) return null;
     let parent, index, style;
     if (el.dataset.drop === 'root') {
@@ -4235,10 +4357,17 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
   }
   function dragScroll() {
     if (!drag?.active) return;
-    const top = Math.max(70, page.querySelector('.top').getBoundingClientRect().bottom + 12),
-      delta = drag.y < top ? -10 : drag.y > innerHeight - 60 ? 10 : 0;
+    const scroller = drag.scroller;
+    const bounds = drag.dialog ? scroller.getBoundingClientRect() : null;
+    const visible = drag.dialog?.querySelector('.dialog-content').getBoundingClientRect();
+    const top = bounds
+      ? Math.max(bounds.top, visible.top, 0) + 40
+      : Math.max(70, page.querySelector('.top').getBoundingClientRect().bottom + 12);
+    const bottom = bounds
+      ? Math.min(bounds.bottom, visible.bottom, innerHeight) - 40
+      : innerHeight - 60;
+    const delta = drag.y < top ? -10 : drag.y > bottom ? 10 : 0;
     if (delta) {
-      const scroller = page.closest('.scrollY') || document.scrollingElement;
       scroller.scrollBy(0, delta);
       clearDrop();
       drag.target = dropAt(drag.x, drag.y);
@@ -4246,15 +4375,38 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     }
     drag.frame = requestAnimationFrame(dragScroll);
   }
+  function dragScroller(handle, dialog) {
+    for (let el = handle.parentElement; el && el !== page; el = el.parentElement) {
+      if (/(auto|scroll)/.test(getComputedStyle(el).overflowY) && el.scrollHeight > el.clientHeight)
+        return el;
+    }
+    return (
+      dialog?.querySelector('.dialog-content') ||
+      page.closest('.scrollY') ||
+      document.scrollingElement
+    );
+  }
   page.addEventListener('pointerdown', (e) => {
     const handle = e.target.closest('[data-drag-id]');
-    if (!handle || e.button !== 0 || page.querySelector('dialog[open]')) return;
+    if (!handle || e.button !== 0 || drag || e.isPrimary === false) return;
+    const dialog = handle.closest('dialog');
+    if (
+      page.querySelector('dialog[open]') &&
+      (handle.dataset.dragKind !== 'item' ||
+        dialog !== $('media-dialog') ||
+        page.querySelector('dialog[open]:not(#media-dialog)'))
+    )
+      return;
     e.preventDefault();
     hideHelp();
     handle.setPointerCapture?.(e.pointerId);
     drag = {
       kind: handle.dataset.dragKind,
       id: handle.dataset.dragId,
+      parent: handle.dataset.dragParent || '',
+      dialog,
+      scroller: dragScroller(handle, dialog),
+      pointerId: e.pointerId,
       startX: e.clientX,
       startY: e.clientY,
       x: e.clientX,
@@ -4265,7 +4417,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
   page.addEventListener(
     'pointermove',
     (e) => {
-      if (!drag) return;
+      if (!drag || e.pointerId !== drag.pointerId) return;
       drag.x = e.clientX;
       drag.y = e.clientY;
       if (!drag.active && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < 5) return;
@@ -4273,11 +4425,14 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       if (!drag.active) {
         drag.active = true;
         page.classList.add('is-dragging');
+        page.classList.toggle('is-dragging-media', drag.kind === 'item');
         drag.ghost = document.createElement('div');
         drag.ghost.className = 'drag-ghost';
         drag.ghost.textContent =
-          (drag.kind === 'node' ? getNode(drag.id) : getRow(drag.id))?.Name || 'Moving';
-        page.append(drag.ghost);
+          drag.kind === 'item'
+            ? refName(reference(drag.parent, drag.id)?.ref || {})
+            : (drag.kind === 'node' ? getNode(drag.id) : getRow(drag.id))?.Name || 'Moving';
+        (drag.dialog || page).append(drag.ghost);
         drag.frame = requestAnimationFrame(dragScroll);
       }
       drag.ghost.style.left = e.clientX + 16 + 'px';
@@ -4294,18 +4449,42 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     drag = null;
     cancelAnimationFrame(old.frame);
     old.ghost?.remove();
-    page.classList.remove('is-dragging');
+    page.classList.remove('is-dragging', 'is-dragging-media');
     clearDrop();
     if (old.active && !cancel && old.target)
       void attempt(() => move(old.kind, old.id, old.target.parent, old.target.index));
   }
-  page.addEventListener('pointerup', () => endDrag());
-  page.addEventListener('pointercancel', () => endDrag(true));
+  page.addEventListener('pointerup', (e) => {
+    if (drag?.pointerId === e.pointerId) endDrag();
+  });
+  page.addEventListener('pointercancel', (e) => {
+    if (drag?.pointerId === e.pointerId) endDrag(true);
+  });
+  page.addEventListener('lostpointercapture', (e) => {
+    if (drag?.pointerId === e.pointerId) endDrag(true);
+  });
+  $('media-dialog').addEventListener('close', () => endDrag(true));
   page.addEventListener('keydown', (e) => {
     const handle = e.target.closest('[data-drag-id]');
-    if (handle && ['Enter', ' '].includes(e.key)) {
+    if (
+      handle?.dataset.dragKind === 'item' &&
+      e.altKey &&
+      ['ArrowUp', 'ArrowDown'].includes(e.key)
+    ) {
       e.preventDefault();
-      openMove(handle.dataset.dragKind, handle.dataset.dragId);
+      const entries = mediaEntries(handle.dataset.dragParent);
+      const index = entries.findIndex((ref) => ref.Id === handle.dataset.dragId);
+      void attempt(() =>
+        moveMedia(
+          handle.dataset.dragId,
+          handle.dataset.dragParent,
+          index + (e.key === 'ArrowUp' ? -1 : 2),
+          true,
+        ),
+      );
+    } else if (handle && ['Enter', ' '].includes(e.key)) {
+      e.preventDefault();
+      openMove(handle.dataset.dragKind, handle.dataset.dragId, handle.dataset.dragParent);
     }
     if (e.key === 'Escape') {
       endDrag(true);

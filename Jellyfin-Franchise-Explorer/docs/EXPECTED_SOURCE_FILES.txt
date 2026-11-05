@@ -157,6 +157,7 @@ Jellyfin-Franchise-Explorer/docs/SETTINGS_EDITOR.md
 Jellyfin-Franchise-Explorer/docs/VALIDATION_SETTINGS_EDITOR.md
 Jellyfin-Franchise-Explorer/scripts/test_settings_core.js
 Jellyfin-Franchise-Explorer/scripts/test_settings_v9_browser.py
+Jellyfin-Franchise-Explorer/scripts/test_media_ordering_browser.py
 Jellyfin-Franchise-Explorer/tests/AutoAdd.Tests/ArtworkTests.cs
 Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Configuration/settingsPage.template.html
 Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Configuration/franchise-settings-core.js

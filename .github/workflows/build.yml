@@ -80,6 +80,7 @@ jobs:
         run: |
           python3 scripts/test_timeline_browser.py
           python3 scripts/test_settings_v9_browser.py
+          python3 scripts/test_media_ordering_browser.py
           python3 scripts/test_card_navigation_v081.py
           python3 scripts/test_local_web_handoff.py
           python3 scripts/test_autonext_browser.py

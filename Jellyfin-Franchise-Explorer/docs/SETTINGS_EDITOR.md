@@ -11,6 +11,7 @@ This branch integrates the approved settings UI into the actual Jellyfin plugin.
 - The **plus** button opens **Add/Modify/Delete Media**. This is the only library search surface. It also includes **Add group / row** and **Add subgroup** for the indicated owner.
 - Movies search movies, TV Shows search series, and Collection searches collections. Chronological Order searches movies and series. Custom searches all three types. TV references can use a full show, seasons or an episode range.
 - Drag handles reorder franchises horizontally and rows/subgroups vertically. Drop onto a group's insertion target to nest an entry. Enter or Space on a drag handle opens the equivalent placement dialog.
+- Expand a media row to drag its movies, shows, episode ranges or collections up and down. The same handles are available under **Current media** in the plus popup. Each row keeps its own order, including rows inside subgroups. On a media handle, use **Alt+Up/Down** for a single step or **Enter/Space** to choose a position. Use **Save changes** to persist the order; Undo restores the prior arrangement. Reordering keeps media references, ranges, artwork and viewing progress intact.
 
 Edits remain in the page until **Save changes**. Saving an individual settings dialog stages that edit; Cancel discards that dialog's pending edits. **Undo** restores prior staged edits. **Reload saved settings** reads the server configuration and keeps the prior draft available through Undo. A concurrent configuration change on the server blocks saving until the editor is reloaded.
 
