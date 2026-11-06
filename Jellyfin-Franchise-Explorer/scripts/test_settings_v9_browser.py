@@ -112,7 +112,7 @@ def run():
 
         # Pointer row reordering and keyboard reparenting both edit the real flat model.
         def drag_to(handle,target,x=.5,y=.25):
-            handle.scroll_into_view_if_needed();target.scroll_into_view_if_needed()
+            handle.evaluate("(el)=>el.scrollIntoView({block:'center',behavior:'instant'})");target.scroll_into_view_if_needed()
             start=handle.bounding_box();end=target.bounding_box()
             page.mouse.move(start['x']+start['width']/2,start['y']+start['height']/2);page.mouse.down()
             page.mouse.move(end['x']+end['width']*x,end['y']+end['height']*y,steps=12);page.mouse.up()

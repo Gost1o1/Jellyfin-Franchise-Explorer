@@ -31,6 +31,8 @@ jobs:
           node --check src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-timeline.js
           python3 scripts/test_my_media_tile_static.py
           node scripts/test_timeline_engine.js
+          node scripts/test_playback_subtitles.js
+          node scripts/test_v08916_jellyfin_subtitle_inheritance.js
           node scripts/test_v089_arming.js
           node scripts/test_v0891_timeline_json.js
           python3 scripts/test_timeline_contract.py
@@ -80,6 +82,8 @@ jobs:
         run: |
           python3 scripts/test_timeline_browser.py
           python3 scripts/test_settings_v9_browser.py
+          python3 scripts/test_viewer_preferences_browser.py
+          python3 scripts/test_media_ordering_browser.py
           python3 scripts/test_card_navigation_v081.py
           python3 scripts/test_local_web_handoff.py
           python3 scripts/test_autonext_browser.py

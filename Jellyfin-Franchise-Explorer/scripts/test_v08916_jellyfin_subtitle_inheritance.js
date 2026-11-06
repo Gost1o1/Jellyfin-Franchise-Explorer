@@ -15,18 +15,19 @@ const tracks=[
   {kind:'subtitles',language:'fra',mode:'disabled'}
 ];
 const timers=[];
-let fetchCount=0,override='',userLanguage='deu';
+let fetchCount=0,override='',userLanguage='deu',pendingLanguage=null;
 const context={
   document:{querySelectorAll:()=>[{textTracks:tracks}]},
   location:{pathname:'/web/index.html'},
   localCredentials:()=>({AccessToken:'test-token',Id:'server',UserId:'user'}),
   localStorage:{getItem:key=>key==='fe-subtitle-language:server:user'?override:''},
-  disableBrowserTextTracks:()=>{},
+  disableBrowserTextTracks:()=>{for(const track of tracks)track.mode='disabled';},
   setTimeout:(fn,delay)=>{timers.push({fn,delay});return timers.length},
   fetch:async(url,opts)=>{
     fetchCount++;
     assert.equal(url,'/Users/Me');
     assert.equal(opts.headers.Authorization,'MediaBrowser Token="test-token"');
+    if(pendingLanguage)return pendingLanguage;
     return {ok:true,json:async()=>({Configuration:{SubtitleLanguagePreference:userLanguage}})};
   }
 };
@@ -55,5 +56,25 @@ vm.runInNewContext(source.slice(start,end),context);
   timers.splice(0).forEach(t=>t.fn());
   assert.equal(tracks[0].mode,'showing','Changes to the Jellyfin setting should be inherited');
 
-  console.log('v0.8.9.22 Jellyfin subtitle-language auto-default and override tests passed.');
+  context.applySubtitlePreferences({subtitleEnabled:false});
+  timers.splice(0).forEach(t=>t.fn());
+  assert(tracks.every(track=>track.mode==='disabled'),'Off must disable every browser subtitle track');
+
+  context.applySubtitlePreferences({subtitleEnabled:false});
+  const staleOffTimers=timers.splice(0);
+  context.applySubtitlePreferences({subtitleEnabled:true,subtitleLanguage:'fr'});
+  timers.splice(0).forEach(t=>t.fn());
+  staleOffTimers.forEach(t=>t.fn());
+  assert.equal(tracks[2].mode,'showing','An older Off timer must not undo a newer On preference');
+
+  let resolveLanguage;
+  pendingLanguage=new Promise(resolve=>{resolveLanguage=resolve;});
+  context.applySubtitlePreferences({subtitleEnabled:true});
+  context.applySubtitlePreferences({subtitleEnabled:false});
+  resolveLanguage({ok:true,json:async()=>({Configuration:{SubtitleLanguagePreference:'fra'}})});
+  await new Promise(setImmediate);
+  timers.splice(0).forEach(t=>t.fn());
+  assert(tracks.every(track=>track.mode==='disabled'),'A slow earlier language lookup must not re-enable subtitles after Off');
+
+  console.log('v0.8.9.24 Jellyfin subtitle default, overrides, Off, and stale preference timer tests passed.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

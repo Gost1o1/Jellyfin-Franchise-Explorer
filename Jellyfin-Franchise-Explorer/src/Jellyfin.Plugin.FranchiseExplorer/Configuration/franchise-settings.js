@@ -310,15 +310,20 @@
     render();
   }
 
-  function grip(kind, id, name) {
+  function grip(kind, id, name, parent = '') {
     return (
       '<button class="grip" data-drag-kind="' +
       kind +
       '" data-drag-id="' +
       id +
+      (parent ? '" data-drag-parent="' + esc(parent) : '') +
       '" aria-label="Move ' +
       esc(name) +
-      '" data-help="Drag to rearrange, or press Enter for placement options.">' +
+      '" data-help="' +
+      (kind === 'item'
+        ? 'Drag up or down within this row. Press Enter for position choices, or Alt+Up/Down to move one place.'
+        : 'Drag to rearrange, or press Enter for placement options.') +
+      '">' +
       icon('grip') +
       '</button>'
     );
@@ -368,9 +373,12 @@
     return name;
   }
   function mediaList(row, manage) {
-    const refs = references(row);
+    const refs = references(row),
+      reorderable = !!getRow(row.Id);
     return refs.length
-      ? '<div class="media-list">' +
+      ? '<div class="media-list"' +
+          (reorderable ? ' data-media-list="' + row.Id + '"' : '') +
+          '>' +
           refs
             .map(
               (ref) =>
@@ -378,7 +386,10 @@
                 (manage ? '' : 'media-readonly') +
                 '" data-media-item="' +
                 ref.Id +
-                '">' +
+                '"' +
+                (reorderable ? ' data-drop="media" data-media-row="' + row.Id + '"' : '') +
+                '>' +
+                (reorderable ? grip('item', ref.Id, refName(ref), row.Id) : '') +
                 icon(
                   ref.ItemType === 'Series' ? 'tv' : ref.ItemType === 'BoxSet' ? 'box' : 'film',
                 ) +
@@ -1250,7 +1261,11 @@
     renderMedia();
     show('media-dialog');
     $('media-body').scrollTop = 0;
-    $('media-library').querySelector('[data-library-search]').focus({ preventScroll: true });
+    const touch = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0,
+      focusTarget = touch
+        ? $('media-dialog').querySelector('[data-close="media-dialog"]')
+        : $('media-library').querySelector('[data-library-search]');
+    focusTarget.focus({ preventScroll: true });
   }
   $('media-dialog').addEventListener('close', () => {
     if (mediaScope) activeSearch().generation++;
@@ -1886,6 +1901,7 @@
     });
 
   function move(kind, id, parent, index) {
+    if (kind === 'item') return moveMedia(id, parent, index);
     if (kind === 'row') {
       const row = getRow(id),
         branch = descendants(parent);
@@ -1919,10 +1935,65 @@
       if (parent) expandPath(parent);
     });
   }
-  function openMove(kind, id) {
+  function mediaEntries(rowId) {
+    const row = getRow(rowId);
+    return row ? references(row) : [];
+  }
+  function focusMedia(id, rowId, reveal = false) {
+    if ($('move-dialog').open) return;
+    const scope = $('media-dialog').open ? $('media-current') : $('board');
+    const handle = [...scope.querySelectorAll('[data-drag-kind="item"]')].find(
+      (el) => el.dataset.dragId === id && el.dataset.dragParent === rowId,
+    );
+    if (reveal)
+      handle?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+    handle?.focus({ preventScroll: true });
+  }
+  function moveMedia(id, rowId, index, reveal = false) {
+    const row = getRow(rowId),
+      entries = mediaEntries(rowId);
+    const previous = entries.findIndex((ref) => ref.Id === id);
+    if (!row || previous < 0) throw Error('This media reference no longer exists in the row.');
+    if (!Number.isInteger(index)) throw Error('Choose a valid position.');
+    index = Math.max(0, Math.min(index, entries.length));
+    if (previous < index) index--;
+    if (previous === index) return;
+    const order = entries.map((ref) => ref.Id);
+    order.splice(previous, 1);
+    order.splice(index, 0, id);
+    // Memberships and reference IDs remain stable, including shared links and
+    // separate ranges of the same show. Only this row's presentation order changes.
+    change(() => {
+      row.MediaOrder = order;
+    });
+    $('drag-status').textContent =
+      refName(entries[previous]) +
+      ' moved to position ' +
+      (index + 1) +
+      ' of ' +
+      entries.length +
+      ' in ' +
+      row.Name;
+    focusMedia(id, rowId, reveal);
+  }
+  function openMove(kind, id, parent = '') {
+    if (kind === 'item') {
+      const found = reference(parent, id);
+      if (!found?.row) return;
+      movePayload = { kind, id, parent };
+      $('move-heading').textContent = 'Move ' + refName(found.ref);
+      $('move-parent').closest('label').hidden = true;
+      $('move-scope').hidden = false;
+      $('move-scope').textContent = path(found.row.ParentNodeId) + ' / ' + found.row.Name;
+      movePositions();
+      show('move-dialog');
+      return;
+    }
     const entry = kind === 'node' ? getNode(id) : getRow(id);
     if (!entry) return;
     movePayload = { kind, id };
+    $('move-parent').closest('label').hidden = false;
+    $('move-scope').hidden = true;
     $('move-heading').textContent = 'Move ' + entry.Name;
     const blocked = kind === 'node' ? descendants(id) : new Set();
     $('move-parent').innerHTML =
@@ -1936,6 +2007,23 @@
   }
   function movePositions() {
     if (!movePayload) return;
+    if (movePayload.kind === 'item') {
+      const entries = mediaEntries(movePayload.parent);
+      $('move-position').innerHTML =
+        entries
+          .map((ref, i) =>
+            ref.Id === movePayload.id
+              ? ''
+              : '<option value="' + i + '">Before ' + esc(refName(ref)) + '</option>',
+          )
+          .join('') +
+        '<option value="' +
+        entries.length +
+        '">Last</option>';
+      const current = entries.findIndex((ref) => ref.Id === movePayload.id);
+      $('move-position').value = String(current + 1);
+      return;
+    }
     const list =
       movePayload.kind === 'node' ? children($('move-parent').value) : rows($('move-parent').value);
     $('move-position').innerHTML =
@@ -1951,11 +2039,15 @@
       move(
         movePayload.kind,
         movePayload.id,
-        $('move-parent').value,
+        movePayload.kind === 'item' ? movePayload.parent : $('move-parent').value,
         Number($('move-position').value),
       );
       $('move-dialog').close();
     });
+  $('move-dialog').addEventListener('close', () => {
+    if (movePayload?.kind === 'item') focusMedia(movePayload.id, movePayload.parent, true);
+    movePayload = null;
+  });
   let drag = null;
   function clearDrop() {
     page
@@ -1963,7 +2055,35 @@
       .forEach((el) => el.classList.remove('drop-before', 'drop-after', 'drop-into'));
   }
   function dropAt(x, y) {
-    const el = document.elementFromPoint(x, y)?.closest('[data-drop]');
+    const point = document.elementFromPoint(x, y);
+    if (drag?.kind === 'item') {
+      let el = point?.closest('[data-media-row]');
+      if (!el) {
+        const list = point?.closest('[data-media-list]');
+        if (list?.dataset.mediaList === drag.parent) {
+          const entries = [...list.querySelectorAll(':scope > [data-media-row]')];
+          el = entries.find((entry) => y <= entry.getBoundingClientRect().bottom) || entries.at(-1);
+        }
+      }
+      if (
+        !el ||
+        !page.contains(el) ||
+        el.dataset.mediaRow !== drag.parent ||
+        el.closest('dialog') !== drag.dialog
+      )
+        return null;
+      const target = mediaEntries(drag.parent).findIndex((ref) => ref.Id === el.dataset.mediaItem);
+      if (target < 0) return null;
+      const box = el.getBoundingClientRect(),
+        before = y < box.top + box.height / 2;
+      return {
+        parent: drag.parent,
+        index: target + (before ? 0 : 1),
+        style: before ? 'drop-before' : 'drop-after',
+        el,
+      };
+    }
+    const el = point?.closest('[data-drop]:not([data-drop="media"])');
     if (!el || !page.contains(el) || !drag) return null;
     let parent, index, style;
     if (el.dataset.drop === 'root') {
@@ -2009,10 +2129,17 @@
   }
   function dragScroll() {
     if (!drag?.active) return;
-    const top = Math.max(70, page.querySelector('.top').getBoundingClientRect().bottom + 12),
-      delta = drag.y < top ? -10 : drag.y > innerHeight - 60 ? 10 : 0;
+    const scroller = drag.scroller;
+    const bounds = drag.dialog ? scroller.getBoundingClientRect() : null;
+    const visible = drag.dialog?.querySelector('.dialog-content').getBoundingClientRect();
+    const top = bounds
+      ? Math.max(bounds.top, visible.top, 0) + 40
+      : Math.max(70, page.querySelector('.top').getBoundingClientRect().bottom + 12);
+    const bottom = bounds
+      ? Math.min(bounds.bottom, visible.bottom, innerHeight) - 40
+      : innerHeight - 60;
+    const delta = drag.y < top ? -10 : drag.y > bottom ? 10 : 0;
     if (delta) {
-      const scroller = page.closest('.scrollY') || document.scrollingElement;
       scroller.scrollBy(0, delta);
       clearDrop();
       drag.target = dropAt(drag.x, drag.y);
@@ -2020,15 +2147,38 @@
     }
     drag.frame = requestAnimationFrame(dragScroll);
   }
+  function dragScroller(handle, dialog) {
+    for (let el = handle.parentElement; el && el !== page; el = el.parentElement) {
+      if (/(auto|scroll)/.test(getComputedStyle(el).overflowY) && el.scrollHeight > el.clientHeight)
+        return el;
+    }
+    return (
+      dialog?.querySelector('.dialog-content') ||
+      page.closest('.scrollY') ||
+      document.scrollingElement
+    );
+  }
   page.addEventListener('pointerdown', (e) => {
     const handle = e.target.closest('[data-drag-id]');
-    if (!handle || e.button !== 0 || page.querySelector('dialog[open]')) return;
+    if (!handle || e.button !== 0 || drag || e.isPrimary === false) return;
+    const dialog = handle.closest('dialog');
+    if (
+      page.querySelector('dialog[open]') &&
+      (handle.dataset.dragKind !== 'item' ||
+        dialog !== $('media-dialog') ||
+        page.querySelector('dialog[open]:not(#media-dialog)'))
+    )
+      return;
     e.preventDefault();
     hideHelp();
     handle.setPointerCapture?.(e.pointerId);
     drag = {
       kind: handle.dataset.dragKind,
       id: handle.dataset.dragId,
+      parent: handle.dataset.dragParent || '',
+      dialog,
+      scroller: dragScroller(handle, dialog),
+      pointerId: e.pointerId,
       startX: e.clientX,
       startY: e.clientY,
       x: e.clientX,
@@ -2039,7 +2189,7 @@
   page.addEventListener(
     'pointermove',
     (e) => {
-      if (!drag) return;
+      if (!drag || e.pointerId !== drag.pointerId) return;
       drag.x = e.clientX;
       drag.y = e.clientY;
       if (!drag.active && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < 5) return;
@@ -2047,11 +2197,14 @@
       if (!drag.active) {
         drag.active = true;
         page.classList.add('is-dragging');
+        page.classList.toggle('is-dragging-media', drag.kind === 'item');
         drag.ghost = document.createElement('div');
         drag.ghost.className = 'drag-ghost';
         drag.ghost.textContent =
-          (drag.kind === 'node' ? getNode(drag.id) : getRow(drag.id))?.Name || 'Moving';
-        page.append(drag.ghost);
+          drag.kind === 'item'
+            ? refName(reference(drag.parent, drag.id)?.ref || {})
+            : (drag.kind === 'node' ? getNode(drag.id) : getRow(drag.id))?.Name || 'Moving';
+        (drag.dialog || page).append(drag.ghost);
         drag.frame = requestAnimationFrame(dragScroll);
       }
       drag.ghost.style.left = e.clientX + 16 + 'px';
@@ -2068,18 +2221,42 @@
     drag = null;
     cancelAnimationFrame(old.frame);
     old.ghost?.remove();
-    page.classList.remove('is-dragging');
+    page.classList.remove('is-dragging', 'is-dragging-media');
     clearDrop();
     if (old.active && !cancel && old.target)
       void attempt(() => move(old.kind, old.id, old.target.parent, old.target.index));
   }
-  page.addEventListener('pointerup', () => endDrag());
-  page.addEventListener('pointercancel', () => endDrag(true));
+  page.addEventListener('pointerup', (e) => {
+    if (drag?.pointerId === e.pointerId) endDrag();
+  });
+  page.addEventListener('pointercancel', (e) => {
+    if (drag?.pointerId === e.pointerId) endDrag(true);
+  });
+  page.addEventListener('lostpointercapture', (e) => {
+    if (drag?.pointerId === e.pointerId) endDrag(true);
+  });
+  $('media-dialog').addEventListener('close', () => endDrag(true));
   page.addEventListener('keydown', (e) => {
     const handle = e.target.closest('[data-drag-id]');
-    if (handle && ['Enter', ' '].includes(e.key)) {
+    if (
+      handle?.dataset.dragKind === 'item' &&
+      e.altKey &&
+      ['ArrowUp', 'ArrowDown'].includes(e.key)
+    ) {
       e.preventDefault();
-      openMove(handle.dataset.dragKind, handle.dataset.dragId);
+      const entries = mediaEntries(handle.dataset.dragParent);
+      const index = entries.findIndex((ref) => ref.Id === handle.dataset.dragId);
+      void attempt(() =>
+        moveMedia(
+          handle.dataset.dragId,
+          handle.dataset.dragParent,
+          index + (e.key === 'ArrowUp' ? -1 : 2),
+          true,
+        ),
+      );
+    } else if (handle && ['Enter', ' '].includes(e.key)) {
+      e.preventDefault();
+      openMove(handle.dataset.dragKind, handle.dataset.dragId, handle.dataset.dragParent);
     }
     if (e.key === 'Escape') {
       endDrag(true);
@@ -2160,30 +2337,94 @@
   page.addEventListener('click', hideHelp);
   page.addEventListener('input', hideHelp);
   function viewerPreferences() {
-    let keys = null;
-    try {
-      const uid = ApiClient.getCurrentUserId?.(),
-        servers = JSON.parse(localStorage.getItem('jellyfin_credentials') || '{}').Servers || [],
-        matches = servers.filter((s) => s.UserId?.toLowerCase() === uid?.toLowerCase()),
-        chosen =
-          matches.find((s) =>
-            ['ManualAddress', 'LocalAddress', 'RemoteAddress', 'LastConnectionAddress'].some(
-              (k) => {
-                try {
-                  return new URL(s[k]).origin === location.origin;
-                } catch (_) {
-                  return false;
-                }
-              },
-            ),
-          ) || (matches.length === 1 ? matches[0] : null);
-      if (chosen && uid)
-        keys = {
-          subtitles: 'fe-subtitles:' + chosen.Id + ':' + chosen.UserId,
-          language: 'fe-subtitle-language:' + chosen.Id + ':' + chosen.UserId,
-          native: 'fe-show-active-native-rows:' + location.origin + ':' + uid.toLowerCase(),
-        };
-    } catch (_) {}
+    let profileUserId = '', profileToken = '', profileRequest = 0;
+    const identity = (value) => {
+      const text = String(value || '').toLowerCase();
+      return /^[a-f\d]{32}$|^[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12}$/.test(text)
+        ? text.replace(/-/g, '') : text;
+    };
+    const same = (left, right) => !!left && !!right && identity(left) === identity(right);
+    const apiValue = (name) => {
+      try {
+        const value = ApiClient[name];
+        return typeof value === 'function' ? value.call(ApiClient) : value;
+      } catch (_) { return null; }
+    };
+    function preferenceKeys() {
+      const token = apiValue('accessToken') || '',
+        uid = apiValue('getCurrentUserId') || (token === profileToken ? profileUserId : ''),
+        currentServer = apiValue('serverId') || apiValue('serverInfo')?.Id;
+      if (!uid) return null;
+      let servers = [];
+      try {
+        const cached = JSON.parse(localStorage.getItem('jellyfin_credentials') || '{}');
+        if (Array.isArray(cached.Servers)) servers = cached.Servers;
+      } catch (_) { /* The active API session can identify this account without cached credentials. */ }
+      const matches = servers.filter((server) => server && server.Id && same(server.UserId, uid));
+      let chosen;
+      if (currentServer) {
+        const matchingServer = matches.filter((server) => same(server.Id, currentServer));
+        chosen = matchingServer.find((server) => token && server.AccessToken === token) || matchingServer[0];
+      } else {
+        const originMatches = matches.filter((server) =>
+          ['ManualAddress', 'LocalAddress', 'RemoteAddress', 'LastConnectionAddress'].some((key) => {
+            try { return new URL(server[key]).origin === location.origin; } catch (_) { return false; }
+          }),
+        );
+        if (new Set(originMatches.map((server) => identity(server.Id))).size === 1)
+          chosen = originMatches[0];
+        else if (!originMatches.length && matches.length === 1) chosen = matches[0];
+      }
+      const serverId = chosen?.Id || currentServer, userId = chosen?.UserId || uid;
+      if (!serverId) return null;
+      return {
+        serverId, userId,
+        subtitles: 'fe-subtitles:' + serverId + ':' + userId,
+        language: 'fe-subtitle-language:' + serverId + ':' + userId,
+        native: 'fe-show-active-native-rows:' + location.origin + ':' + String(userId).toLowerCase(),
+      };
+    }
+    function matchingKeys(keys, kind) {
+      const primary = keys[kind], found = new Set([primary]),
+        prefix = kind === 'native' ? 'fe-show-active-native-rows:' + location.origin + ':'
+          : kind === 'subtitles' ? 'fe-subtitles:' : 'fe-subtitle-language:';
+      for (let index = 0; index < localStorage.length; index++) {
+        const key = localStorage.key(index);
+        if (!key?.startsWith(prefix)) continue;
+        if (kind === 'native') {
+          if (same(key.slice(prefix.length), keys.userId)) found.add(key);
+        } else {
+          const [serverId, userId] = key.slice(prefix.length).split(':');
+          if (same(serverId, keys.serverId) && same(userId, keys.userId)) found.add(key);
+        }
+      }
+      return [...found];
+    }
+    function readPreference(keys, kind) {
+      for (const key of matchingKeys(keys, kind)) {
+        const value = localStorage.getItem(key);
+        if (value !== null) return value;
+      }
+      return null;
+    }
+    function savePreference(keys, kind, value) {
+      const saved = matchingKeys(keys, kind).map((key) => [key, localStorage.getItem(key)]),
+        written = [];
+      try {
+        for (const [key, previous] of saved) {
+          localStorage.setItem(key, value);
+          written.push([key, previous]);
+        }
+      } catch (error) {
+        for (const [key, previous] of written.reverse()) {
+          try {
+            if (previous === null) localStorage.removeItem(key);
+            else localStorage.setItem(key, previous);
+          } catch (_) { /* Preserve the visible prior state and report the failed save. */ }
+        }
+        throw error;
+      }
+    }
     const codes =
         'ar bg ca cs da de el en es et fa fi fr he hi hr hu id is it ja ko lt lv ms nb nl pl pt ro ru sk sl sr sv th tr uk ur vi zh'.split(
           ' ',
@@ -2197,9 +2438,8 @@
       codes
         .map((code) => '<option value="' + code + '">' + esc(names?.of(code) || code) + '</option>')
         .join('');
-    const sync = () => {
-      const enabled = !!keys && localStorage.getItem(keys.subtitles) === '1',
-        hide = !!keys && localStorage.getItem(keys.native) === '0';
+    const show = (state) => {
+      const { keys, enabled, hide, language } = state;
       for (const [id, value] of [
         ['subtitles', enabled],
         ['hide-native', hide],
@@ -2209,28 +2449,65 @@
         $(id).querySelector('.switch-label').textContent = value ? 'On' : 'Off';
       }
       $('language').disabled = !keys || !enabled;
-      $('language').value = keys ? localStorage.getItem(keys.language) || '' : '';
+      $('language').value = language;
+    };
+    let lastState = { keys: null, enabled: false, hide: false, language: '' };
+    const sync = () => {
+      const keys = preferenceKeys();
+      try {
+        lastState = { keys, enabled: !!keys && readPreference(keys, 'subtitles') === '1',
+          hide: !!keys && readPreference(keys, 'native') === '0',
+          language: keys ? readPreference(keys, 'language') || '' : '' };
+        show(lastState);
+        return lastState;
+      } catch (_) {
+        show({ ...lastState, keys: null });
+        notify('Could not read viewer preferences. Allow browser storage and reopen settings.', true);
+        return null;
+      }
+    };
+    const subtitlesChanged = (keys) => {
+      if (keys)
+        window.dispatchEvent(
+          new CustomEvent('franchise-subtitles-changed', {
+            detail: { serverId: keys.serverId, userId: keys.userId },
+          }),
+        );
+    };
+    const changePreference = (kind, value) => {
+      const before = sync();
+      if (!before?.keys) return;
+      try {
+        const next = typeof value === 'function' ? value(before) : value;
+        savePreference(before.keys, kind, next);
+        const after = sync();
+        if (after && kind !== 'native') subtitlesChanged(after.keys);
+      } catch (_) {
+        show(before);
+        notify('Could not save viewer preferences. Allow browser storage and try again.', true);
+      }
     };
     $('subtitles').onclick = () => {
-      if (keys)
-        localStorage.setItem(
-          keys.subtitles,
-          localStorage.getItem(keys.subtitles) === '1' ? '0' : '1',
-        );
-      sync();
+      changePreference('subtitles', (state) => state.enabled ? '0' : '1');
     };
     $('hide-native').onclick = () => {
-      if (keys)
-        localStorage.setItem(keys.native, localStorage.getItem(keys.native) === '0' ? '1' : '0');
-      sync();
+      changePreference('native', (state) => state.hide ? '1' : '0');
     };
     $('language').onchange = () => {
-      if (keys) localStorage.setItem(keys.language, $('language').value);
+      changePreference('language', $('language').value);
     };
     sync();
-    if (ApiClient.getCurrentUser)
-      void ApiClient.getCurrentUser()
+    function loadProfile() {
+      if (!ApiClient.getCurrentUser) return;
+      const serial = ++profileRequest, token = apiValue('accessToken') || '';
+      void Promise.resolve().then(() => ApiClient.getCurrentUser())
         .then((user) => {
+          if (serial !== profileRequest || token !== (apiValue('accessToken') || '')) return;
+          const uid = apiValue('getCurrentUserId'), profileId = user.Id || user.id || uid;
+          if (uid && profileId && !same(uid, profileId)) return;
+          profileUserId = profileId || '';
+          profileToken = token;
+          sync();
           const preferred =
             user.Configuration?.SubtitleLanguagePreference ||
             user.configuration?.subtitleLanguagePreference;
@@ -2245,6 +2522,17 @@
               ')';
         })
         .catch(() => {});
+    }
+    page.addEventListener('pageshow', () => { sync(); loadProfile(); });
+    $('settings').addEventListener('toggle', () => {
+      if ($('settings').open) { sync(); loadProfile(); }
+    });
+    window.addEventListener('storage', (event) => {
+      if (!event.key || event.key === 'jellyfin_credentials' ||
+          ['fe-subtitles:', 'fe-subtitle-language:', 'fe-show-active-native-rows:'].some(
+            (prefix) => event.key.startsWith(prefix))) sync();
+    });
+    loadProfile();
   }
   const artwork = window.FranchiseSettingsArtwork.create({
     page,

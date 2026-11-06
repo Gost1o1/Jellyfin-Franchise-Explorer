@@ -29,9 +29,10 @@ public sealed class HomeTileRegistrationService : IHostedService, IDisposable
     // Script IDs are stable within a UI generation, not forever. Injector and
     // Jellyfin Web can cache the previous script despite a DLL replacement.
     // A new ID lets this release load the updated home and menu integration.
-    private const string CurrentScriptId = "jellyfin-franchise-explorer-my-media-v08923";
+    private const string CurrentScriptId = "jellyfin-franchise-explorer-my-media-v08924";
     private static readonly string[] LegacyScriptIds =
     {
+        "jellyfin-franchise-explorer-my-media-v08923",
         "jellyfin-franchise-explorer-my-media-v08922",
         "jellyfin-franchise-explorer-my-media-v08921",
         "jellyfin-franchise-explorer-my-media-v08920",
@@ -178,7 +179,7 @@ public sealed class HomeTileRegistrationService : IHostedService, IDisposable
             ["requiresAuthentication"] = false,
             ["pluginId"] = global::Jellyfin.Plugin.FranchiseExplorer.Plugin.PluginId.ToString(),
             ["pluginName"] = "Franchise Explorer",
-            ["pluginVersion"] = "0.8.9.23"
+            ["pluginVersion"] = "0.8.9.24"
         });
 
         object? payload = parse.Invoke(null, new object[] { json });
@@ -218,5 +219,9 @@ public sealed class PluginServiceRegistrator : IPluginServiceRegistrator
     {
         services.AddHostedService<HomeTileRegistrationService>();
         services.AddHostedService<TimelinePlaybackMonitorService>();
+        services.AddSingleton<PlaybackSubtitlePolicyStore>();
+        services.AddScoped<PlaybackSubtitlePolicyFilter>();
+        services.Configure<Microsoft.AspNetCore.Mvc.MvcOptions>(options =>
+            options.Filters.AddService<PlaybackSubtitlePolicyFilter>());
     }
 }

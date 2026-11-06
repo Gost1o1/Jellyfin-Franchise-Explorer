@@ -5,7 +5,7 @@ on:
       version:
         description: 'Release version; must equal csproj Version'
         required: true
-        default: '0.8.9.23'
+        default: '0.8.9.24'
         type: string
       confirm:
         description: 'Type RELEASE_EXPERIMENTAL to publish'
@@ -39,6 +39,8 @@ jobs:
       - name: Validate browser UI before publishing
         working-directory: Jellyfin-Franchise-Explorer
         run: |
+          python3 scripts/test_media_ordering_browser.py
+          python3 scripts/test_viewer_preferences_browser.py
           python3 scripts/test_my_media_tile_browser.py
           python3 scripts/test_my_media_tile_resize.py
           python3 scripts/test_v085_native_card.py
@@ -86,6 +88,8 @@ jobs:
           node --check src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-timeline.js
           python3 scripts/test_my_media_tile_static.py
           node scripts/test_timeline_engine.js
+          node scripts/test_playback_subtitles.js
+          node scripts/test_v08916_jellyfin_subtitle_inheritance.js
           node scripts/test_v089_arming.js
           node scripts/test_v0891_timeline_json.js
           python3 scripts/test_timeline_contract.py
