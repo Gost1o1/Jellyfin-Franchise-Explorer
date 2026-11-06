@@ -17,13 +17,22 @@ const row={id:rowId,parentNodeId:uuid(8),name:'Chronological Viewing Order',rowT
  {id:refShow,itemId:seriesId,rangeMode:'Episodes',startSeason:1,startEpisode:2,endSeason:2,endEpisode:2},
  {id:refMovie,itemId:movieId,rangeMode:'Full'}
  ],mediaOrder:[refShow,refMovie]};
-let state=null,posted=[],nowPlayingId=null,remoteSupported=true,simulateStart=true;
+let state=null,posted=[],enrollments=[],nowPlayingId=null,remoteSupported=true,simulateStart=true;
 const jsonify=x=>({ok:true,status:200,json:async()=>x});
 const mockFetch=async (url,options={})=>{
  const path=String(url);
  if(path.includes('/Shows/'+seriesId+'/Episodes'))return jsonify({Items:episodes,TotalRecordCount:episodes.length});
- if(path.includes('/Sessions?'))return jsonify([{Id:sessionId,UserId:uuid(9),DeviceName:'Test Web',SupportsMediaControl:remoteSupported,SupportsRemoteControl:remoteSupported,NowPlayingItem:nowPlayingId?{Id:nowPlayingId}:null}]);
- if(path.includes('/Sessions/'+sessionId+'/Playing')){posted.push(path);if(simulateStart && path.includes('playCommand=PlayNow')){const first=new URLSearchParams(path.split('?')[1]).get('itemIds').split(',')[0];nowPlayingId=first;}return {ok:true,status:204};}
+ if(path.includes('/Sessions?'))return jsonify([
+   {Id:sessionId,UserId:uuid(9),DeviceId:'remote-web',DeviceName:'Test Web',SupportsMediaControl:remoteSupported,SupportsRemoteControl:remoteSupported,NowPlayingItem:nowPlayingId?{Id:nowPlayingId}:null},
+   {Id:'additional-user-only',UserId:uuid(88),DeviceId:'another-users-device',AdditionalUsers:[{UserId:uuid(9)}]}
+ ]);
+ if(path.includes('/FranchiseExplorer/PlaybackPreferences')){
+    assert.equal(options.method,'POST');
+    const request=JSON.parse(options.body);enrollments.push(request);
+    assert.equal(request.deviceId,'remote-web');assert.equal(request.enabled,false);
+    return jsonify({enabled:false,language:'',subtitleStreamIndex:-1,mediaSourceId:'first-source'});
+ }
+ if(path.includes('/Sessions/'+sessionId+'/Playing')){assert(enrollments.length,'Subtitle policy must be confirmed before playback');posted.push(path);if(simulateStart && path.includes('playCommand=PlayNow')){const first=new URLSearchParams(path.split('?')[1]).get('itemIds').split(',')[0];nowPlayingId=first;}return {ok:true,status:204};}
  if(path.includes('/FranchiseExplorer/TimelineState/')&&options.method==='PUT'){
     state=JSON.parse(options.body);return jsonify(state);
  }
@@ -37,8 +46,10 @@ assert(engine,'Timeline helper should be exported');
 assert.equal(engine.inRange(episodes[1],row.items[0]),true);
 assert.equal(engine.inRange(episodes[0],row.items[0]),false);
 assert.equal(engine.inRange(episodes[5],row.items[0]),false);
-const mgr=new engine.TimelineManager({token:'test',prefix:'',userId:uuid(9),catalog,getItem:async(id)=>id===seriesId?show:id===movieId?movie:null});
+const mgr=new engine.TimelineManager({serverId:'test-server',token:'test',prefix:'',userId:uuid(9),catalog,getItem:async(id)=>id===seriesId?show:id===movieId?movie:null});
 (async()=>{
+ assert.deepEqual(Array.from(await mgr.sessions(),session=>session.Id),[sessionId],
+   'Device choices must be owned by the signed-in user so subtitle enrollment can apply on that player');
  const {queue,warnings}=await mgr.resolve(row);
  assert.equal(warnings.length,0,JSON.stringify(warnings));
  assert.equal(queue.length,5,'S1E2–S2E2 is four episodes plus one movie');
@@ -85,6 +96,8 @@ const mgr=new engine.TimelineManager({token:'test',prefix:'',userId:uuid(9),cata
  assert.equal(state.playbackMode,'playing');
  assert(posted[0].includes('playCommand=PlayNow'));
  assert(posted[0].includes('startIndex=0'));
+ assert(posted[0].includes('subtitleStreamIndex=-1')&&posted[0].includes('mediaSourceId=first-source'));
+ assert.deepEqual(enrollments[0].itemIds,Array.from(queue,item=>item.id),'The whole queue must be enrolled before its first play command');
  assert.equal(nowPlayingId,queue[0].id, 'First item must actually begin playing');
  // Move ahead, then replay an earlier movie without touching timeline cursor.
  state.index=3;state.completedKeys=state.queueKeys.slice(0,3);state.positionTicks=12345;
@@ -104,6 +117,19 @@ const mgr=new engine.TimelineManager({token:'test',prefix:'',userId:uuid(9),cata
  const result=await mgr.resolve(bad);
  assert.equal(result.queue.length,0);
  assert(result.warnings.length>0);
+ // Appended chunks negotiate their own first item. A media source belongs to
+ // the initial title and must never be reused as another title's source.
+ const longQueue=Array.from({length:26},(_,index)=>({id:uuid(500+index)}));
+ const chunkStart=posted.length;
+ await mgr.play(longQueue,sessionId);
+ const chunks=posted.slice(chunkStart).map(path=>new URLSearchParams(path.split('?')[1]));
+ assert.equal(chunks.length,2);assert.equal(chunks[0].get('playCommand'),'PlayNow');
+ assert.equal(chunks[0].get('subtitleStreamIndex'),'-1');
+ assert.equal(chunks[0].get('mediaSourceId'),'first-source');
+ assert.equal(chunks[1].get('playCommand'),'PlayLast');
+ assert.equal(chunks[1].has('subtitleStreamIndex'),false);
+ assert.equal(chunks[1].has('mediaSourceId'),false);
+ assert.deepEqual(enrollments.at(-1).itemIds,longQueue.map(item=>item.id));
  // Real-world failure case: a 204 HTTP response does NOT mean the web
  // client started playback. Never write a new timeline state on a no-op.
  const before=JSON.stringify(state),sentBefore=posted.length;

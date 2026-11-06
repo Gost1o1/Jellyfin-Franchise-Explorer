@@ -1324,7 +1324,12 @@
   }
   function applySubtitlePreferences(options){
     const generation=++subtitlePreferenceGeneration;
-    if(!options.subtitleEnabled){for(const delay of [800,2000,4500])setTimeout(disableBrowserTextTracks,delay);return;}
+    if(!options.subtitleEnabled){
+      for(const delay of [800,2000,4500])setTimeout(()=>{
+        if(generation===subtitlePreferenceGeneration)disableBrowserTextTracks();
+      },delay);
+      return;
+    }
     const auth=localCredentials();
     const serverId=auth?.Id||auth?.ServerId||'';
     const saved=serverId&&auth?.UserId?localStorage.getItem('fe-subtitle-language:'+serverId+':'+auth.UserId):'';
@@ -1483,6 +1488,16 @@
     if(localNoticeTimer)clearTimeout(localNoticeTimer);
     localNoticeTimer=setTimeout(()=>{notice.remove();localNoticeTimer=null;},Math.max(2000,Math.min(ttl,8000)));
   }
+  window.addEventListener('franchise-subtitles-applied',event=>{
+    const settings=event.detail,auth=localCredentials();
+    if(!settings?.serverId||!settings.userId||!settings.deviceId||!auth?.UserId)return;
+    if(!itemMatch(settings.serverId,auth.Id||auth.ServerId)||!itemMatch(settings.userId,auth.UserId)
+      ||settings.deviceId!==deviceId())return;
+    applySubtitlePreferences(settings);
+  });
+  window.addEventListener('franchise-subtitles-error',event=>{
+    showLocalNotice(event.detail?.message||'Could not apply subtitle preferences.');
+  });
   function localVideoAdvancing(snapshot){
     // Verify a real rendering player. Session NowPlayingItem alone may refer
     // to a background/stale session, even when it reports an advancing clock.
@@ -1758,6 +1773,24 @@
   // releases its native activity at the end, so WebView polling cannot
   // reliably launch the next episode. Restrict this to native Android;
   // desktop continues to use the untouched Jellyfin Web card shortcut.
+  async function prepareNativeSubtitles(id,options={},itemIds){
+    const auth=localCredentials();
+    const intent=localIntent(auth);
+    const matchingIntent=intent&&itemMatch(intent.expectedId,id)?intent:null;
+    const preferences=window.FranchiseSubtitlePreferences;
+    if(typeof preferences?.prepare!=='function')
+      throw new Error('Subtitle preferences are unavailable. Reload Jellyfin and retry playback.');
+    const prefix=((location.pathname||'').match(/^(.*?)\/web(?:\/|$)/i)||[])[1]||'';
+    return preferences.prepare({serverId:auth?.Id||auth?.ServerId||'',
+      userId:auth?.UserId||'',token:auth?.AccessToken||'',prefix,deviceId:deviceId(),
+      itemIds:itemIds||nativeAndroidQueue(id,matchingIntent).map(item=>item.Id)
+    },{subtitleEnabled:options.subtitleEnabled??matchingIntent?.subtitleEnabled??false,
+      subtitleLanguage:options.subtitleLanguage??matchingIntent?.subtitleLanguage??''});
+  }
+  function nativeSubtitleFailure(error){
+    console.error('Franchise Explorer: subtitle preferences could not be applied',error);
+    showLocalNotice('Could not apply subtitle preferences. '+(error?.message||'Reload Jellyfin and retry playback.'));
+  }
   function nativeAndroidQueue(id,intent){
     if(intent?.replayOnly)return [{Id:id}]; // Watch once must not track/chain.
     const state=intent?.state;
@@ -1782,46 +1815,51 @@
     const player=window.ExoPlayer;
     if(typeof player?.play!=='function')return false;
     const auth=localCredentials();
-    armPlaybackReturn(id,options.returnUrl||location.href);
     const intent=localIntent(auth);
-    try{
-      const position=Math.max(0,Number(options.positionTicks)||0);
-      // ExoPlayer.play passes these options to NativePlayer.loadPlayer and
-      // obtains maxStreamingBitrateLocal/Remote from Jellyfin's appSettings.
-      const items=nativeAndroidQueue(id,intent);
-      const launch=player.play({items,fullscreen:true,startIndex:0,
-        startPositionTicks:options.startOver?0:position});
-      console.info('Franchise Explorer: Android native chronological queue launched',
-        {queueLength:items.length,tracked:!!intent&&!intent.replayOnly});
-      if(intent&&itemMatch(intent.expectedId,id)){
-        if(!intent.replayOnly&&auth?.UserId){
-          // Android pauses WebView timers while its native activity is open.
-          // Jellyfin's SERVER playback listener alone activates the armed row.
-          // Keep a device-bound local marker so Home can verify its session
-          // after Android resumes the WebView; do not guess from a user ID.
-          localStorage.setItem(androidFollowKey(auth),JSON.stringify({rowId:intent.rowId,
-            itemId:id,deviceId:deviceId(),created:Date.now(),
-            subtitleEnabled:!!intent.subtitleEnabled,
-            subtitleLanguage:intent.subtitleLanguage||''}));
-          localStorage.removeItem('fe-local-follow-v1:'+String(auth.UserId).toLowerCase());
+    const items=nativeAndroidQueue(id,intent);
+    // Enroll the exact native queue before ExoPlayer can request PlaybackInfo,
+    // including later entries Android advances to while WebView is paused.
+    void prepareNativeSubtitles(id,options,items.map(item=>item.Id)).then(subtitles=>{
+      try{
+        armPlaybackReturn(id,options.returnUrl||location.href);
+        const position=Math.max(0,Number(options.positionTicks)||0);
+        // ExoPlayer.play passes these options to NativePlayer.loadPlayer and
+        // obtains maxStreamingBitrateLocal/Remote from Jellyfin's appSettings.
+        const launch=player.play({items,fullscreen:true,startIndex:0,
+          startPositionTicks:options.startOver?0:position,
+          ...(Number.isInteger(subtitles.subtitleStreamIndex)?{subtitleStreamIndex:subtitles.subtitleStreamIndex}:{}),
+          ...(subtitles.mediaSourceId?{mediaSourceId:subtitles.mediaSourceId}:{})});
+        console.info('Franchise Explorer: Android native chronological queue launched',
+          {queueLength:items.length,tracked:!!intent&&!intent.replayOnly});
+        if(intent&&itemMatch(intent.expectedId,id)){
+          if(!intent.replayOnly&&auth?.UserId){
+            // Android pauses WebView timers while its native activity is open.
+            // Jellyfin's SERVER playback listener alone activates the armed row.
+            // Keep a device-bound local marker so Home can verify its session
+            // after Android resumes the WebView; do not guess from a user ID.
+            localStorage.setItem(androidFollowKey(auth),JSON.stringify({rowId:intent.rowId,
+              itemId:id,deviceId:deviceId(),created:Date.now(),
+              subtitleEnabled:!!subtitles.subtitleEnabled,
+              subtitleLanguage:subtitles.subtitleLanguage||''}));
+            localStorage.removeItem('fe-local-follow-v1:'+String(auth.UserId).toLowerCase());
+          }
+          // The browser's timed confirmation loop cannot run in the background;
+          // don't leave this expiring intent blocking the next Home handoff.
+          localStorage.removeItem(intent.key);
         }
-        // The browser's timed confirmation loop cannot run in the background;
-        // don't leave this expiring intent blocking the next Home handoff.
-        localStorage.removeItem(intent.key);
-      }
-      Promise.resolve(launch).catch(error=>{
+        Promise.resolve(launch).catch(error=>{
+          console.error('Franchise Explorer: Android native player launch failed',error);
+          showLocalNotice('Android Integrated Player could not start this timeline item. Open it from Franchises to retry.');
+        });
+        applySubtitlePreferences(subtitles);
+        // No HTMLVideoElement exists in Integrated Player. The server's actual
+        // PlaybackStart and PlaybackStopped events are authoritative on Android.
+      }catch(error){
         console.error('Franchise Explorer: Android native player launch failed',error);
         showLocalNotice('Android Integrated Player could not start this timeline item. Open it from Franchises to retry.');
-      });
-      applySubtitlePreferences(options);
-      // No HTMLVideoElement exists in Integrated Player. The server's actual
-      // PlaybackStart and PlaybackStopped events are authoritative on Android.
-      return true;
-    }catch(error){
-      console.error('Franchise Explorer: Android native player launch failed',error);
-      showLocalNotice('Android Integrated Player could not start this timeline item. Open it from Franchises to retry.');
-      return false;
-    }
+      }
+    }).catch(nativeSubtitleFailure);
+    return true; // Accepted synchronously; the authenticated enrollment gates launch.
   }
   // Jellyfin Web's own delegated shortcuts click handler understands
   // data-action=play / resume on a card inside the active items container.
@@ -1847,7 +1885,6 @@
       const auth=localCredentials();
       const serverId=auth?.Id||auth?.ServerId||'';
       if(!serverId)return false;
-      armPlaybackReturn(id,options.returnUrl||location.href);
       wrapper.dataset.serverid=serverId;
       wrapper.dataset.type=options.type==='Episode'?'Episode':'Movie';
       wrapper.dataset.mediatype='Video';
@@ -1863,33 +1900,41 @@
       button.dataset.itemid=id;
       button.dataset.positionticks=String(options.startOver?0:Math.max(0,Number(options.positionTicks)||0));
       wrapper.appendChild(button);container.appendChild(wrapper);
-      const intent=localIntent(auth);
-      if(intent&&itemMatch(intent.expectedId,id)){
-        intent.routePending=false;
-        localStorage.setItem(intent.key,JSON.stringify(intent));
-      }
-      if(options.startOver)enforceStartOver(id);
-      // Let Jellyfin's own delegated listener observe an inserted card before
-      // clicking; do not try to jump directly into a private Web module.
-      setTimeout(()=>{
+      void prepareNativeSubtitles(id,options).then(subtitles=>{
         if(!wrapper.isConnected)return;
-        button.click();
-        setTimeout(()=>wrapper.remove(),250);
-        void confirmLocalTimeline(id);
-      },0);
-      applySubtitlePreferences(options);
-      // A theme or Jellyfin Web variant may not expose the delegated
-      // shortcut listener. Keep Home visible and report the problem instead
-      // of silently navigating through the item's Details page.
-      const pathname=location.pathname,hash=location.hash;
-      setTimeout(()=>{
-        const latest=localIntent(localCredentials());
-        if(!latest||!itemMatch(latest.expectedId,id)||location.pathname!==pathname||location.hash!==hash)return;
-        const playing=[...document.querySelectorAll('video')].some(v=>!v.paused&&v.readyState>=2);
-        if(playing)return;
-        console.warn('Franchise Explorer: the native Jellyfin shortcut did not start video playback.');
-        showLocalNotice('Could not start this item directly. Stay on Home and retry, or use Details if you prefer to inspect the title. The chronological timeline was not advanced.',13000);
-      },12000);
+        armPlaybackReturn(id,options.returnUrl||location.href);
+        const intent=localIntent(auth);
+        if(intent&&itemMatch(intent.expectedId,id)){
+          intent.routePending=false;
+          intent.subtitleEnabled=subtitles.subtitleEnabled;
+          intent.subtitleLanguage=subtitles.subtitleLanguage;
+          localStorage.setItem(intent.key,JSON.stringify(intent));
+        }
+        if(options.startOver)enforceStartOver(id);
+        // Let Jellyfin's own delegated listener observe an inserted card before
+        // clicking; do not try to jump directly into a private Web module.
+        setTimeout(()=>{
+          if(!wrapper.isConnected)return;
+          try{
+            button.click();
+            setTimeout(()=>wrapper.remove(),250);
+            void confirmLocalTimeline(id).catch(nativeSubtitleFailure);
+          }catch(error){wrapper.remove();nativeSubtitleFailure(error);}
+        },0);
+        applySubtitlePreferences(subtitles);
+        // A theme or Jellyfin Web variant may not expose the delegated
+        // shortcut listener. Keep Home visible and report the problem instead
+        // of silently navigating through the item's Details page.
+        const pathname=location.pathname,hash=location.hash;
+        setTimeout(()=>{
+          const latest=localIntent(localCredentials());
+          if(!latest||!itemMatch(latest.expectedId,id)||location.pathname!==pathname||location.hash!==hash)return;
+          const playing=[...document.querySelectorAll('video')].some(v=>!v.paused&&v.readyState>=2);
+          if(playing)return;
+          console.warn('Franchise Explorer: the native Jellyfin shortcut did not start video playback.');
+          showLocalNotice('Could not start this item directly. Stay on Home and retry, or use Details if you prefer to inspect the title. The chronological timeline was not advanced.',13000);
+        },12000);
+      }).catch(error=>{wrapper.remove();nativeSubtitleFailure(error);});
       return true;
     }
   };
@@ -1939,9 +1984,10 @@
   setInterval(consumeHomeQuickPlay,300);
   addEventListener('hashchange',consumeHomeQuickPlay);
   setTimeout(consumeHomeQuickPlay,0);
+  let detailsSubtitleRequest=null;
   function startIfReady(){
     scheduled=false;
-    const p=params();if(!p){currentKey='';attempts=0;return;}
+    const p=params();if(!p){currentKey='';attempts=0;detailsSubtitleRequest=null;return;}
     const id=p.get('id');
     const key=id+'|'+(p.get('feSubs')||'0')+'|'+(p.get('feStartOver')||'0');
     if(currentKey!==key){currentKey=key;attempts=0;routeSettlingSince=Date.now();}
@@ -1957,25 +2003,39 @@
       ? 'button[data-action="play"],.btnPlay,button[data-action="resume"]'
       : '.btnPlay,button[data-action="play"],button[data-action="resume"]');
     if(play&&isVisible(play)){
+      if(detailsSubtitleRequest?.key===key)return;
       const subs=p.get('feSubs')==='1';
       const isTimeline=p.get('feLocalTimeline')==='1';
       const startOver=isTimeline && p.get('feStartOver')==='1';
-      clearMarker(p);currentKey='';attempts=0;
-      // The correct details page is visible; disarm route recovery before
-      // Jellyfin starts its native player and changes the URL.
-      if(isTimeline){
-        const auth=localCredentials();const intent=localIntent(auth);
-        if(intent && itemMatch(intent.expectedId,id)){
-          intent.routePending=false;
-          localStorage.setItem(intent.key,JSON.stringify(intent));
+      const request={key,hash:location.hash};detailsSubtitleRequest=request;
+      void prepareNativeSubtitles(id,{subtitleEnabled:subs}).then(subtitles=>{
+        if(detailsSubtitleRequest!==request)return;
+        if(location.hash!==request.hash||!isVisible(play)){detailsSubtitleRequest=null;return;}
+        clearMarker(p);currentKey='';attempts=0;
+        // The correct details page is visible; disarm route recovery before
+        // Jellyfin starts its native player and changes the URL.
+        if(isTimeline){
+          const auth=localCredentials();const intent=localIntent(auth);
+          if(intent && itemMatch(intent.expectedId,id)){
+            intent.routePending=false;
+            intent.subtitleEnabled=subtitles.subtitleEnabled;
+            intent.subtitleLanguage=subtitles.subtitleLanguage;
+            localStorage.setItem(intent.key,JSON.stringify(intent));
+          }
         }
-      }
-      if(startOver)enforceStartOver(id);
-      play.click();
-      if(isTimeline)void confirmLocalTimeline(id);
-      // Best-effort browser text-track selection. Jellyfin native clients and
-      // separately rendered subtitle formats may use their own preferences.
-      applySubtitlePreferences({subtitleEnabled:subs});
+        if(startOver)enforceStartOver(id);
+        play.click();
+        if(isTimeline)void confirmLocalTimeline(id);
+        // Browser text tracks are a secondary fallback after server negotiation.
+        applySubtitlePreferences(subtitles);
+        detailsSubtitleRequest=null;
+      }).catch(error=>{
+        if(detailsSubtitleRequest!==request)return;
+        detailsSubtitleRequest=null;
+        if(location.hash!==request.hash)return;
+        clearMarker(p);currentKey='';attempts=0;
+        nativeSubtitleFailure(error);
+      });
       return;
     }
     attempts++;

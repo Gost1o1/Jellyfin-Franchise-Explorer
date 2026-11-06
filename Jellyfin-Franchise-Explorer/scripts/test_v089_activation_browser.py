@@ -6,6 +6,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 bridge = (Path(__file__).resolve().parents[1] / 'src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-my-media.js').read_text()
+client = (Path(__file__).resolve().parents[1] / 'src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-timeline.js').read_text()
 uid = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 first = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
 second = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
@@ -38,8 +39,9 @@ with sync_playwright() as playwright:
             version:1,created:Date.now(),rowId:row,expectedId:first,state,
             replayOnly:false,routePending:true,navigationAttempts:0,subtitleEnabled:false}));
           window.serverState=state;
-          window.activations=0;window.playClicks=0;window.startTime=Date.now();
+          window.activations=0;window.playClicks=0;window.subtitleEnrollments=[];window.startTime=Date.now();
           document.querySelector('.btnPlay').addEventListener('click',()=>{
+            if(window.subtitleEnrollments.length!==1)throw Error('Details play preceded subtitle enrollment');
             window.playClicks++;window.startTime=Date.now();});
           const video=document.getElementById('movie');
           Object.defineProperty(video,'paused',{get:()=>window.playClicks===0});
@@ -48,6 +50,12 @@ with sync_playwright() as playwright:
           Object.defineProperty(video,'currentTime',{get:()=>window.playClicks?(Date.now()-window.startTime)/1000:0});
           window.fetch=async (url,options={})=>{
             const target=String(url);
+            if(target.endsWith('/FranchiseExplorer/PlaybackPreferences')){
+              const body=JSON.parse(options.body);
+              if(body.deviceId!=='DEVICE'||body.enabled!==false||body.itemIds[0]!==first)throw Error('Wrong enrolled device, preference or queue');
+              window.subtitleEnrollments.push(body);
+              return {ok:true,status:200,json:async()=>({enabled:false,language:'eng',subtitleStreamIndex:-1,mediaSourceId:'SOURCE'})};
+            }
             if(target.includes('/Sessions?'))return {ok:true,status:200,json:async()=>[{
               Id:'SESSION',UserId:uid.replace(/-/g,''),Client:'Jellyfin Web',
               DeviceId:'DEVICE',NowPlayingItem:{Id:first},
@@ -66,6 +74,7 @@ with sync_playwright() as playwright:
           localStorage.setItem('_deviceId2','DEVICE');
           location.hash='#/details?id='+first+'&feAutoPlay=1&feLocalTimeline=1';
         }''', {'uid':uid,'first':first,'second':second,'row':row})
+        page.add_script_tag(content=client)
         page.add_script_tag(content=bridge)
         page.wait_for_function('''uid=>window.activations===1 && !!localStorage.getItem('fe-local-follow-v1:'+uid)''',
                                arg=uid,timeout=15000)
@@ -73,6 +82,7 @@ with sync_playwright() as playwright:
           owner:JSON.parse(localStorage.getItem('fe-local-follow-v1:'+uid)),
           intent:localStorage.getItem('fe-local-timeline-v1:'+uid)})''',uid)
         assert activated['playClicks']==1,activated
+        assert page.evaluate('window.subtitleEnrollments[0].itemIds')==[first,second]
         assert activated['owner']['sessionId']=='SESSION',activated
         assert activated['intent'] is None,activated
 

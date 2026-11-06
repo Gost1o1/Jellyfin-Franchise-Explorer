@@ -413,6 +413,9 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
 #FranchiseExplorerConfigPage .media-entry[data-media-row]{grid-template-columns:22px 16px minmax(0,1fr) auto}
 #FranchiseExplorerConfigPage .media-entry.media-readonly[data-media-row]{grid-template-columns:22px 16px minmax(0,1fr)}
 #FranchiseExplorerConfigPage .media-entry>.grip{width:22px;min-height:32px;margin:0}
+@media(pointer:coarse){#FranchiseExplorerConfigPage .media-entry[data-media-row]{grid-template-columns:44px 16px minmax(0,1fr) auto}
+#FranchiseExplorerConfigPage .media-entry.media-readonly[data-media-row]{grid-template-columns:44px 16px minmax(0,1fr)}
+#FranchiseExplorerConfigPage .media-entry>.grip{width:44px;min-height:44px}}
 #FranchiseExplorerConfigPage .media-entry.drop-before{box-shadow:0 -3px 0 var(--accent)!important}
 #FranchiseExplorerConfigPage .media-entry.drop-after{box-shadow:0 3px 0 var(--accent)!important}
 </style>
@@ -3493,7 +3496,11 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     renderMedia();
     show('media-dialog');
     $('media-body').scrollTop = 0;
-    $('media-library').querySelector('[data-library-search]').focus({ preventScroll: true });
+    const touch = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0,
+      focusTarget = touch
+        ? $('media-dialog').querySelector('[data-close="media-dialog"]')
+        : $('media-library').querySelector('[data-library-search]');
+    focusTarget.focus({ preventScroll: true });
   }
   $('media-dialog').addEventListener('close', () => {
     if (mediaScope) activeSearch().generation++;
@@ -4584,6 +4591,8 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
           ) || (matches.length === 1 ? matches[0] : null);
       if (chosen && uid)
         keys = {
+          serverId: chosen.Id,
+          userId: chosen.UserId,
           subtitles: 'fe-subtitles:' + chosen.Id + ':' + chosen.UserId,
           language: 'fe-subtitle-language:' + chosen.Id + ':' + chosen.UserId,
           native: 'fe-show-active-native-rows:' + location.origin + ':' + uid.toLowerCase(),
@@ -4616,6 +4625,14 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       $('language').disabled = !keys || !enabled;
       $('language').value = keys ? localStorage.getItem(keys.language) || '' : '';
     };
+    const subtitlesChanged = () => {
+      if (keys)
+        window.dispatchEvent(
+          new CustomEvent('franchise-subtitles-changed', {
+            detail: { serverId: keys.serverId, userId: keys.userId },
+          }),
+        );
+    };
     $('subtitles').onclick = () => {
       if (keys)
         localStorage.setItem(
@@ -4623,6 +4640,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
           localStorage.getItem(keys.subtitles) === '1' ? '0' : '1',
         );
       sync();
+      subtitlesChanged();
     };
     $('hide-native').onclick = () => {
       if (keys)
@@ -4631,6 +4649,8 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     };
     $('language').onchange = () => {
       if (keys) localStorage.setItem(keys.language, $('language').value);
+      sync();
+      subtitlesChanged();
     };
     sync();
     if (ApiClient.getCurrentUser)

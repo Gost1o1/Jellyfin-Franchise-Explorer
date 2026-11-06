@@ -219,5 +219,9 @@ public sealed class PluginServiceRegistrator : IPluginServiceRegistrator
     {
         services.AddHostedService<HomeTileRegistrationService>();
         services.AddHostedService<TimelinePlaybackMonitorService>();
+        services.AddSingleton<PlaybackSubtitlePolicyStore>();
+        services.AddScoped<PlaybackSubtitlePolicyFilter>();
+        services.Configure<Microsoft.AspNetCore.Mvc.MvcOptions>(options =>
+            options.Filters.AddService<PlaybackSubtitlePolicyFilter>());
     }
 }

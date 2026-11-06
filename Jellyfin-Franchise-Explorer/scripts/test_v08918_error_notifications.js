@@ -18,6 +18,7 @@ assert(from>=0&&to>from,'Playback notification handler missing');
 const handler=home.slice(from,to);
 const timers=new Map();
 const logged=[];
+const listeners={},applied=[];
 let nextTimer=0,notice=null,removed=false,nativeAndroid=false;
 const sandbox={
   androidIntegratedPlayer:()=>nativeAndroid,
@@ -28,7 +29,12 @@ const sandbox={
   },
   setTimeout:(fn,ms)=>{const id=++nextTimer;timers.set(id,{fn:()=>{timers.delete(id);fn();},ms});return id;},
   clearTimeout:id=>timers.delete(id),
-  window:{FranchiseExplorerReportError:(source,message)=>logged.push({source,message})},
+  window:{FranchiseExplorerReportError:(source,message)=>logged.push({source,message}),
+    addEventListener:(name,listener)=>{listeners[name]=listener;}},
+  applySubtitlePreferences:options=>applied.push(options),
+  localCredentials:()=>({Id:'server',UserId:'user'}),
+  deviceId:()=> 'local-device',
+  itemMatch:(a,b)=>String(a||'').replace(/-/g,'').toLowerCase()===String(b||'').replace(/-/g,'').toLowerCase(),
   console:{error:(...args)=>logged.push({source:'console',message:args.join(' ')})}
 };
 vm.createContext(sandbox);
@@ -57,6 +63,21 @@ assert.deepEqual([...timers.keys()],[androidTimerId],
   'Repeated Android errors must not extend the visible notification');
 timers.get(androidTimerId).fn();
 assert.equal(removed,true,'Repeated Android notifications must still disappear');
+
+listeners['franchise-subtitles-applied']({detail:{subtitleEnabled:false,subtitleStreamIndex:-1}});
+assert.equal(applied.length,0,'An unscoped subtitle event must not alter local video tracks');
+listeners['franchise-subtitles-applied']({detail:{subtitleEnabled:false,serverId:'server',userId:'user',deviceId:'remote-device'}});
+assert.equal(applied.length,0,'A remote player update must not alter the controlling browser video');
+listeners['franchise-subtitles-applied']({detail:{subtitleEnabled:false,serverId:'server',userId:'another-user',deviceId:'local-device'}});
+assert.equal(applied.length,0,'Another account update must not alter local video');
+listeners['franchise-subtitles-applied']({detail:{subtitleEnabled:false,serverId:'another-server',userId:'user',deviceId:'local-device'}});
+assert.equal(applied.length,0,'Another server update must not alter local video');
+listeners['franchise-subtitles-applied']({detail:{subtitleEnabled:false,subtitleStreamIndex:-1,serverId:'server',userId:'user',deviceId:'local-device'}});
+assert.equal(applied.length,1,'A server-applied subtitle update must also refresh the browser fallback');
+assert.equal(applied[0].subtitleEnabled,false);
+listeners['franchise-subtitles-error']({detail:{message:'Could not apply subtitle preferences. Please retry.'}});
+assert(notice.textContent.includes('Please retry'),'Subtitle update failures must be visible');
+assert(logged.at(-1).message.includes('subtitle preferences'),'Subtitle failures must be recorded for diagnosis');
 
 assert(home.includes("window.FranchiseExplorerReportError('home',message)"));
 assert(config.includes('function notify(message, error = false)'));

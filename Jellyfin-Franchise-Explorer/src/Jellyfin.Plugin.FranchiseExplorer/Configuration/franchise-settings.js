@@ -1261,7 +1261,11 @@
     renderMedia();
     show('media-dialog');
     $('media-body').scrollTop = 0;
-    $('media-library').querySelector('[data-library-search]').focus({ preventScroll: true });
+    const touch = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0,
+      focusTarget = touch
+        ? $('media-dialog').querySelector('[data-close="media-dialog"]')
+        : $('media-library').querySelector('[data-library-search]');
+    focusTarget.focus({ preventScroll: true });
   }
   $('media-dialog').addEventListener('close', () => {
     if (mediaScope) activeSearch().generation++;
@@ -2352,6 +2356,8 @@
           ) || (matches.length === 1 ? matches[0] : null);
       if (chosen && uid)
         keys = {
+          serverId: chosen.Id,
+          userId: chosen.UserId,
           subtitles: 'fe-subtitles:' + chosen.Id + ':' + chosen.UserId,
           language: 'fe-subtitle-language:' + chosen.Id + ':' + chosen.UserId,
           native: 'fe-show-active-native-rows:' + location.origin + ':' + uid.toLowerCase(),
@@ -2384,6 +2390,14 @@
       $('language').disabled = !keys || !enabled;
       $('language').value = keys ? localStorage.getItem(keys.language) || '' : '';
     };
+    const subtitlesChanged = () => {
+      if (keys)
+        window.dispatchEvent(
+          new CustomEvent('franchise-subtitles-changed', {
+            detail: { serverId: keys.serverId, userId: keys.userId },
+          }),
+        );
+    };
     $('subtitles').onclick = () => {
       if (keys)
         localStorage.setItem(
@@ -2391,6 +2405,7 @@
           localStorage.getItem(keys.subtitles) === '1' ? '0' : '1',
         );
       sync();
+      subtitlesChanged();
     };
     $('hide-native').onclick = () => {
       if (keys)
@@ -2399,6 +2414,8 @@
     };
     $('language').onchange = () => {
       if (keys) localStorage.setItem(keys.language, $('language').value);
+      sync();
+      subtitlesChanged();
     };
     sync();
     if (ApiClient.getCurrentUser)

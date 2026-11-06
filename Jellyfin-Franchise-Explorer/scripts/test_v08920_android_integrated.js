@@ -14,7 +14,7 @@ function section(begin,end){
   return source.slice(from,to);
 }
 const deviceCode=section('  function androidIntegratedPlayer(){','  const playbackReturnKey=');
-const nativeCode=section('  function nativeAndroidQueue(id,intent){','  // Jellyfin Web\'s own delegated shortcuts');
+const nativeCode=section('  async function prepareNativeSubtitles(id,options={},itemIds){','  // Jellyfin Web\'s own delegated shortcuts');
 const bridgeCode=section('  window.FranchiseExplorerNativePlayback={','  // A click in the standalone Franchises browser');
 const recoveryCode=section('  async function recoverAndroidFollow(auth,owner,localKey){','  async function followLocalTimeline(){');
 
@@ -25,13 +25,18 @@ const store={};
 const win={
   NativePlayer:{isEnabled:()=>true},
   NativeInterface:{getDeviceInformation:()=>JSON.stringify({deviceId:'android-device-id'})},
+  FranchiseSubtitlePreferences:{prepare:async(context,fallback)=>{
+    assert.equal(context.deviceId,'android-device-id');
+    assert.equal(context.token,'test-token');
+    return {...fallback,subtitleStreamIndex:11,mediaSourceId:'source-a'};
+  }},
   ExoPlayer:{play:options=>{calls.push(options);return Promise.resolve();}}
 };
 const context={
   window:win,console,Promise,JSON,Number,Math,Date,encodeURIComponent,
   itemMatch:(a,b)=>String(a||'').replace(/-/g,'').toLowerCase()===String(b||'').replace(/-/g,'').toLowerCase(),
   localStorage:{getItem:key=>store[key]||null,setItem:(key,value)=>{store[key]=value;},removeItem:key=>{delete store[key];}},
-  localCredentials:()=>({UserId:'u',Id:'server-id'}),
+  localCredentials:()=>({UserId:'u',Id:'server-id',AccessToken:'test-token'}),
   localIntent:()=>({key:'fe-intent',rowId:'row-1',expectedId:id,replayOnly:false,
     subtitleEnabled:true,subtitleLanguage:'de'}),
   armPlaybackReturn:()=>{},confirmLocalTimeline:()=>{verified++;return Promise.resolve();},
@@ -47,13 +52,18 @@ const context={
 store._deviceId2='webview-id';
 vm.createContext(context);
 vm.runInContext(deviceCode+nativeCode+bridgeCode+recoveryCode,context);
+(async()=>{
 assert.equal(vm.runInContext('deviceId()',context),'android-device-id',
   'Native session verification must prefer the actual Android device ID');
 assert.equal(win.FranchiseExplorerNativePlayback.play(id,{type:'Episode',startOver:true,positionTicks:600000000}),true);
+assert.equal(calls.length,0,'Subtitle enrollment must finish before the native player is launched');
+await new Promise(setImmediate);
 assert.equal(calls.length,1,'An Android next episode must launch through the native player');
 assert.equal(calls[0].startPositionTicks,0,'Restart must begin from zero on Android');
 assert.equal(calls[0].fullscreen,true);
 assert.equal(calls[0].items[0].Id,id);
+assert.equal(calls[0].subtitleStreamIndex,11);
+assert.equal(calls[0].mediaSourceId,'source-a');
 assert.equal(verified,0,'Android must not rely on WebView timers while native playback is visible');
 assert(store['fe-android-native-follow-v1:u'],'Android must preserve the device-bound launch for Home recovery');
 assert.equal(store['fe-intent'],undefined,'An expiring browser intent must not block Android follow-up');
@@ -74,7 +84,6 @@ assert.equal(win.FranchiseExplorerNativePlayback.play(id),false,
   'Android without ExoPlayer must decline safely rather than use a Web-only click');
 assert.equal(webElementQueried,0);
 
-(async()=>{
   const auth=context.localCredentials();
   const owner=await vm.runInContext('recoverAndroidFollow',context)(auth,null,'fe-local-follow-v1:u');
   assert.equal(owner.sessionId,'native-session');

@@ -1,3 +1,114 @@
+/* Per-launch subtitle preferences. The server scopes negotiation to this user,
+ * selected device and explicit item queue; Jellyfin account defaults are untouched. */
+(function(global){
+  'use strict';
+  if(global.FranchiseSubtitlePreferences)return;
+  const canonical=value=>String(value||'').replace(/-/g,'').toLowerCase();
+  const guid=value=>/^[a-f\d]{32}$|^[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12}$/i.test(String(value||''));
+  function stored(prefix,serverId,userId){
+    try{
+      const storage=global.localStorage;
+      const exact=storage.getItem(prefix+serverId+':'+userId);
+      if(exact!=null)return exact;
+      for(let i=0;i<storage.length;i++){
+        const key=storage.key(i);if(!key?.startsWith(prefix))continue;
+        const [server,user]=key.slice(prefix.length).split(':');
+        if(canonical(server)===canonical(serverId)&&canonical(user)===canonical(userId))return storage.getItem(key);
+      }
+    }catch(_){/* A denied browser store must not alter another user's defaults. */}
+    return null;
+  }
+  function read(serverId,userId,fallback={}){
+    const enabled=stored('fe-subtitles:',serverId,userId);
+    const language=stored('fe-subtitle-language:',serverId,userId);
+    return {subtitleEnabled:enabled===null?!!fallback.subtitleEnabled:enabled==='1',
+      subtitleLanguage:language===null?(fallback.subtitleLanguage||''):language};
+  }
+  function headers(context){
+    return {Authorization:'MediaBrowser Token="'+String(context.token||'').replace(/["\\\r\n]/g,'')+'"',
+      'Content-Type':'application/json'};
+  }
+  async function request(context,path,options={}){
+    const response=await fetch((context.prefix||'')+path,{cache:'no-store',...options,
+      headers:{...headers(context),...(options.headers||{})}});
+    if(!response.ok)throw Error('Jellyfin could not apply franchise subtitle preferences (HTTP '+response.status+').');
+    return response.status===204?null:response.json();
+  }
+  let active=null,generation=0,enrollment=Promise.resolve();
+  function queue(context){
+    const ids=[...new Set((context.itemIds||[]).filter(guid))].slice(0,1000);
+    if(!context.userId||!context.deviceId||!context.token||!ids.length)
+      throw Error('The signed-in playback device could not be identified for subtitle settings.');
+    return {...context,itemIds:ids};
+  }
+  async function enroll(context,preferences,serial){
+    // Serialize enrollment so an older request cannot overwrite a newer switch
+    // on the server when a user changes the preference during a launch.
+    const pending=enrollment.catch(()=>{}).then(()=>{
+      if(serial!==generation)throw Error('Subtitle preference request was superseded by a newer selection.');
+      return request(context,'/FranchiseExplorer/PlaybackPreferences',{method:'POST',
+        body:JSON.stringify({deviceId:context.deviceId,itemIds:context.itemIds,
+          mediaSourceId:context.mediaSourceId||null,enabled:preferences.subtitleEnabled,
+          language:preferences.subtitleLanguage})});
+    });
+    enrollment=pending.then(()=>{},()=>{});
+    const result=await pending;
+    if(serial!==generation)throw Error('Subtitle preference request was superseded by a newer selection.');
+    if(!result||typeof result.enabled!=='boolean'||result.enabled!==preferences.subtitleEnabled)
+      throw Error('Jellyfin did not confirm the requested subtitle preference.');
+    return {...preferences,subtitleLanguage:result.language||preferences.subtitleLanguage,
+      subtitleStreamIndex:result.enabled?(Number.isInteger(result.subtitleStreamIndex)?result.subtitleStreamIndex:null):-1,
+      mediaSourceId:result.mediaSourceId||''};
+  }
+  async function prepare(context,fallback={}){
+    const next=queue(context),serial=++generation;
+    const preferences=read(next.serverId,next.userId,fallback);
+    const settings=await enroll(next,preferences,serial);
+    active={...next,preferences};
+    return settings;
+  }
+  async function refresh(){
+    if(!active)return;
+    const previous=active,serial=++generation;
+    const sessions=await request(previous,'/Sessions');
+    if(serial!==generation||active!==previous)return;
+    const session=(Array.isArray(sessions)?sessions:[]).find(value=>
+      canonical(value.UserId)===canonical(previous.userId)&&value.DeviceId===previous.deviceId&&
+      previous.itemIds.some(id=>canonical(id)===canonical(value.NowPlayingItem?.Id)));
+    const id=session?.NowPlayingItem?.Id;
+    const next=id?{...previous,mediaSourceId:session.PlayState?.MediaSourceId||'',
+      itemIds:[id,...previous.itemIds.filter(value=>canonical(value)!==canonical(id))]}:previous;
+    const preferences=read(next.serverId,next.userId,previous.preferences);
+    const settings=await enroll(next,preferences,serial);
+    if(serial!==generation)return;
+    active={...next,preferences};
+    if(session?.Id){
+      const index=settings.subtitleStreamIndex;
+      if(Number.isInteger(index)){
+        await request(next,'/Sessions/'+encodeURIComponent(session.Id)+'/Command',{method:'POST',
+          body:JSON.stringify({Name:'SetSubtitleStreamIndex',Arguments:{Index:String(index)}})});
+      }
+    }
+    if(session?.Id)global.dispatchEvent?.(new CustomEvent('franchise-subtitles-applied',{
+      detail:{...settings,serverId:next.serverId,userId:next.userId,deviceId:next.deviceId}}));
+  }
+  function changed(event){
+    if(!active)return;
+    const detail=event?.detail;
+    if(detail&&(canonical(detail.userId)!==canonical(active.userId)||
+      canonical(detail.serverId)!==canonical(active.serverId)))return;
+    void refresh().catch(error=>{
+      console.error('Franchise Explorer: subtitle preference update failed',error);
+      global.dispatchEvent?.(new CustomEvent('franchise-subtitles-error',{detail:{message:error.message}}));
+    });
+  }
+  global.addEventListener?.('franchise-subtitles-changed',changed);
+  global.addEventListener?.('storage',event=>{
+    if(event.key?.startsWith('fe-subtitles:')||event.key?.startsWith('fe-subtitle-language:'))changed();
+  });
+  global.FranchiseSubtitlePreferences={read,prepare,refresh};
+})(window);
+
 /* Franchise Explorer v0.8.9.5 local Jellyfin Web playback handoff.
  * A Jellyfin PlayNow queue is built from item IDs, never from filenames.
  * Timeline state is separate from Jellyfin watched flags and user-specific.
@@ -134,8 +245,7 @@
     async sessions(){
       const all=await this.request('/Sessions?ControllableByUserId='+encodeURIComponent(this.context.userId));
       return (Array.isArray(all)?all:[]).filter(s=>s?.Id &&
-        (String(s.UserId||'').toLowerCase()===this.context.userId.toLowerCase() ||
-          (s.AdditionalUsers||[]).some(u=>String(u.UserId||'').toLowerCase()===this.context.userId.toLowerCase()))
+        String(s.UserId||'').replace(/-/g,'').toLowerCase()===String(this.context.userId).replace(/-/g,'').toLowerCase()
       );
     }
     async verifyStarted(sessionId,expectedItemId,options={}){
@@ -172,6 +282,11 @@
           ' reports that remote media control is disabled. Jellyfin cannot start a queue on it via the Sessions API. '+
           'Choose a remote-controllable player or enable casting/remote control in the device. '+
           'Your timeline history was not changed.');
+      const subtitles=await global.FranchiseSubtitlePreferences.prepare({
+        serverId:this.context.serverId,userId:this.context.userId,token:this.context.token,
+        prefix:this.context.prefix,deviceId:destination.DeviceId,
+        itemIds:queue.slice(index).map(item=>item.id)
+      });
       const chunks=[];
       // Start with a modest batch; adding all 422 titles before verifying the
       // client can start a single item is both slow and misleading.
@@ -179,7 +294,9 @@
       const command=async (ids,cmd,position)=>{
         const url='/Sessions/'+encodeURIComponent(sessionId)+'/Playing?playCommand='+cmd+
           '&itemIds='+encodeURIComponent(ids.map(q=>q.id).join(','))+
-          '&startIndex=0&startPositionTicks='+Math.max(0,position);
+          '&startIndex=0&startPositionTicks='+Math.max(0,position)+
+          (cmd==='PlayNow'&&Number.isInteger(subtitles.subtitleStreamIndex)?'&subtitleStreamIndex='+subtitles.subtitleStreamIndex:'')+
+          (cmd==='PlayNow'&&subtitles.mediaSourceId?'&mediaSourceId='+encodeURIComponent(subtitles.mediaSourceId):'');
         const res=await fetch(this.url(url),{method:'POST',headers:this.headers()});
         if(!res.ok)throw new Error('Jellyfin rejected '+cmd+' for the selected device (HTTP '+res.status+').');
       };

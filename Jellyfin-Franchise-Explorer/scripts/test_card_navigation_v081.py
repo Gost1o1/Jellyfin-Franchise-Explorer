@@ -75,12 +75,32 @@ with sync_playwright() as p:
   page=browser.new_page()
   page.route('http://jellyfin.test/**',lambda r:r.fulfill(content_type='text/html',body='<div class="itemsContainer"></div>'))
   page.goto('http://jellyfin.test/web/index.html#/home')
-  page.evaluate("localStorage.setItem('jellyfin_credentials',JSON.stringify({Servers:[{Id:'testserver',UserId:'"+guid(100)+"',AccessToken:'mock'}]}));window.__clicked=[];document.addEventListener('click',e=>{const card=e.target.closest('.itemAction');if(card)window.__clicked.push({id:card.dataset.id,action:card.dataset.action,position:card.dataset.positionticks});});window.fetch=async()=>new Response('[]',{status:200,headers:{'Content-Type':'application/json'}});")
+  page.evaluate('''userId=>{
+    localStorage.setItem('jellyfin_credentials',JSON.stringify({Servers:[{Id:'testserver',UserId:userId,AccessToken:'mock'}]}));
+    localStorage.setItem('_deviceId2','THIS-DEVICE');
+    window.__clicked=[];window.__enrolled=[];
+    document.addEventListener('click',e=>{const card=e.target.closest('.itemAction');if(card){
+      if(window.__enrolled.length!==1)throw Error('Native click preceded subtitle enrollment');
+      window.__clicked.push({id:card.dataset.id,action:card.dataset.action,position:card.dataset.positionticks});
+    }});
+    window.fetch=async(path,options={})=>{
+      let result=[];
+      if(String(path).endsWith('/FranchiseExplorer/PlaybackPreferences')){
+        const body=JSON.parse(options.body);
+        if(body.deviceId!=='THIS-DEVICE'||body.enabled!==false)throw Error('Wrong subtitle preference');
+        window.__enrolled.push(body);
+        result={enabled:false,language:'eng',subtitleStreamIndex:-1,mediaSourceId:'SOURCE'};
+      }
+      return new Response(JSON.stringify(result),{status:200,headers:{'Content-Type':'application/json'}});
+    };
+  }''',guid(100))
+  page.add_script_tag(content=client)
   page.add_script_tag(content=companion)
   accepted=page.evaluate('(id)=>window.FranchiseExplorerNativePlayback.play(id,{type:"Movie",startOver:true,positionTicks:999})',refs[0]['itemId'])
   assert accepted
   page.wait_for_function('window.__clicked.length===1',timeout=5000)
   assert page.evaluate('window.__clicked[0]')=={'id':refs[0]['itemId'],'action':'play','position':'0'}
+  assert page.evaluate('window.__enrolled[0].itemIds')==[refs[0]['itemId']]
   assert page.evaluate('location.hash')=='#/home'
   print('Native delegated Web action, restart offset, no Details navigation PASS')
   page.close()

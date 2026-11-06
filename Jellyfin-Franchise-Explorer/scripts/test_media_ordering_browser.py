@@ -134,6 +134,25 @@ ApiClient.updatePluginConfiguration=async(id,value)=>{
         def order(row_id):
             return next(r['MediaOrder'] for r in model()['Rows'] if r['Id'] == row_id)
 
+        def touch_drag(row_id, ref_id, target_id, scope=None):
+            handle = media_entry(row_id, ref_id, scope).locator('.grip')
+            target = media_entry(row_id, target_id, scope)
+            handle.evaluate("(el)=>el.scrollIntoView({block:'center',behavior:'instant'})")
+            target.scroll_into_view_if_needed()
+            start, end = handle.bounding_box(), target.bounding_box()
+            assert start['width'] >= 44 and start['height'] >= 44, 'Media grips need touch targets'
+            cdp = context.new_cdp_session(page)
+            start_x, start_y = start['x'] + start['width']/2, start['y'] + start['height']/2
+            end_x, end_y = end['x'] + 40, end['y'] + end['height']*.2
+            cdp.send('Input.dispatchTouchEvent', {'type': 'touchStart',
+                'touchPoints': [{'x': start_x, 'y': start_y}]})
+            for step in range(1, 9):
+                cdp.send('Input.dispatchTouchEvent', {'type': 'touchMove', 'touchPoints': [{
+                    'x': start_x + (end_x-start_x)*step/8,
+                    'y': start_y + (end_y-start_y)*step/8}]})
+            cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []})
+            cdp.detach()
+
         def only_order_changed(before, row_id):
             after = model()
             next(r for r in after['Rows'] if r['Id'] == row_id)['MediaOrder'] = next(
@@ -201,6 +220,7 @@ ApiClient.updatePluginConfiguration=async(id,value)=>{
 
         # Reordering also works in the plus popup, where dragging used to be blocked.
         board.locator(f'[data-add-row="{CHRONO}"]').click()
+        expect(modal.locator('[data-library-search]')).to_be_focused()
         drag(CHRONO, RANGE_B, LINK, scope=modal)
         assert order(CHRONO) == [RANGE_B, LINK, RANGE_A, DIRECT_MOVIE]
         modal.locator('#media-undo').click()
@@ -225,38 +245,55 @@ ApiClient.updatePluginConfiguration=async(id,value)=>{
         context.close()
 
         # Real Chromium touch events exercise pointer capture on a narrow screen.
-        page, server, context = make_page(mobile=True)
-        board = page.locator('#board')
-        modal = page.locator('#media-dialog')
-        expand_all()
         for width in (390, 320):
+            page, server, context = make_page(mobile=True)
             page.set_viewport_size({'width': width, 'height': 844})
+            board = page.locator('#board')
+            modal = page.locator('#media-dialog')
+            expand_all()
+            # Search opens only on a deliberate tap; a title added now and an existing
+            # title can both be reordered immediately in this same row.
+            board.locator(f'[data-add-row="{CUSTOM}"]').click()
+            search = modal.locator('[data-library-search]')
+            expect(search).not_to_be_focused()
+            search.tap()
+            expect(search).to_be_focused()
+            search.fill('Iron Man')
+            add = modal.locator(f'[data-library-add="{MOVIE2}"]')
+            expect(add).to_be_visible()
+            add.tap()
+            expect(modal.locator(f'[data-media-row="{CUSTOM}"]')).to_have_count(4)
+            added = next(r for r in model()['Rows'] if r['Id'] == CUSTOM)['Items'][-1]['Id']
+            before = model()
+            original = order(CUSTOM)
+            touch_drag(CUSTOM, added, original[0], modal)
+            assert order(CUSTOM) == [added] + original[:-1], f'New media touch reorder at {width}px'
+            only_order_changed(before, CUSTOM)
+            touch_drag(CUSTOM, LINK, added, modal)
+            assert order(CUSTOM) == [LINK, added, gid(307), gid(308)]
+            actions = modal.locator('.media-actions')
+            assert actions.evaluate_all('''els=>els.every(el=>{
+                const row=el.closest('.media-entry').getBoundingClientRect(), box=el.getBoundingClientRect();
+                return box.left>=row.left && box.right<=row.right+1;
+            })'''), f'Media actions must stay inside their cards at {width}px'
+            assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
+            for _ in range(3):
+                modal.locator('#media-undo').click()
+            modal.locator('[data-close="media-dialog"]').first.click()
+
             for popup in (False, True):
                 if popup:
                     board.locator(f'[data-add-row="{TV}"]').click()
+                    expect(modal.locator('[data-library-search]')).not_to_be_focused()
+                    expect(modal.locator('[data-close="media-dialog"]').first).to_be_focused()
                 scope = modal if popup else None
-                target = media_entry(TV, gid(305), scope)
-                handle = media_entry(TV, gid(306), scope).locator('.grip')
-                handle.evaluate("(el)=>el.scrollIntoView({block:'center',behavior:'instant'})")
-                target.scroll_into_view_if_needed()
-                start, end = handle.bounding_box(), target.bounding_box()
-                cdp = context.new_cdp_session(page)
-                start_x, start_y = start['x'] + start['width']/2, start['y'] + start['height']/2
-                end_x, end_y = end['x'] + 40, end['y'] + end['height']*.2
-                cdp.send('Input.dispatchTouchEvent', {'type': 'touchStart',
-                    'touchPoints': [{'x': start_x, 'y': start_y}]})
-                for step in range(1, 9):
-                    cdp.send('Input.dispatchTouchEvent', {'type': 'touchMove', 'touchPoints': [{
-                        'x': start_x + (end_x-start_x)*step/8,
-                        'y': start_y + (end_y-start_y)*step/8}]})
-                cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []})
+                touch_drag(TV, gid(306), gid(305), scope)
                 assert order(TV) == [gid(306), gid(305)], f'Touch reorder at {width}px, popup={popup}'
                 assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
                 page.locator('#media-undo' if popup else '#undo').click()
-                cdp.detach()
                 if popup:
                     modal.locator('[data-close="media-dialog"]').first.click()
-        context.close()
+            context.close()
 
         # Holding near the popup's lower edge scrolls a long media list, not the background page.
         page, server, context = make_page()
@@ -300,7 +337,7 @@ ApiClient.updatePluginConfiguration=async(id,value)=>{
         assert not errors, errors
         browser.close()
         print('PASS row media ordering: pointer/touch/keyboard, all categories/subgroups, '
-              'popup, cancellation, isolated metadata, Undo and Save/reload')
+              'popup focus, newly added media, touch targets, cancellation, isolated metadata, Undo and Save/reload')
 
 
 if __name__ == '__main__':

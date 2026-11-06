@@ -25,8 +25,9 @@ setup=f'''<script>
 const SAMPLE_CATALOG={json.dumps(cat)};
 const SAMPLE_ITEMS={json.dumps(items)};
 const SAMPLE_EPISODES={json.dumps(episodes)};
-window.__played=[];window.__state=null;window.__nowPlaying=null;
-Object.defineProperty(window,'localStorage',{{configurable:true,value:{{getItem:()=>JSON.stringify({{Servers:[{{Id:'testserver',UserId:'{user}',AccessToken:'fake',ManualAddress:'http://test.invalid'}}]}})}}}});
+window.__played=[];window.__enrolled=[];window.__state=null;window.__nowPlaying=null;
+const STORAGE=new Map([['jellyfin_credentials',JSON.stringify({{Servers:[{{Id:'testserver',UserId:'{user}',AccessToken:'fake',ManualAddress:'http://test.invalid'}}]}})],['fe-subtitles:testserver:{user}','0']]);
+Object.defineProperty(window,'localStorage',{{configurable:true,value:{{getItem:key=>STORAGE.get(key)??null,setItem:(key,value)=>STORAGE.set(key,String(value)),removeItem:key=>STORAGE.delete(key),get length(){{return STORAGE.size;}},key:index=>[...STORAGE.keys()][index]??null}}}});
 window.fetch=async function(input,options={{}}){{
  const path=String(input);
  const ok=(v)=>new Response(JSON.stringify(v),{{status:200,headers:{{'Content-Type':'application/json'}}}});
@@ -35,8 +36,9 @@ window.fetch=async function(input,options={{}}){{
  if(path.includes('/FranchiseExplorer/TimelineState/')&&options.method==='PUT'){{window.__state=JSON.parse(options.body);return ok(window.__state);}}
  if(path.includes('/FranchiseExplorer/TimelineState'))return ok(window.__state?[window.__state]:[]);
  if(path.includes('/Shows/{showid}/Episodes'))return ok({{Items:SAMPLE_EPISODES,TotalRecordCount:SAMPLE_EPISODES.length}});
- if(path.includes('/Sessions?'))return ok([{{Id:'dev1',UserId:'{user}',DeviceName:'Chrome Web',UserName:'Mock',SupportsMediaControl:true,SupportsRemoteControl:true,NowPlayingItem:window.__nowPlaying?{{Id:window.__nowPlaying}}:null}}]);
- if(path.includes('/Sessions/dev1/Playing')){{window.__played.push(path);if(path.includes('playCommand=PlayNow')){{window.__nowPlaying=new URLSearchParams(path.split('?')[1]).get('itemIds').split(',')[0];}}return new Response(null,{{status:204}});}}
+ if(path.includes('/Sessions?'))return ok([{{Id:'dev1',DeviceId:'remote-web',UserId:'{user}',DeviceName:'Chrome Web',UserName:'Mock',SupportsMediaControl:true,SupportsRemoteControl:true,NowPlayingItem:window.__nowPlaying?{{Id:window.__nowPlaying}}:null}}]);
+ if(path.includes('/FranchiseExplorer/PlaybackPreferences')){{const request=JSON.parse(options.body);if(request.deviceId!=='remote-web'||request.enabled!==false)throw Error('Wrong subtitle scope');window.__enrolled.push(request);return ok({{enabled:false,language:'',subtitleStreamIndex:-1,mediaSourceId:'first-source'}});}}
+ if(path.includes('/Sessions/dev1/Playing')){{if(!window.__enrolled.length)throw Error('Playback started before subtitle enrollment');window.__played.push(path);if(path.includes('playCommand=PlayNow')){{window.__nowPlaying=new URLSearchParams(path.split('?')[1]).get('itemIds').split(',')[0];}}return new Response(null,{{status:204}});}}
  const key=path.split('?')[0].split('/').pop();if(SAMPLE_ITEMS[key])return ok(SAMPLE_ITEMS[key]);
  return new Response('',{{status:404}});
 }};
@@ -62,6 +64,8 @@ with sync_playwright() as p:
    progress=page.evaluate('window.__state')
    assert progress['total']==5 and progress['index']==0 and progress['playbackMode']=='playing',progress
    assert progress['queueLengths'][0]>0
+   assert page.evaluate('window.__enrolled[0].itemIds.length')==5
+   assert 'subtitleStreamIndex=-1' in page.evaluate('window.__played[0]')
    dialog.get_by_role('button',name='Replay only').first.click()
    page.wait_for_function("window.__state && window.__state.playbackMode === 'replay'",timeout=4000)
    assert page.evaluate('window.__state.completedKeys.length')==0

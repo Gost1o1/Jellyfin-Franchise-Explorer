@@ -1,6 +1,8 @@
 ## 0.8.9.24 (unreleased)
 
 - Fix media reordering within rows in the settings editor and preserve the selected order through Save changes.
+- Enlarge touch media handles and keep the keyboard closed when opening the media popup on a phone; search still focuses when tapped.
+- Apply the franchise subtitle switch during Jellyfin playback negotiation, including native Android queue advances, and send actual subtitle stream selections when changing the setting during playback.
 - Advance source, assembly, settings, catalog API, Injector and release-workflow markers to 0.8.9.24; retain the published 0.8.9.23 release and retire its plugin-owned Injector script after registration.
 
 ## 0.8.9.23

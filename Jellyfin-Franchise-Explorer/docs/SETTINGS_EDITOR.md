@@ -4,7 +4,7 @@ This branch integrates the approved settings UI into the actual Jellyfin plugin.
 
 ## Editing
 
-- **Settings** contains subtitle preferences and the Home row visibility switch. **Advanced settings**, inside Settings, contains backup import/export. These viewer preferences apply immediately in the current browser, as in the existing plugin.
+- **Settings** contains subtitle preferences and the Home row visibility switch. **Advanced settings**, inside Settings, contains backup import/export. These viewer preferences are saved per user and server in the current browser.
 - **Franchises** starts closed. Add a franchise, or expand an existing franchise to see its rows and subgroups. Settings, plus and delete buttons stay beside each title on mobile.
 - A franchise or subgroup's **settings** button opens its title, description, poster, backdrop and IMDb sources. Groups and subgroups can be added here, including inside an existing subgroup.
 - A row's **settings** button opens its category and artwork. The category supplies the name; **Custom** reveals a name field. **Sub Group** creates a named subgroup. Converting an existing row keeps that row and its references inside the new subgroup.
@@ -12,6 +12,16 @@ This branch integrates the approved settings UI into the actual Jellyfin plugin.
 - Movies search movies, TV Shows search series, and Collection searches collections. Chronological Order searches movies and series. Custom searches all three types. TV references can use a full show, seasons or an episode range.
 - Drag handles reorder franchises horizontally and rows/subgroups vertically. Drop onto a group's insertion target to nest an entry. Enter or Space on a drag handle opens the equivalent placement dialog.
 - Expand a media row to drag its movies, shows, episode ranges or collections up and down. The same handles are available under **Current media** in the plus popup. Each row keeps its own order, including rows inside subgroups. On a media handle, use **Alt+Up/Down** for a single step or **Enter/Space** to choose a position. Use **Save changes** to persist the order; Undo restores the prior arrangement. Reordering keeps media references, ranges, artwork and viewing progress intact.
+
+Media dragging changes the order inside the same row. On touch screens, use the six-dot handle beside the media title. Opening the plus popup leaves the phone keyboard closed; tap **Search titles** to type.
+
+## Subtitle playback
+
+The subtitle switch applies when launching franchise playback and can update a currently playing franchise item. Off requests Jellyfin subtitle index `-1`, including forced, external and ASS subtitle streams. On chooses an available stream in the selected language, with the Jellyfin user's subtitle language as the default when no language is selected. Existing subtitles already burned into a source video cannot be removed.
+
+The server records a temporary preference for the explicit item queue, signed-in user and selected playback device. This supports native queue advances while the web page is paused. It does not rewrite the Jellyfin user's settings. Each new franchise launch replaces the device's queue scope; it expires after twelve hours or a server restart. Replaying an enrolled item on that device during the scope can retain this preference. Unrelated items receive no override, and their metadata requests do not clear the active queue.
+
+If the server cannot confirm the preference, the launch shows an error instead of starting with an unconfirmed setting. A change during playback uses Jellyfin's subtitle command for that user's active device. Android 2.7.3 Integrated Player does not implement that live subtitle command; use the preference before launching or restarting playback. Its later queue entries also receive the saved choice during playback negotiation.
 
 Edits remain in the page until **Save changes**. Saving an individual settings dialog stages that edit; Cancel discards that dialog's pending edits. **Undo** restores prior staged edits. **Reload saved settings** reads the server configuration and keeps the prior draft available through Undo. A concurrent configuration change on the server blocks saving until the editor is reloaded.
 
