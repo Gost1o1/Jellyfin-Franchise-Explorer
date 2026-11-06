@@ -159,6 +159,7 @@ Jellyfin-Franchise-Explorer/scripts/test_settings_core.js
 Jellyfin-Franchise-Explorer/scripts/test_settings_v9_browser.py
 Jellyfin-Franchise-Explorer/scripts/test_media_ordering_browser.py
 Jellyfin-Franchise-Explorer/scripts/test_playback_subtitles.js
+Jellyfin-Franchise-Explorer/scripts/test_viewer_preferences_browser.py
 Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Api/FranchisePlaybackPreferencesController.cs
 Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Web/PlaybackSubtitlePolicy.cs
 Jellyfin-Franchise-Explorer/tests/AutoAdd.Tests/PlaybackSubtitleTests.cs

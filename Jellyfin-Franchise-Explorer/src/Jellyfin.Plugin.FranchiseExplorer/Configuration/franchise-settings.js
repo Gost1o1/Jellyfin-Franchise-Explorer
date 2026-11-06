@@ -2337,32 +2337,94 @@
   page.addEventListener('click', hideHelp);
   page.addEventListener('input', hideHelp);
   function viewerPreferences() {
-    let keys = null;
-    try {
-      const uid = ApiClient.getCurrentUserId?.(),
-        servers = JSON.parse(localStorage.getItem('jellyfin_credentials') || '{}').Servers || [],
-        matches = servers.filter((s) => s.UserId?.toLowerCase() === uid?.toLowerCase()),
-        chosen =
-          matches.find((s) =>
-            ['ManualAddress', 'LocalAddress', 'RemoteAddress', 'LastConnectionAddress'].some(
-              (k) => {
-                try {
-                  return new URL(s[k]).origin === location.origin;
-                } catch (_) {
-                  return false;
-                }
-              },
-            ),
-          ) || (matches.length === 1 ? matches[0] : null);
-      if (chosen && uid)
-        keys = {
-          serverId: chosen.Id,
-          userId: chosen.UserId,
-          subtitles: 'fe-subtitles:' + chosen.Id + ':' + chosen.UserId,
-          language: 'fe-subtitle-language:' + chosen.Id + ':' + chosen.UserId,
-          native: 'fe-show-active-native-rows:' + location.origin + ':' + uid.toLowerCase(),
-        };
-    } catch (_) {}
+    let profileUserId = '', profileToken = '', profileRequest = 0;
+    const identity = (value) => {
+      const text = String(value || '').toLowerCase();
+      return /^[a-f\d]{32}$|^[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12}$/.test(text)
+        ? text.replace(/-/g, '') : text;
+    };
+    const same = (left, right) => !!left && !!right && identity(left) === identity(right);
+    const apiValue = (name) => {
+      try {
+        const value = ApiClient[name];
+        return typeof value === 'function' ? value.call(ApiClient) : value;
+      } catch (_) { return null; }
+    };
+    function preferenceKeys() {
+      const token = apiValue('accessToken') || '',
+        uid = apiValue('getCurrentUserId') || (token === profileToken ? profileUserId : ''),
+        currentServer = apiValue('serverId') || apiValue('serverInfo')?.Id;
+      if (!uid) return null;
+      let servers = [];
+      try {
+        const cached = JSON.parse(localStorage.getItem('jellyfin_credentials') || '{}');
+        if (Array.isArray(cached.Servers)) servers = cached.Servers;
+      } catch (_) { /* The active API session can identify this account without cached credentials. */ }
+      const matches = servers.filter((server) => server && server.Id && same(server.UserId, uid));
+      let chosen;
+      if (currentServer) {
+        const matchingServer = matches.filter((server) => same(server.Id, currentServer));
+        chosen = matchingServer.find((server) => token && server.AccessToken === token) || matchingServer[0];
+      } else {
+        const originMatches = matches.filter((server) =>
+          ['ManualAddress', 'LocalAddress', 'RemoteAddress', 'LastConnectionAddress'].some((key) => {
+            try { return new URL(server[key]).origin === location.origin; } catch (_) { return false; }
+          }),
+        );
+        if (new Set(originMatches.map((server) => identity(server.Id))).size === 1)
+          chosen = originMatches[0];
+        else if (!originMatches.length && matches.length === 1) chosen = matches[0];
+      }
+      const serverId = chosen?.Id || currentServer, userId = chosen?.UserId || uid;
+      if (!serverId) return null;
+      return {
+        serverId, userId,
+        subtitles: 'fe-subtitles:' + serverId + ':' + userId,
+        language: 'fe-subtitle-language:' + serverId + ':' + userId,
+        native: 'fe-show-active-native-rows:' + location.origin + ':' + String(userId).toLowerCase(),
+      };
+    }
+    function matchingKeys(keys, kind) {
+      const primary = keys[kind], found = new Set([primary]),
+        prefix = kind === 'native' ? 'fe-show-active-native-rows:' + location.origin + ':'
+          : kind === 'subtitles' ? 'fe-subtitles:' : 'fe-subtitle-language:';
+      for (let index = 0; index < localStorage.length; index++) {
+        const key = localStorage.key(index);
+        if (!key?.startsWith(prefix)) continue;
+        if (kind === 'native') {
+          if (same(key.slice(prefix.length), keys.userId)) found.add(key);
+        } else {
+          const [serverId, userId] = key.slice(prefix.length).split(':');
+          if (same(serverId, keys.serverId) && same(userId, keys.userId)) found.add(key);
+        }
+      }
+      return [...found];
+    }
+    function readPreference(keys, kind) {
+      for (const key of matchingKeys(keys, kind)) {
+        const value = localStorage.getItem(key);
+        if (value !== null) return value;
+      }
+      return null;
+    }
+    function savePreference(keys, kind, value) {
+      const saved = matchingKeys(keys, kind).map((key) => [key, localStorage.getItem(key)]),
+        written = [];
+      try {
+        for (const [key, previous] of saved) {
+          localStorage.setItem(key, value);
+          written.push([key, previous]);
+        }
+      } catch (error) {
+        for (const [key, previous] of written.reverse()) {
+          try {
+            if (previous === null) localStorage.removeItem(key);
+            else localStorage.setItem(key, previous);
+          } catch (_) { /* Preserve the visible prior state and report the failed save. */ }
+        }
+        throw error;
+      }
+    }
     const codes =
         'ar bg ca cs da de el en es et fa fi fr he hi hr hu id is it ja ko lt lv ms nb nl pl pt ro ru sk sl sr sv th tr uk ur vi zh'.split(
           ' ',
@@ -2376,9 +2438,8 @@
       codes
         .map((code) => '<option value="' + code + '">' + esc(names?.of(code) || code) + '</option>')
         .join('');
-    const sync = () => {
-      const enabled = !!keys && localStorage.getItem(keys.subtitles) === '1',
-        hide = !!keys && localStorage.getItem(keys.native) === '0';
+    const show = (state) => {
+      const { keys, enabled, hide, language } = state;
       for (const [id, value] of [
         ['subtitles', enabled],
         ['hide-native', hide],
@@ -2388,9 +2449,24 @@
         $(id).querySelector('.switch-label').textContent = value ? 'On' : 'Off';
       }
       $('language').disabled = !keys || !enabled;
-      $('language').value = keys ? localStorage.getItem(keys.language) || '' : '';
+      $('language').value = language;
     };
-    const subtitlesChanged = () => {
+    let lastState = { keys: null, enabled: false, hide: false, language: '' };
+    const sync = () => {
+      const keys = preferenceKeys();
+      try {
+        lastState = { keys, enabled: !!keys && readPreference(keys, 'subtitles') === '1',
+          hide: !!keys && readPreference(keys, 'native') === '0',
+          language: keys ? readPreference(keys, 'language') || '' : '' };
+        show(lastState);
+        return lastState;
+      } catch (_) {
+        show({ ...lastState, keys: null });
+        notify('Could not read viewer preferences. Allow browser storage and reopen settings.', true);
+        return null;
+      }
+    };
+    const subtitlesChanged = (keys) => {
       if (keys)
         window.dispatchEvent(
           new CustomEvent('franchise-subtitles-changed', {
@@ -2398,29 +2474,40 @@
           }),
         );
     };
+    const changePreference = (kind, value) => {
+      const before = sync();
+      if (!before?.keys) return;
+      try {
+        const next = typeof value === 'function' ? value(before) : value;
+        savePreference(before.keys, kind, next);
+        const after = sync();
+        if (after && kind !== 'native') subtitlesChanged(after.keys);
+      } catch (_) {
+        show(before);
+        notify('Could not save viewer preferences. Allow browser storage and try again.', true);
+      }
+    };
     $('subtitles').onclick = () => {
-      if (keys)
-        localStorage.setItem(
-          keys.subtitles,
-          localStorage.getItem(keys.subtitles) === '1' ? '0' : '1',
-        );
-      sync();
-      subtitlesChanged();
+      changePreference('subtitles', (state) => state.enabled ? '0' : '1');
     };
     $('hide-native').onclick = () => {
-      if (keys)
-        localStorage.setItem(keys.native, localStorage.getItem(keys.native) === '0' ? '1' : '0');
-      sync();
+      changePreference('native', (state) => state.hide ? '1' : '0');
     };
     $('language').onchange = () => {
-      if (keys) localStorage.setItem(keys.language, $('language').value);
-      sync();
-      subtitlesChanged();
+      changePreference('language', $('language').value);
     };
     sync();
-    if (ApiClient.getCurrentUser)
-      void ApiClient.getCurrentUser()
+    function loadProfile() {
+      if (!ApiClient.getCurrentUser) return;
+      const serial = ++profileRequest, token = apiValue('accessToken') || '';
+      void Promise.resolve().then(() => ApiClient.getCurrentUser())
         .then((user) => {
+          if (serial !== profileRequest || token !== (apiValue('accessToken') || '')) return;
+          const uid = apiValue('getCurrentUserId'), profileId = user.Id || user.id || uid;
+          if (uid && profileId && !same(uid, profileId)) return;
+          profileUserId = profileId || '';
+          profileToken = token;
+          sync();
           const preferred =
             user.Configuration?.SubtitleLanguagePreference ||
             user.configuration?.subtitleLanguagePreference;
@@ -2435,6 +2522,17 @@
               ')';
         })
         .catch(() => {});
+    }
+    page.addEventListener('pageshow', () => { sync(); loadProfile(); });
+    $('settings').addEventListener('toggle', () => {
+      if ($('settings').open) { sync(); loadProfile(); }
+    });
+    window.addEventListener('storage', (event) => {
+      if (!event.key || event.key === 'jellyfin_credentials' ||
+          ['fe-subtitles:', 'fe-subtitle-language:', 'fe-show-active-native-rows:'].some(
+            (prefix) => event.key.startsWith(prefix))) sync();
+    });
+    loadProfile();
   }
   const artwork = window.FranchiseSettingsArtwork.create({
     page,

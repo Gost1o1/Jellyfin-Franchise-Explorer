@@ -7,10 +7,11 @@ The approved settings UI is integrated with the production plugin. Source is now
 - .NET 10 Release build against Jellyfin 12.2.0: **zero warnings, zero errors**.
 - C# executable tests: IMDb parsing and transport errors/pagination; configuration XML migration; row-source ownership and artwork XML persistence; immutable uploads; invalid upload rejection; video capabilities, access denial and revocation; authenticated subtitle enrollment, selected media versions, actual stream indices, pre-negotiation overrides, immutable responses, scope isolation and expiry.
 - Static, model and playback checks from the build workflow and the release-only direct-Home regression. The generated settings resource matches its source modules.
-- All **16** browser scripts in the build workflow, using mocked Jellyfin APIs. The production settings browser test additionally checks horizontal franchise dragging, row reordering, keyboard placement, nested-group settings and plus-button creation, transactional Cancel/Save/Undo, fixed search types, TV ranges, artwork scopes, uploads, video selection, manual-title deduplication, accurate review destinations, save conflicts and 390/320 px action alignment.
+- Browser scripts in the build workflow use mocked Jellyfin APIs. The production settings browser test additionally checks horizontal franchise dragging, row reordering, keyboard placement, nested-group settings and plus-button creation, transactional Cancel/Save/Undo, fixed search types, TV ranges, artwork scopes, uploads, video selection, manual-title deduplication, accurate review destinations, save conflicts and 390/320 px action alignment.
 - Media ordering regression: mouse, real Chromium touch events and keyboard placement within every media row category and nested subgroups; popup dragging and long-list scrolling; secondary-pointer isolation, cancellation and no-op drops; Undo and Save/full-page reload; unchanged memberships, reference IDs, ranges, artwork, global positions and sibling rows. A timeline regression verifies that the new order resolves correctly while preserving cursor identity, position and completed history.
 - Mobile regression: existing and newly added media reorder inside the same row at 390/320 px; 44 px handles, inline action bounds, initial popup focus and manually tapping search.
 - Subtitle client regressions: saved Off overrides stale launch preferences; actual On stream indices/languages; authenticated enrollment before Web/Android launch; failure blocks launch; native queues and remote PlayLast source isolation; current-device event scoping; rapid preference changes and stale text-track timers.
+- Settings switch regression: On → Off saves zero, updates the label and ARIA state, disables language selection, and emits the change after persistence; active API session resolution, alternate GUID formats, deferred sessions, preference-key aliases, account isolation, label activation and visible storage failures.
 - Live IMDb controller retrieval: **571** entries from `ls539646485`, with explicit order and complete pagination. Those real results passed through the new production editor's preview, staged application and save against a simulated Jellyfin library. Exact-ID movie and episode matches imported successfully; missing titles remained review-only.
 - Repository completeness and `git diff --check`.
 
@@ -30,6 +31,7 @@ python3 scripts/check_repository_completeness.py
 dotnet build src/Jellyfin.Plugin.FranchiseExplorer -c Release
 dotnet run --project tests/AutoAdd.Tests -c Release
 python3 scripts/test_settings_v9_browser.py
+python3 scripts/test_viewer_preferences_browser.py
 python3 scripts/test_media_ordering_browser.py
 ```
 
