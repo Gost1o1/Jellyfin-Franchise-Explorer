@@ -219,6 +219,20 @@
 #FranchiseExplorerConfigPage .source-heading{display:flex;align-items:center;gap:8px;font-size:12px;color:#9cc0d1;margin:0;overflow-wrap:anywhere;font-weight:600}
 #FranchiseExplorerConfigPage .source-group .field{font-size:12px}
 #FranchiseExplorerConfigPage .source-group input{font-size:13px}
+#FranchiseExplorerConfigPage .imdb-library{display:grid;gap:12px;margin-top:18px;min-width:0}
+#FranchiseExplorerConfigPage .imdb-library h3{font-size:15px;margin:0}
+#FranchiseExplorerConfigPage .imdb-list-card{display:flex;gap:12px;align-items:center;min-width:0;padding:12px;border:1px solid var(--line);border-radius:8px;background:#17222c}
+#FranchiseExplorerConfigPage .imdb-list-card>div:first-child{flex:1;min-width:0}
+#FranchiseExplorerConfigPage .imdb-list-card strong,#FranchiseExplorerConfigPage .imdb-list-card small{display:block;overflow-wrap:anywhere}
+#FranchiseExplorerConfigPage .imdb-list-card small{font-size:11px;color:var(--muted);margin-top:5px}
+#FranchiseExplorerConfigPage .saved-source-summary{font-size:12px;color:#a6c4d2;overflow-wrap:anywhere}
+#FranchiseExplorerConfigPage .saved-source-options{display:grid;gap:9px}
+#FranchiseExplorerConfigPage .saved-source-option{display:flex;align-items:flex-start;gap:10px;padding:12px;border:1px solid var(--line);border-radius:8px;min-width:0}
+#FranchiseExplorerConfigPage .saved-source-option input{margin-top:4px;flex:none}
+#FranchiseExplorerConfigPage .saved-source-option span{min-width:0;overflow-wrap:anywhere}
+#FranchiseExplorerConfigPage .saved-source-option small{display:block;font-size:11px;color:var(--muted);margin-top:4px}
+#FranchiseExplorerConfigPage .auto-source-fields{display:grid;gap:12px;min-width:0}
+#FranchiseExplorerConfigPage .row-auto-settings{display:grid;gap:12px;border-top:1px solid var(--line);padding-top:16px}
 #FranchiseExplorerConfigPage .add-options{display:grid;gap:12px}
 #FranchiseExplorerConfigPage .add-options button{display:flex;align-items:center;gap:13px;text-align:left;min-height:60px;background:#1d2e39}
 #FranchiseExplorerConfigPage .add-options button .icon{color:var(--accent);width:22px;height:22px}
@@ -440,12 +454,12 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
 <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
 </defs></svg>
 <main class="fx-wrap">
-<header class="top"><div><h1>Franchise Explorer<span class="version">v0.8.9.24</span></h1></div><div class="top-actions"><span id="save-state" class="save-state" role="status">Loading configuration…</span><button class="icon-button quiet" id="undo" aria-label="Undo" data-help="Undo the most recent unsaved edit or move." disabled><svg class="icon"><use href="#i-undo"/></svg></button><button class="icon-button quiet" id="reset" aria-label="Reload saved settings" data-help="Reload the saved plugin configuration. Unsaved changes can be restored with Undo."><svg class="icon"><use href="#i-reset"/></svg></button><button class="primary" id="save" data-help="Save these changes to the Jellyfin plugin configuration.">Save changes</button></div></header>
+<header class="top"><div><h1>Franchise Explorer<span class="version">v0.8.9.25</span></h1></div><div class="top-actions"><span id="save-state" class="save-state" role="status">Loading configuration…</span><button class="icon-button quiet" id="undo" aria-label="Undo" data-help="Undo the most recent unsaved edit or move." disabled><svg class="icon"><use href="#i-undo"/></svg></button><button class="icon-button quiet" id="reset" aria-label="Reload saved settings" data-help="Reload the saved plugin configuration. Unsaved changes can be restored with Undo."><svg class="icon"><use href="#i-reset"/></svg></button><button class="primary" id="save" data-help="Save these changes to the Jellyfin plugin configuration.">Save changes</button></div></header>
 <details class="panel" id="settings"><summary><svg class="icon label-icon"><use href="#i-settings"/></svg>Settings<span class="section-count"></span></summary><div class="panel-body settings-grid">
 <div class="setting" data-help="Enable subtitles for franchise playback in this browser."><label class="setting-label" id="subtitles-label" for="subtitles">Enable subtitles</label><button type="button" class="switch" role="switch" aria-checked="false" aria-labelledby="subtitles-label" id="subtitles"><span class="switch-label">Off</span><span class="switch-track"></span></button></div>
 <label class="setting" data-help="Choose the subtitle language to use when subtitles are enabled."><span class="setting-label">Subtitle language</span><select id="language" aria-label="Subtitle language"><option value="auto">Jellyfin preference</option><option value="en">English</option><option value="de">Deutsch</option><option value="es">Español</option><option value="fr">Français</option><option value="ja">日本語</option></select></label>
 <div class="setting" data-help="Hide titles managed by a franchise from the main menu's Continue Watching and Next Up rows. Their watched history is preserved."><label class="setting-label" id="hide-label" for="hide-native">Hide franchise Continue Watching and Next Up from main menu</label><button type="button" class="switch" role="switch" aria-checked="false" aria-labelledby="hide-label" id="hide-native"><span class="switch-label">Off</span><span class="switch-track"></span></button></div>
-<details class="panel" id="advanced"><summary><svg class="icon label-icon"><use href="#i-box"/></svg>Advanced settings<span class="section-count"></span></summary><div class="panel-body button-row"><button id="export" data-help="Download a JSON backup of the plugin configuration.">Export backup</button><button id="import" data-help="Import a Franchise Explorer configuration backup for review before saving.">Import backup</button><input id="import-file" type="file" accept=".json,application/json" hidden></div></details>
+<details class="panel" id="advanced"><summary><svg class="icon label-icon"><use href="#i-box"/></svg>Advanced settings<span class="section-count"></span></summary><div class="panel-body"><div class="button-row"><button id="export" data-help="Download a JSON backup of the plugin configuration.">Export backup</button><button id="import" data-help="Import a Franchise Explorer configuration backup for review before saving.">Import backup</button><input id="import-file" type="file" accept=".json,application/json" hidden></div><section class="imdb-library" aria-labelledby="imdb-library-heading"><h3 id="imdb-library-heading">IMDb lists</h3><div id="saved-imdb-lists"></div><button id="add-imdb-list" data-help="Save a named IMDb URL for use in Auto Add. Saving a list does not import titles. Use Save changes to persist the library.">＋ Add IMDb list</button></section></div></details>
 </div></details>
 <details class="panel" id="franchises"><summary><svg class="icon label-icon"><use href="#i-grid"/></svg>Franchises<span id="franchise-count" class="section-count"></span></summary><div class="panel-body"><div class="franchises-toolbar"><button id="add-franchise" data-help="Create a franchise, then use its settings icon for IMDb Auto Add and its + icon for rows or subcategories.">＋ Add franchise</button></div><div id="board" class="board"></div></div></details>
 </main>
@@ -454,16 +468,18 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
 <label class="field" data-help="Rename this franchise or subgroup. Changes are staged until you save or apply selected changes."><span>Title</span><input id="detail-title" maxlength="120" required></label>
 <label class="field" data-help="Edit the description for this franchise or subgroup."><span>Description</span><textarea id="detail-description" maxlength="1500"></textarea></label>
 <section id="franchise-photos" class="photos-section"></section>
-<section class="franchise-setup"><div class="button-row"><button id="franchise-auto-add" class="mode-button" aria-expanded="false" data-help="Preview Auto Add changes for this franchise or subgroup, including its configured row and subgroup sources.">Auto Add from IMDb</button></div><div id="franchise-imdb-fields" class="franchise-auto-fields" hidden><label class="field" data-help="Set the main IMDb list for this franchise or subgroup. Specific row and subgroup sources can be set under Advanced."><span>IMDb URL</span><input id="franchise-imdb-url" type="url" maxlength="300" placeholder="https://www.imdb.com/list/ls…/"></label><button class="primary" id="franchise-preview" data-help="Review additions, removals, missing titles and their destinations. Apply only the changes you select.">Preview changes</button></div>
+<section class="franchise-setup"><div class="button-row"><button id="franchise-auto-add" class="mode-button" aria-expanded="false" data-help="Preview Auto Add changes for this franchise or subgroup, including its configured row and subgroup sources.">Auto Add from IMDb</button></div><div id="franchise-imdb-fields" class="auto-source-fields" hidden><div class="franchise-auto-fields"><label class="field" data-help="Set the main IMDb list for this franchise or subgroup. Specific row and subgroup sources can be set under Advanced."><span>IMDb URL</span><input id="franchise-imdb-url" type="url" maxlength="300" placeholder="https://www.imdb.com/list/ls…/"></label><button id="choose-franchise-imdb-lists">Choose saved lists</button></div><div id="franchise-source-summary" class="saved-source-summary"></div><label class="field" data-help="Choose how Auto Add presents episodes in chronological rows. Movies keep their IMDb positions. Rows can override this setting."><span>Episode format</span><select id="franchise-episode-format"><option value="Bundles">Episode bundles</option><option value="Individual">Individual episodes</option></select></label><button class="primary" id="franchise-preview" data-help="Review additions, removals, missing titles and their destinations. Apply only the changes you select.">Preview changes</button></div>
 <details class="rows-box" id="franchise-advanced"><summary>Advanced</summary><div class="rows-content"><div id="source-list" class="source-list"></div></div></details></section>
 </div></div><div class="dialog-footer"><button data-close="franchise-dialog">Cancel</button><button class="primary" id="save-franchise">Save franchise</button></div></dialog>
+<dialog id="imdb-list-dialog" class="compact-dialog" aria-labelledby="imdb-list-heading"><div class="dialog-head"><h2 id="imdb-list-heading">Add IMDb list</h2><button class="icon-button quiet" data-close="imdb-list-dialog" aria-label="Close IMDb list editor">✕</button></div><div class="dialog-content move-form"><label class="field"><span>Name</span><input id="imdb-list-name" maxlength="120" required></label><label class="field"><span>IMDb URL</span><input id="imdb-list-url" type="url" maxlength="300" placeholder="https://www.imdb.com/list/ls…/" required></label><label class="setting"><span>Available in Auto Add</span><input id="imdb-list-enabled" type="checkbox" checked></label></div><div class="dialog-footer"><button data-close="imdb-list-dialog">Cancel</button><button class="primary" id="save-imdb-list">Save list</button></div></dialog>
+<dialog id="imdb-source-picker" class="compact-dialog" aria-labelledby="imdb-source-picker-heading"><div class="dialog-head"><h2 id="imdb-source-picker-heading">Choose saved IMDb lists</h2><button class="icon-button quiet" data-close="imdb-source-picker" aria-label="Close saved IMDb lists">✕</button></div><div class="dialog-content move-form"><div id="imdb-source-options" class="saved-source-options"></div></div><div class="dialog-footer"><button data-close="imdb-source-picker">Cancel</button><button class="primary" id="use-imdb-sources">Use selected lists</button></div></dialog>
 <dialog id="new-franchise-dialog" class="compact-dialog" aria-labelledby="new-franchise-heading"><div class="dialog-head"><h2 id="new-franchise-heading">Add franchise</h2><button class="icon-button quiet" data-close="new-franchise-dialog" aria-label="Close new franchise">✕</button></div><div class="dialog-content move-form"><label class="field"><span>Title</span><input id="new-name" maxlength="120" required placeholder="Franchise name"></label><label class="field"><span>Description</span><textarea id="new-description" maxlength="1500"></textarea></label></div><div class="dialog-footer"><button data-close="new-franchise-dialog">Cancel</button><button class="primary" id="create-manual">Add franchise</button></div></dialog>
-<dialog id="library-range-dialog" class="compact-dialog" aria-labelledby="library-range-heading"><div class="dialog-head"><div><h2 id="library-range-heading">Choose TV Show range</h2><div id="library-range-title" class="scope-title"></div></div><button class="icon-button quiet" data-close="library-range-dialog" aria-label="Close TV range">✕</button></div><div class="dialog-content move-form"><label class="field" data-help="Keep the complete show together, or choose a season or episode range as a single entry."><span>Include</span><select id="library-range-mode"><option value="full">Entire TV Show</option><option value="seasons">Season to season</option><option value="episodes">Season/episode to season/episode</option></select></label><div id="library-range-endpoints" class="range-grid" hidden><label class="field" data-help="Specials use season 0."><span>Starting season</span><input id="library-from-season" type="number" min="0" max="999" step="1" value="1"></label><label class="field"><span>Ending season</span><input id="library-to-season" type="number" min="0" max="999" step="1" value="1"></label><label class="field episode-field" hidden><span>Starting episode</span><input id="library-from-episode" type="number" min="1" max="999" step="1" value="1"></label><label class="field episode-field" hidden><span>Ending episode</span><input id="library-to-episode" type="number" min="1" max="999" step="1" value="3"></label></div><p id="library-range-error" class="inline-error" role="alert" hidden></p></div><div class="dialog-footer"><button data-close="library-range-dialog">Cancel</button><button class="primary" id="confirm-library-range">Add to row</button></div></dialog>
+<dialog id="library-range-dialog" class="compact-dialog" aria-labelledby="library-range-heading"><div class="dialog-head"><div><h2 id="library-range-heading">Choose TV Show range</h2><div id="library-range-title" class="scope-title"></div></div><button class="icon-button quiet" data-close="library-range-dialog" aria-label="Close TV range">✕</button></div><div class="dialog-content move-form"><label class="field" data-help="Keep the complete show together, choose a specific library episode, or select a season or episode range."><span>Include</span><select id="library-range-mode"><option value="full">Entire TV Show</option><option value="seasons">Season to season</option><option value="specific">Specific episode</option><option value="episodes">Season/episode to season/episode</option></select></label><div id="library-range-endpoints" class="range-grid" hidden><label class="field" data-help="Specials use season 0."><span>Starting season</span><input id="library-from-season" type="number" min="0" max="999" step="1" value="1"></label><label class="field"><span>Ending season</span><input id="library-to-season" type="number" min="0" max="999" step="1" value="1"></label><label class="field episode-field" hidden><span>Starting episode</span><input id="library-from-episode" type="number" min="1" max="999" step="1" value="1"></label><label class="field episode-field" hidden><span>Ending episode</span><input id="library-to-episode" type="number" min="1" max="999" step="1" value="3"></label></div><div id="library-specific-picker" class="range-grid" hidden><label class="field"><span>Season</span><select id="library-specific-season" disabled><option value="">Choose a season</option></select></label><label class="field"><span>Episode</span><select id="library-specific-episode" disabled><option value="">Choose an episode</option></select></label><p id="library-specific-status" class="scope-title" role="status" aria-live="polite"></p><button type="button" class="quiet" id="library-specific-retry" hidden>Retry loading</button></div><p id="library-range-error" class="inline-error" role="alert" hidden></p></div><div class="dialog-footer"><button data-close="library-range-dialog">Cancel</button><button class="primary" id="confirm-library-range">Add to row</button></div></dialog>
 <dialog id="media-dialog" class="media-dialog" aria-labelledby="media-heading"><div class="dialog-head"><div><h2 id="media-heading">Add/Modify/Delete Media</h2><div id="media-scope" class="scope-title"></div></div><button class="icon-button quiet" data-close="media-dialog" aria-label="Close media manager">✕</button></div><div class="dialog-content" id="media-body"><section id="media-group-tools" class="structure-tools"><h3>Groups and subgroups</h3><div id="media-structure-owner" class="structure-owner"></div><div class="button-row"><button id="choose-add-row">＋ Add group / row</button><button id="choose-add-subgroup">＋ Add subgroup</button><button class="quiet" id="media-convert-row" hidden>Make this row a subgroup</button></div></section><div id="media-content"><div id="media-library"></div><section class="media-current-section"><h3>Current media</h3><div id="media-current"></div></section></div></div><div class="dialog-footer"><button class="quiet" id="media-undo" disabled>Undo</button><button class="primary" data-close="media-dialog">Done</button></div></dialog>
-<dialog id="review"><div class="dialog-head"><h2>Review changes</h2><button class="icon-button quiet" data-close="review" aria-label="Close review">✕</button></div><div class="dialog-content"><div class="review-bar"><div id="review-counts" class="counts"></div><div class="button-row"><button class="quiet" id="select-all">Select all</button><button class="quiet" id="clear-selection">Clear</button></div></div><div class="table-scroll"><table><thead><tr><th><input type="checkbox" id="review-all" aria-label="Select all proposed changes"></th><th>Title</th><th>TV Show / Movie</th><th>Where</th><th>Change</th></tr></thead><tbody id="review-list"></tbody></table></div></div><div class="dialog-footer"><span class="selected-count" id="selected-count"></span><button data-close="review">Cancel</button><button class="primary" id="apply-selected">Apply selected</button></div></dialog>
+<dialog id="review"><div class="dialog-head"><h2>Review changes</h2><button class="icon-button quiet" data-close="review" aria-label="Close review">✕</button></div><div class="dialog-content"><div id="review-format-controls" class="auto-source-fields"></div><div class="review-bar"><div id="review-counts" class="counts"></div><div class="button-row"><button class="quiet" id="select-all">Select all</button><button class="quiet" id="clear-selection">Clear</button></div></div><div class="table-scroll"><table><thead><tr><th><input type="checkbox" id="review-all" aria-label="Select all proposed changes"></th><th>Title</th><th>Type</th><th>Where</th><th>Change</th></tr></thead><tbody id="review-list"></tbody></table></div></div><div class="dialog-footer"><span class="selected-count" id="selected-count"></span><button data-close="review">Cancel</button><button class="primary" id="apply-selected">Apply selected</button></div></dialog>
 <dialog id="structure-dialog" class="compact-dialog" aria-labelledby="structure-heading"><div class="dialog-head"><h2 id="structure-heading">Add group / row</h2><button class="icon-button quiet" data-close="structure-dialog" aria-label="Close group creation">✕</button></div><div class="dialog-content move-form"><div id="structure-owner" class="scope-title"></div><label class="field" id="structure-type-field"><span>Name</span><select id="structure-type"></select></label><label class="field" id="structure-name-field"><span id="structure-name-label">Custom name</span><input id="structure-name" maxlength="120"></label></div><div class="dialog-footer"><button data-close="structure-dialog">Cancel</button><button class="primary" id="confirm-structure">Add</button></div></dialog>
 <dialog id="subgroup-dialog" class="compact-dialog"><div class="dialog-head"><h2>Add subgroup</h2><button class="icon-button quiet" data-close="subgroup-dialog" aria-label="Close subgroup menu">✕</button></div><div class="dialog-content"><label class="field" data-help="The subgroup appears within the selected franchise. It can have its own rows and further subgroups."><span>Subgroup name</span><input id="subgroup-name" maxlength="120" required placeholder="e.g. Phase Two"></label></div><div class="dialog-footer"><button data-close="subgroup-dialog">Cancel</button><button class="primary" id="confirm-subgroup">Add subgroup</button></div></dialog>
-<dialog id="row-dialog" class="compact-dialog" aria-labelledby="row-heading"><div class="dialog-head"><h2 id="row-heading">Edit row</h2><button class="icon-button quiet" data-close="row-dialog" aria-label="Close row editor">✕</button></div><div class="dialog-content move-form"><span class="editor-owner" id="row-owner"></span><section class="structure-tools" id="row-structure-tools"><h3>Groups and subgroups</h3><div id="row-structure-owner" class="structure-owner"></div><div class="button-row"><button id="row-add-row">＋ Add group / row</button><button id="row-add-subgroup">＋ Add subgroup</button><button class="quiet" id="row-convert-subgroup" data-help="Turn this row into a subgroup, keeping its current media, source and artwork inside it. Save to apply.">Make this row a subgroup</button></div><div id="row-pending-structure" class="pending-structure"></div></section><label class="field" data-help="The selected option becomes the row name. Choose Custom to enter your own name."><span>Name</span><select id="edit-row-type"></select></label><label class="field" id="edit-row-group-field" hidden data-help="Create a subgroup in the rows list. When converting an existing row, that row and its titles move inside the new subgroup."><span>Subgroup name</span><input id="edit-row-group-name" maxlength="120" placeholder="e.g. Phase Two"></label><label class="field" id="edit-row-custom-field" hidden data-help="Enter the name for this custom row."><span>Custom name</span><input id="edit-row-custom" maxlength="120" placeholder="Row name"></label><section id="row-photos" class="photos-section"></section></div><div class="dialog-footer"><button data-close="row-dialog">Cancel</button><button class="primary" id="save-row">Save row</button></div></dialog>
+<dialog id="row-dialog" class="compact-dialog" aria-labelledby="row-heading"><div class="dialog-head"><h2 id="row-heading">Edit row</h2><button class="icon-button quiet" data-close="row-dialog" aria-label="Close row editor">✕</button></div><div class="dialog-content move-form"><span class="editor-owner" id="row-owner"></span><section class="structure-tools" id="row-structure-tools"><h3>Groups and subgroups</h3><div id="row-structure-owner"></div><div class="button-row"><button id="row-add-row">＋ Add group / row</button><button id="row-add-subgroup">＋ Add subgroup</button><button class="quiet" id="row-convert-subgroup" data-help="Turn this row into a subgroup, keeping its current media, source and artwork inside it. Save to apply.">Make this row a subgroup</button></div><div id="row-pending-structure" class="pending-structure"></div></section><label class="field" data-help="The selected option becomes the row name. Choose Custom to enter your own name."><span>Name</span><select id="edit-row-type"></select></label><label class="field" id="edit-row-group-field" hidden data-help="Create a subgroup in the rows list. When converting an existing row, that row and its titles move inside the new subgroup."><span>Subgroup name</span><input id="edit-row-group-name" maxlength="120" placeholder="e.g. Phase Two"></label><label class="field" id="edit-row-custom-field" hidden data-help="Enter the name for this custom row."><span>Custom name</span><input id="edit-row-custom" maxlength="120" placeholder="Row name"></label><section id="row-auto-settings" class="row-auto-settings"><button id="row-auto-add" aria-expanded="false">Auto Add from IMDb</button><div id="row-imdb-fields" class="auto-source-fields" hidden><label class="field"><span>IMDb URL</span><input id="row-imdb-url" type="url" maxlength="300" placeholder="https://www.imdb.com/list/ls…/"></label><button id="choose-row-imdb-lists">Choose saved lists</button><div id="row-source-summary" class="saved-source-summary"></div><label id="row-format-field" class="field" data-help="Override the franchise episode format for this chronological row."><span>Episode format</span><select id="row-episode-format"><option value="">Use franchise setting</option><option value="Bundles">Episode bundles</option><option value="Individual">Individual episodes</option></select></label><button id="row-preview" class="primary">Preview changes</button></div></section><section id="row-photos" class="photos-section"></section></div><div class="dialog-footer"><button data-close="row-dialog">Cancel</button><button class="primary" id="save-row">Save row</button></div></dialog>
 <dialog id="item-dialog" class="item-settings-dialog" aria-labelledby="item-art-heading"><div class="dialog-head"><div><h2 id="item-art-heading">Media settings</h2><div id="item-art-title" class="scope-title"></div></div><button class="icon-button quiet" data-close="item-dialog" aria-label="Close media settings">✕</button></div><div class="dialog-content"><span id="item-art-type" class="item-type-label"></span><section id="item-photos" class="photos-section"></section></div><div class="dialog-footer"><button data-close="item-dialog">Cancel</button><button class="primary" id="save-item-artwork">Save artwork</button></div></dialog>
 <dialog id="artwork-dialog" class="artwork-dialog" aria-labelledby="artwork-heading"><div class="dialog-head"><div><h2 id="artwork-heading">Choose Poster</h2><div id="artwork-scope" class="scope-title"></div></div><button class="icon-button quiet" data-close="artwork-dialog" aria-label="Close artwork picker">✕</button></div><div class="dialog-content"><div id="artwork-filters" class="art-filters"><button data-art-filter="all" aria-pressed="true">All</button><button data-art-filter="images" aria-pressed="false">Images</button><button data-art-filter="videos" aria-pressed="false">Videos</button><button data-art-filter="upload" aria-pressed="false">Upload photo</button></div><label class="field art-search"><span>Find media artwork</span><input id="artwork-search" type="search" placeholder="Search associated titles…" autocomplete="off"></label><div class="art-picker-layout"><div><div id="artwork-gallery" class="artwork-gallery"></div><div id="art-upload-panel" hidden><label class="art-upload-target"><span>Upload a photo</span><input id="art-upload" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></label><p id="art-upload-error" class="inline-error" role="alert" hidden></p><div id="art-upload-preview"></div></div></div><aside class="art-selection"><h3>Preview</h3><div id="artwork-preview"></div><div id="artwork-selection" class="art-selection-label"></div></aside></div></div><div class="dialog-footer"><span class="art-source-label">Associated media artwork</span><button data-close="artwork-dialog">Cancel</button><button class="primary" id="confirm-artwork" disabled>Use selected</button></div></dialog>
 <dialog id="delete-dialog" class="compact-dialog" aria-labelledby="delete-heading" aria-describedby="delete-message"><div class="dialog-head"><h2 id="delete-heading">Delete</h2><button class="icon-button quiet" data-close="delete-dialog" aria-label="Close delete confirmation">✕</button></div><div class="dialog-content"><p id="delete-message"></p><div id="delete-impact"></div><p id="delete-library-note" class="delete-note">This removes Franchise Explorer entries only. Movies, shows and collections stay in your Jellyfin library. Undo can restore these entries.</p></div><div class="dialog-footer"><button data-close="delete-dialog">Cancel</button><button class="delete-confirm" id="confirm-delete">Delete</button></div></dialog>
@@ -629,9 +645,30 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         return null;
       return { show, season, first, last };
     }
+    const covers = (link, info) => {
+      if (itemId(link.JellyfinItemId) !== itemId(info.show.Id)) return false;
+      if (!link.RangeMode || link.RangeMode === 'Full') return true;
+      if (link.RangeMode === 'Seasons')
+        return info.season >= link.StartSeason && info.season <= link.EndSeason;
+      return link.RangeMode === 'Episodes' &&
+        (info.season > link.StartSeason || (info.season === link.StartSeason && info.first >= link.StartEpisode)) &&
+        (info.season < link.EndSeason || (info.season === link.EndSeason && info.last <= link.EndEpisode));
+    };
+    const referenceKey = (ref) => itemId(ref.JellyfinItemId) + ':' +
+      [ref.StartSeason, ref.StartEpisode, ref.EndSeason, ref.EndEpisode].join(':');
+    function timelineRow(model, nodeId) {
+      const node = model.Nodes.find((n) => n.Id === nodeId),
+        mapping = node?.AutoAddRows?.find((m) => m.Category === 'Chronological Timeline');
+      return model.Rows.find((row) => row.ParentNodeId === nodeId &&
+        (mapping ? row.Id === mapping.RowId : row.RowType === 'Timeline'));
+    }
+    function effectiveFormat(model, nodeId) {
+      return timelineRow(model, nodeId)?.EpisodeFormat ||
+        model.Nodes.find((n) => n.Id === nodeId)?.EpisodeFormat || 'Bundles';
+    }
     const episodeLabel = (season, number) =>
       'S' + String(season).padStart(2, '0') + 'E' + String(number).padStart(2, '0');
-    function plan(entries, blocked = () => false) {
+    function plan(entries, blocked = () => false, episodeFormat = 'Bundles') {
       const groups = [],
         shows = new Map(),
         skipped = [];
@@ -664,6 +701,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
           continue;
         }
         const same =
+          episodeFormat !== 'Individual' &&
           pending &&
           entry.orderVerified &&
           pending.entry.orderVerified &&
@@ -732,18 +770,20 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     }
     function removeReferences(model, records) {
       const next = JSON.parse(JSON.stringify(model)),
-        links = new Set(records.filter((r) => !r.RowId).map((r) => r.ReferenceId)),
+        links = new Set(records.filter((r) => !r.RowId && !r.DetachOnly).map((r) => r.ReferenceId)),
         items = new Set(records.filter((r) => r.RowId).map((r) => r.ReferenceId));
       next.MediaLinks = next.MediaLinks.filter((l) => !links.has(l.Id));
       for (const row of next.Rows) {
-        row.MediaLinkIds = (row.MediaLinkIds || []).filter((id) => !links.has(id));
+        const detached = new Set(records.filter((record) => record.DetachOnly &&
+          record.rowIds?.includes(row.Id)).map((record) => record.ReferenceId));
+        row.MediaLinkIds = (row.MediaLinkIds || []).filter((id) => !links.has(id) && !detached.has(id));
         row.Items = (row.Items || []).filter((i) => !items.has(i.Id));
-        row.MediaOrder = (row.MediaOrder || []).filter((id) => !links.has(id) && !items.has(id));
+        row.MediaOrder = (row.MediaOrder || []).filter((id) => !links.has(id) && !items.has(id) && !detached.has(id));
       }
       for (const node of next.Nodes)
         node.AutoAddRecords = (node.AutoAddRecords || [])
           .filter(
-            (r) => !records.some((x) => x.ReferenceId === r.ReferenceId && x.RowId === r.RowId),
+            (r) => !records.some((x) => !x.DetachOnly && x.ReferenceId === r.ReferenceId && x.RowId === r.RowId),
           )
           .map((r) =>
             r.Signature && signature(model, r) === r.Signature
@@ -760,6 +800,25 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         present = new Set(entries.map((e) => e.imdbId));
       const removals = [],
         protectedRefs = [];
+      const chronological = timelineRow(model, nodeId),
+        rowRefs = chronological ? [...(chronological.Items || []),
+          ...(chronological.MediaLinkIds || []).map((id) => model.MediaLinks.find((link) => link.Id === id)).filter(Boolean)] : [],
+        matched = new Map(entries.filter((entry) => entry.status === 'matched' && entry.orderVerified)
+          .map((entry) => [entry.imdbId, entry])),
+        eligible = (node.AutoAddRecords || []).filter((record) =>
+          rowRefs.some((ref) => ref.Id === record.ReferenceId && ref.RangeMode === 'Episodes') &&
+          record.SourceIds.length && record.SourceIds.every((id) => success.has(id)) &&
+          record.ImdbIds.length && record.ImdbIds.every((id) => matched.has(id))),
+        editable = new Set(eligible.filter((record) => record.Signature && signature(model, record) === record.Signature)
+          .map((record) => record.ReferenceId));
+      const desired = plan(entries.map((entry) => entry.categories.includes('Chronological Timeline')
+        ? { ...entry, categories: ['Chronological Timeline'] } : { ...entry, status: 'excluded' }),
+      (entry) => rowRefs.some((ref) => !editable.has(ref.Id) &&
+        (itemId(ref.JellyfinItemId) === itemId(entry.item.Id) ||
+          (episodeInfo(entry) && covers(ref, episodeInfo(entry))))), effectiveFormat(model, nodeId));
+      const desiredKeys = new Set(desired.groups.filter((group) => group.episodes).map((group) =>
+        referenceKey({ JellyfinItemId: group.show.Id, StartSeason: group.season, StartEpisode: group.first,
+          EndSeason: group.season, EndEpisode: group.last })));
       for (const record of node.AutoAddRecords || []) {
         if (
           !record.SourceIds.length ||
@@ -770,16 +829,15 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         const absent = record.RowId
           ? record.ImdbIds.every((id) => !present.has(id))
           : record.ImdbIds.some((id) => !present.has(id));
-        if (!absent) continue;
+        const ref = record.RowId
+          ? model.Rows.find((r) => r.Id === record.RowId)?.Items.find((i) => i.Id === record.ReferenceId)
+          : model.MediaLinks.find((l) => l.Id === record.ReferenceId),
+          reformat = !!ref && eligible.includes(record) && !desiredKeys.has(referenceKey(ref));
+        if (!absent && !reformat) continue;
         if (!record.Signature || signature(model, record) !== record.Signature) {
           protectedRefs.push(record);
           continue;
         }
-        const ref = record.RowId
-          ? model.Rows.find((r) => r.Id === record.RowId)?.Items.find(
-              (i) => i.Id === record.ReferenceId,
-            )
-          : model.MediaLinks.find((l) => l.Id === record.ReferenceId);
         if (ref)
           removals.push({
             ...record,
@@ -792,10 +850,13 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
                   '–' +
                   episodeLabel(ref.EndSeason, ref.EndEpisode)
                 : ''),
+            DetachOnly: !record.RowId && (!!record.__scopeExternalRows?.length ||
+              (reformat && model.Rows.some((row) => row.Id !== chronological?.Id &&
+                row.MediaLinkIds?.includes(record.ReferenceId)))),
             rowIds: model.Rows.filter(
               (r) => r.Id === record.RowId || (r.MediaLinkIds || []).includes(record.ReferenceId),
-            ).map((r) => r.Id),
-            reason: 'No longer in the enabled IMDb source',
+            ).filter((row) => !reformat || row.Id === chronological?.Id).map((r) => r.Id),
+            reason: reformat ? 'Change chronological episode format' : 'No longer in the enabled IMDb source',
           });
       }
       let previewSequence = 0;
@@ -815,7 +876,8 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
               l.StartSeason === info.season &&
               l.StartEpisode <= info.first &&
               l.EndEpisode >= info.last
-            : itemId(l.JellyfinItemId) === itemId(entry.item.Id),
+            : itemId(l.JellyfinItemId) === itemId(entry.item.Id) &&
+              (l.RangeMode || 'Full') === 'Full',
         );
         if (covered.length) {
           const requiresRemovals = removals
@@ -877,7 +939,8 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         base = removeReferences(model, removals),
         titles = new Set(),
         shows = new Set();
-      for (const add of diff.additions.filter((a) => selected.has(a.key)))
+      for (const add of diff.additions.filter((a) => selected.has(a.key) &&
+          (a.requiresRemovals || []).every((key) => selected.has(key))))
         for (const imdb of add.entryIds) (add.kind === 'show' ? shows : titles).add(imdb);
       const picked = entries.map((e) =>
         !titles.has(e.imdbId) && !shows.has(e.imdbId)
@@ -959,7 +1022,8 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
             .sort((a, b) => a.Position - b.Position)
             .map((l) => l.Id);
         place(oldOrder, current, newLinkIds).forEach((key, index) => {
-          next.MediaLinks.find((l) => l.Id === key).Position = index + 1;
+          if (editable.has(key) && !records.some((record) => record.ReferenceId === key && record.__scopeExternalRows?.length))
+            next.MediaLinks.find((l) => l.Id === key).Position = index + 1;
         });
       }
       for (const row of next.Rows) {
@@ -989,32 +1053,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
             changed = true;
           }
       }
-      const original = [
-        ...next.MediaLinks.filter((l) => descendant.has(l.NodeId)),
-        ...next.Rows.filter(
-          (r) => r.RowType === 'Timeline' && descendant.has(r.ParentNodeId),
-        ).flatMap((r) => r.Items || []),
-      ];
-      const covers = (link, info) => {
-        if (itemId(link.JellyfinItemId) !== itemId(info.show.Id)) return false;
-        if (!link.RangeMode || link.RangeMode === 'Full') return true;
-        if (link.RangeMode === 'Seasons')
-          return info.season >= link.StartSeason && info.season <= link.EndSeason;
-        return (
-          link.RangeMode === 'Episodes' &&
-          (info.season > link.StartSeason ||
-            (info.season === link.StartSeason && info.first >= link.StartEpisode)) &&
-          (info.season < link.EndSeason ||
-            (info.season === link.EndSeason && info.last <= link.EndEpisode))
-        );
-      };
-      const blocked = (entry) => {
-        if (original.some((l) => itemId(l.JellyfinItemId) === itemId(entry.item.Id))) return true;
-        const info = episodeInfo(entry);
-        return !!info && original.some((l) => covers(l, info));
-      };
-      const layout = plan(entries, blocked),
-        rowMap = new Map();
+      const rowMap = new Map();
       const configured = Array.isArray(node.AutoAddRows) && node.AutoAddRows.length > 0;
       if (!configured) node.AutoAddRows = [];
       categories.forEach((name, index) => {
@@ -1045,6 +1084,25 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         if (!configured) node.AutoAddRows.push({ Category: name, RowId: row.Id });
         rowMap.set(name, row);
       });
+      const assigned = new Set(next.Rows.flatMap((row) => row.MediaLinkIds || [])),
+        external = new Set((node.AutoAddRecords || []).filter((record) => record.__scopeExternalRows?.length)
+          .map((record) => record.ReferenceId)),
+        unassigned = next.MediaLinks.filter((link) => descendant.has(link.NodeId) && !assigned.has(link.Id) && !external.has(link.Id)),
+        layout = { ...plan(entries), groups: [] };
+      // Block only references belonging to this destination. A bundled Custom
+      // row must not prevent an independent chronological row from using singles.
+      for (const [category, row] of rowMap) {
+        if (category === 'TV Shows') continue;
+        const existing = [...unassigned, ...(row.Items || []),
+          ...(row.MediaLinkIds || []).map((id) => next.MediaLinks.find((link) => link.Id === id)).filter(Boolean)];
+        const blocked = (entry) => existing.some((ref) =>
+          itemId(ref.JellyfinItemId) === itemId(entry.item.Id) ||
+          (episodeInfo(entry) && covers(ref, episodeInfo(entry))));
+        const filtered = entries.map((entry) => entry.categories.includes(category)
+          ? { ...entry, categories: [category] } : { ...entry, status: 'excluded' });
+        layout.groups.push(...plan(filtered, blocked,
+          category === 'Chronological Timeline' ? effectiveFormat(next, nodeId) : 'Bundles').groups);
+      }
       node.AutoAddRecords ??= [];
       const freshRecords = [];
       let added = 0,
@@ -1090,7 +1148,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
           });
         }
       }
-      const used = new Set();
+      const used = new Map();
       for (const group of layout.groups) {
         const entry = group.entry,
           item = entry.item;
@@ -1132,8 +1190,18 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
             ':' +
             group.last
           : itemId(item.Id);
-        if (used.has(identity)) continue;
-        used.add(identity);
+        if (used.has(identity)) {
+          const existing = used.get(identity);
+          for (const category of eligible) {
+            const row = rowMap.get(category);
+            if (!row.MediaLinkIds.includes(existing.Id)) row.MediaLinkIds.push(existing.Id);
+            if (!row.MediaOrder.includes(existing.Id)) row.MediaOrder.push(existing.Id);
+          }
+          const record = freshRecords.find((record) => record.ReferenceId === existing.Id);
+          record.SourceIds = [...new Set([...record.SourceIds, entry.sourceId])];
+          record.ImdbIds = [...new Set([...record.ImdbIds, ...(group.episodes || [entry]).map((item) => item.imdbId)])];
+          continue;
+        }
         const link = {
           Id: id(),
           NodeId: nodeId,
@@ -1153,6 +1221,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
           EndEpisode: group.episodes ? group.last : 0,
         };
         next.MediaLinks.push(link);
+        used.set(identity, link);
         added++;
         freshRecords.push({
           ReferenceId: link.Id,
@@ -1170,10 +1239,32 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         node.AutoAddRecords.push({ ...record, Signature: signature(next, record) });
       return { model: next, added: added + showCards, showCards, skipped: layout.skipped.length };
     }
-    return { categories, url, sources, match, preview, plan, apply, changes, applyChanges };
+    return { categories, url, sources, match, preview, plan, apply, changes, applyChanges, signature };
   })();
   // AUTOADD_ENGINE_END
   const clone = (value) => JSON.parse(JSON.stringify(value));
+  function episodeFormat(value, inherit = false) {
+    const format = String(value || (inherit ? '' : 'Bundles'));
+    if (!['Bundles', 'Individual', ...(inherit ? [''] : [])].includes(format))
+      throw new Error('Choose Episode bundles or Individual episodes.');
+    return format;
+  }
+  function normalizeImdbLists(raw) {
+    if (raw == null) return [];
+    if (!Array.isArray(raw) || raw.length > 100)
+      throw new Error('Maximum 100 saved IMDb lists.');
+    const ids = new Set(), urls = new Set();
+    return raw.map((list) => {
+      if (!list || !validGuid(list.Id)) throw new Error('Invalid saved IMDb list ID.');
+      const id = String(list.Id).replace(/-/g, '').toLowerCase(), url = autoAdd.url(list.Url),
+        name = String(list.Name || '').trim();
+      if (ids.has(id)) throw new Error('Duplicate saved IMDb list ID.');
+      if (urls.has(url)) throw new Error('This IMDb URL is already saved.');
+      if (!name || name.length > 120) throw new Error('Enter an IMDb list name of 1–120 characters.');
+      ids.add(id); urls.add(url);
+      return { ...list, Id: String(list.Id), Name: name, Url: url, Enabled: list.Enabled !== false };
+    });
+  }
   const num = (value) =>
     Number.isFinite(Number(value)) ? Math.max(0, Math.min(100000, Math.trunc(Number(value)))) : 0;
   const categories = [
@@ -1361,6 +1452,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
           node.CollectionArtworkMode === 'Preserve' ? 'Preserve' : 'Collection',
         Overview: String(node.Overview || '').slice(0, 1500),
         SortOrder: num(node.SortOrder),
+        EpisodeFormat: episodeFormat(node.EpisodeFormat),
         AutoAddSources: autoAdd.sources(node.AutoAddSources),
         AutoAddRows: (Array.isArray(node.AutoAddRows) ? node.AutoAddRows : [])
           .filter(
@@ -1524,6 +1616,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
           Category: categoryForRow(row, { Nodes: safeNodes }),
           SourceUrl: row.SourceUrl ? autoAdd.url(row.SourceUrl) : '',
           AutoAddSources: autoAdd.sources(row.AutoAddSources),
+          EpisodeFormat: episodeFormat(row.EpisodeFormat, true),
           SortOrder: num(row.SortOrder),
           NodeIds: nodeIds.slice(0, 250),
           MediaLinkIds: linkIds.slice(0, 3000),
@@ -1547,6 +1640,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       Nodes: safeNodes,
       MediaLinks: safeLinks,
       Rows: safeRows,
+      ImdbLists: normalizeImdbLists(raw.ImdbLists),
     };
   }
   function scopedJobs(base, nodeId) {
@@ -1565,17 +1659,18 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       const ownRows = base.Rows.filter((r) => r.ParentNodeId === node.Id),
         mappings = [],
         mainSources = autoAdd.sources(node.AutoAddSources).filter((s) => s.Enabled);
+      const hasOwnSources = (row) => !!row.SourceUrl || !!row.AutoAddSources?.length;
       for (const name of autoAdd.categories) {
         if (!mainSources.some((s) => s.Categories.includes(name))) continue;
         const category = categoryFromAutoAdd(name),
           previous = node.AutoAddRows.find((m) => m.Category === name);
         let row =
-          ownRows.find((r) => r.Id === previous?.RowId && !r.SourceUrl) ||
-          ownRows.find((r) => !r.SourceUrl && categoryForRow(r, base) === category);
+          ownRows.find((r) => r.Id === previous?.RowId && !hasOwnSources(r)) ||
+          ownRows.find((r) => !hasOwnSources(r) && categoryForRow(r, base) === category);
         // Respect a deleted mapped row, or a row deliberately using its own source.
         if (
           !row &&
-          (previous || ownRows.some((r) => r.SourceUrl && categoryForRow(r, base) === category))
+          (previous || ownRows.some((r) => hasOwnSources(r) && categoryForRow(r, base) === category))
         )
           continue;
         if (!row) {
@@ -1609,30 +1704,31 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
             rowIds: mappings.map((m) => m.RowId),
             mappings,
             sources,
+            episodeFormat: episodeFormat(ownRows.find((r) =>
+              mappings.some((m) => m.Category === 'Chronological Timeline' && m.RowId === r.Id))?.EpisodeFormat || node.EpisodeFormat),
           });
         node.AutoAddRows = [
           ...node.AutoAddRows.filter((m) => !enabled.has(m.Category)),
           ...mappings,
         ];
       }
-      for (const row of ownRows.filter((r) => r.SourceUrl)) {
+      for (const row of ownRows.filter(hasOwnSources)) {
         const name = categoryToAutoAdd(categoryForRow(row, base));
         if (!name) continue;
-        const previous = row.AutoAddSources?.[0],
-          source = {
-            Id: previous?.Id || guid(),
-            Url: autoAdd.url(row.SourceUrl),
-            Enabled: true,
-            Priority: 0,
-            Categories: [name],
-          };
-        row.AutoAddSources = [source];
+        const assigned = row.AutoAddSources?.length
+          ? autoAdd.sources(row.AutoAddSources)
+          : [{ Id: guid(), Url: autoAdd.url(row.SourceUrl), Enabled: true, Priority: 0, Categories: [name] }];
+        row.AutoAddSources = assigned;
+        const sources = assigned.filter((source) => source.Enabled)
+          .map((source) => ({ ...source, Categories: [name] }));
+        if (!sources.length) continue;
         jobs.push({
           nodeId: node.Id,
           scopeRowId: row.Id,
           rowIds: [row.Id],
           mappings: [{ Category: name, RowId: row.Id }],
-          sources: [source],
+          sources,
+          episodeFormat: episodeFormat(row.EpisodeFormat || node.EpisodeFormat),
         });
       }
     }
@@ -1655,11 +1751,21 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       }
       node.AutoAddRows = clone(job.mappings);
       node.AutoAddSources = clone(job.sources);
+      node.EpisodeFormat = episodeFormat(job.episodeFormat || node.EpisodeFormat);
       node.AutoAddRecords = node.AutoAddRecords.filter(
         (r) =>
           String(r.ScopeRowId || '') === job.scopeRowId &&
-          (r.RowId || !external.has(r.ReferenceId)),
+          (r.RowId ? ids.has(r.RowId) : linked.has(r.ReferenceId)),
       );
+    }
+    const owner = next.Nodes.find((node) => node.Id === job.nodeId);
+    for (const record of owner?.AutoAddRecords || []) {
+      if (record.RowId || !external.has(record.ReferenceId)) continue;
+      const clean = !!record.Signature && autoAdd.signature(full, record) === record.Signature;
+      record.__scopeExternalRows = full.Rows.filter((row) => !ids.has(row.Id) &&
+        row.MediaLinkIds.includes(record.ReferenceId)).map((row) => row.Id);
+      record.__scopeOwnershipClean = clean;
+      if (clean) record.Signature = autoAdd.signature(next, record);
     }
     return next;
   }
@@ -1688,14 +1794,20 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         String(r.ScopeRowId || '') !== job.scopeRowId ||
         !processed.has(r.ReferenceId + ':' + r.RowId),
     );
-    owner.AutoAddRecords.push(
-      ...imported.AutoAddRecords.map((r) => ({ ...clone(r), ScopeRowId: job.scopeRowId })),
-    );
+    for (const raw of imported.AutoAddRecords) {
+      const record = { ...clone(raw), ScopeRowId: job.scopeRowId };
+      delete record.__scopeExternalRows;
+      delete record.__scopeOwnershipClean;
+      if (raw.__scopeOwnershipClean) record.Signature = autoAdd.signature(full, record);
+      owner.AutoAddRecords.push(record);
+    }
     return full;
   }
   global.FranchiseSettingsCore = {
     autoAdd,
     normalize,
+    normalizeImdbLists,
+    episodeFormat,
     guid,
     validGuid,
     emptyArt,
@@ -2288,6 +2400,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         Nodes: value.Nodes,
         Rows: value.Rows,
         MediaLinks: value.MediaLinks,
+        ImdbLists: value.ImdbLists,
       },
       (_key, entry) =>
         entry && typeof entry === 'object' && !Array.isArray(entry)
@@ -2377,6 +2490,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       AutoAddSources: [],
       AutoAddRows: [],
       AutoAddRecords: [],
+      EpisodeFormat: 'Bundles',
     };
   }
   function newRow(parent, type, name) {
@@ -2387,6 +2501,8 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       Category: type,
       RowType: C.rowTypeForCategory(type),
       SourceUrl: '',
+      AutoAddSources: [],
+      EpisodeFormat: '',
       SortOrder: rows(parent).length,
       NodeIds: [],
       MediaLinkIds: [],
@@ -2521,6 +2637,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         Nodes: safe.Nodes,
         Rows: safe.Rows,
         MediaLinks: safe.MediaLinks,
+        ImdbLists: safe.ImdbLists,
       };
     await ApiClient.updatePluginConfiguration(pluginId, next);
     model = safe;
@@ -2771,6 +2888,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       '<div class="board-drop" data-drop="root">Move to top level</div>' +
       (roots.length ? '' : '<div class="empty">No franchises. Add a franchise to begin.</div>');
     $('undo').disabled = !history.length;
+    renderSavedLists();
     if ($('media-dialog').open) renderMedia(true);
   }
   function show(id) {
@@ -2843,6 +2961,130 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
             '</ul>'
           : '';
   }
+  let editingImdbList = '', sourcePicker = null;
+  const canonicalSource = (value) => {
+    try { return C.autoAdd.url(value); } catch (_) { return ''; }
+  };
+  function renderSavedLists() {
+    $('saved-imdb-lists').innerHTML = (model.ImdbLists || []).map((list) =>
+      '<div class="imdb-list-card"><div><strong>' + esc(list.Name) + '</strong><small>' +
+      esc(list.Url) + (list.Enabled ? '' : ' · Unavailable for new selections') +
+      '</small></div><div class="button-row"><button class="icon-button quiet" data-edit-imdb-list="' +
+      list.Id + '" aria-label="Edit ' + esc(list.Name) + '">' + icon('gear') +
+      '</button><button class="icon-button danger" data-delete-imdb-list="' + list.Id +
+      '" aria-label="Delete saved list ' + esc(list.Name) + '">' + icon('trash') + '</button></div></div>',
+    ).join('') || '<div class="empty">No saved IMDb lists.</div>';
+  }
+  function openImdbList(id = '') {
+    const list = (model.ImdbLists || []).find((entry) => entry.Id === id);
+    editingImdbList = id;
+    $('imdb-list-heading').textContent = id ? 'Edit IMDb list' : 'Add IMDb list';
+    $('imdb-list-name').value = list?.Name || '';
+    $('imdb-list-url').value = list?.Url || '';
+    $('imdb-list-enabled').checked = list?.Enabled !== false;
+    show('imdb-list-dialog');
+    $('imdb-list-name').focus();
+  }
+  $('add-imdb-list').onclick = () => openImdbList();
+  $('saved-imdb-lists').onclick = (event) => {
+    const edit = event.target.closest('[data-edit-imdb-list]'),
+      remove = event.target.closest('[data-delete-imdb-list]');
+    if (edit) openImdbList(edit.dataset.editImdbList);
+    if (remove) {
+      change(() => { model.ImdbLists = model.ImdbLists.filter((entry) => entry.Id !== remove.dataset.deleteImdbList); });
+      notify('Saved list removed. Assigned Auto Add sources are preserved.');
+    }
+  };
+  $('save-imdb-list').onclick = () => attempt(() => {
+    const previous = (model.ImdbLists || []).find((entry) => entry.Id === editingImdbList),
+      value = { ...(previous || {}), Id: previous?.Id || C.guid(),
+        Name: $('imdb-list-name').value.trim(), Url: $('imdb-list-url').value.trim(),
+        Enabled: $('imdb-list-enabled').checked },
+      lists = (model.ImdbLists || []).map((entry) => entry.Id === editingImdbList ? value : entry);
+    if (!previous) lists.push(value);
+    const safe = C.normalizeImdbLists(lists);
+    change(() => { model.ImdbLists = safe; });
+    $('imdb-list-dialog').close();
+    notify('IMDb list staged. Save changes to persist.');
+  });
+  function sourceSummary(sources) {
+    return (sources || []).filter((source) => source.Enabled !== false).map((source) =>
+      (model.ImdbLists || []).find((list) => canonicalSource(list.Url) === canonicalSource(source.Url))?.Name || source.Url,
+    ).join(' · ') || 'No IMDb sources selected';
+  }
+  function rowSources(row) {
+    if (row.AutoAddSources?.length) return row.AutoAddSources;
+    return row.SourceUrl ? [{ Id: C.guid(), Url: row.SourceUrl, Enabled: true, Priority: 0,
+      Categories: [C.categoryToAutoAdd(category(row))].filter(Boolean) }] : [];
+  }
+  function setPrimarySource(previous, value, categories) {
+    const first = previous.find((source) => source.Enabled !== false) || previous[0];
+    if (!value.trim()) return previous.filter((source) => source !== first);
+    const duplicate = previous.find((source) => source !== first && canonicalSource(source.Url) &&
+      canonicalSource(source.Url) === canonicalSource(value));
+    if (duplicate) return previous.filter((source) => source !== first);
+    return [{ ...(first || {}), Id: first?.Id || C.guid(), Url: value.trim(), Enabled: true,
+      Priority: first?.Priority || 0, Categories: first?.Categories?.length ? first.Categories : categories },
+      ...previous.filter((source) => source !== first)];
+  }
+  function pickerSources(target) {
+    if (target.kind === 'node') return nodeDraft?.sourceNodes[target.id] || [];
+    if (target.kind === 'node-row') return nodeDraft?.sourceRows[target.id]?.AutoAddSources || [];
+    return rowDraft?.row.AutoAddSources || [];
+  }
+  function openSourcePicker(target) {
+    sourcePicker = target;
+    const assigned = new Set(pickerSources(target).map((source) => canonicalSource(source.Url)));
+    $('imdb-source-options').innerHTML = (model.ImdbLists || []).map((list) => {
+      const selected = assigned.has(canonicalSource(list.Url));
+      return '<label class="saved-source-option"><input type="checkbox" data-saved-imdb-list="' +
+        list.Id + '"' + (selected ? ' checked' : '') + (!list.Enabled && !selected ? ' disabled' : '') +
+        '><span>' + esc(list.Name) + '<small>' + esc(list.Url) +
+        (!list.Enabled ? ' · Unavailable for new selections' : '') + '</small></span></label>';
+    }).join('') || '<div class="empty">Add named lists under Settings → Advanced settings.</div>';
+    show('imdb-source-picker');
+  }
+  $('imdb-source-picker').addEventListener('close', () => { sourcePicker = null; });
+  $('use-imdb-sources').onclick = () => attempt(() => {
+    const target = sourcePicker;
+    if (!target) return;
+    const previous = pickerSources(target),
+      presets = model.ImdbLists || [],
+      known = new Set(presets.map((list) => canonicalSource(list.Url))),
+      picked = new Set([...$('imdb-source-options').querySelectorAll('[data-saved-imdb-list]:checked')]
+        .map((input) => input.dataset.savedImdbList)),
+      categories = target.kind === 'node'
+        ? ['Chronological Timeline', 'Movies', 'TV Shows', 'Collections']
+        : [C.categoryToAutoAdd(category(target.kind === 'row' ? rowDraft.row : getRow(target.id)))].filter(Boolean),
+      next = previous.filter((source) => !known.has(canonicalSource(source.Url)));
+    for (const list of presets.filter((entry) => picked.has(entry.Id))) {
+      const existing = previous.find((source) => canonicalSource(source.Url) === canonicalSource(list.Url));
+      next.push(existing ? C.clone(existing) : { Id: C.guid(), Url: list.Url, Enabled: true,
+        Priority: next.length, Categories: categories });
+    }
+    const sources = C.autoAdd.sources(next);
+    if (target.kind === 'node') {
+      if (!nodeDraft) return;
+      nodeDraft.sourceNodes[target.id] = sources;
+      if (target.id === nodeDraft.node.Id) $('franchise-imdb-url').value = sources.find((s) => s.Enabled)?.Url || '';
+      renderSources();
+    } else {
+      const row = target.kind === 'row' ? rowDraft?.row : nodeDraft?.sourceRows[target.id];
+      if (!row) return;
+      row.AutoAddSources = sources;
+      row.SourceUrl = sources.find((source) => source.Enabled)?.Url || '';
+      if (target.kind === 'row') renderRowSources();
+      else renderSources();
+    }
+    autoGeneration++;
+    $('imdb-source-picker').close();
+  });
+  $('choose-franchise-imdb-lists').onclick = () => {
+    if (nodeDraft) openSourcePicker({ kind: 'node', id: nodeDraft.node.Id });
+  };
+  $('choose-row-imdb-lists').onclick = () => {
+    if (rowDraft) openSourcePicker({ kind: 'row', id: rowDraft.row.Id });
+  };
   function openNode(id) {
     const node = getNode(id);
     if (!node) return;
@@ -2851,7 +3093,8 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     for (const n of model.Nodes.filter((n) => descendants(id).has(n.Id)))
       nodeDraft.sourceNodes[n.Id] = C.clone(n.AutoAddSources || []);
     for (const row of model.Rows.filter((r) => descendants(id).has(r.ParentNodeId)))
-      nodeDraft.sourceRows[row.Id] = row.SourceUrl || '';
+      nodeDraft.sourceRows[row.Id] = { SourceUrl: row.SourceUrl || '', AutoAddSources: C.clone(rowSources(row)),
+        EpisodeFormat: row.EpisodeFormat || '' };
     $('detail-title').value = node.Name;
     $('detail-description').value = node.Overview;
     $('detail-title').setCustomValidity('');
@@ -2862,6 +3105,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     $('franchise-auto-add').setAttribute('aria-expanded', 'false');
     $('franchise-imdb-url').value =
       node.AutoAddSources?.find((s) => s.Enabled !== false)?.Url || '';
+    $('franchise-episode-format').value = node.EpisodeFormat || 'Bundles';
     renderSources();
     pendingView();
     artwork.render(
@@ -2877,6 +3121,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
   }
   function renderSources() {
     if (!nodeDraft) return;
+    $('franchise-source-summary').textContent = sourceSummary(nodeDraft.sourceNodes[nodeDraft.node.Id]);
     const branch = descendants(nodeDraft.node.Id);
     $('source-list').innerHTML = model.Nodes.filter((n) => branch.has(n.Id))
       .map(
@@ -2887,7 +3132,9 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
           n.Id +
           '" value="' +
           esc(nodeDraft.sourceNodes[n.Id]?.find((s) => s.Enabled !== false)?.Url || '') +
-          '" placeholder="https://www.imdb.com/list/ls…/"></label>' +
+          '" placeholder="https://www.imdb.com/list/ls…/"></label><button data-choose-source-node="' +
+          n.Id + '">Choose saved lists</button><div class="saved-source-summary">' +
+          esc(sourceSummary(nodeDraft.sourceNodes[n.Id])) + '</div>' +
           rows(n.Id)
             .map(
               (row) =>
@@ -2896,8 +3143,15 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
                 ' · Row URL</span><input type="url" data-source-row="' +
                 row.Id +
                 '" value="' +
-                esc(nodeDraft.sourceRows[row.Id]) +
-                '" placeholder="Optional row source"></label>',
+                esc(nodeDraft.sourceRows[row.Id]?.SourceUrl || '') +
+                '" placeholder="Optional row source"></label><button data-choose-source-row="' + row.Id +
+                '">Choose saved lists for ' + esc(row.Name) + '</button><div class="saved-source-summary">' +
+                esc(sourceSummary(nodeDraft.sourceRows[row.Id]?.AutoAddSources)) + '</div>' +
+                (category(row) === 'Chronological Order' ? '<label class="field"><span>' + esc(row.Name) +
+                  ' · Episode format</span><select data-source-row-format="' + row.Id + '"><option value="">Use franchise setting</option>' +
+                  ['Bundles', 'Individual'].map((format) => '<option value="' + format + '"' +
+                    (nodeDraft.sourceRows[row.Id]?.EpisodeFormat === format ? ' selected' : '') + '>' +
+                    (format === 'Bundles' ? 'Episode bundles' : 'Individual episodes') + '</option>').join('') + '</select></label>' : ''),
             )
             .join('') +
           '</section>',
@@ -2906,23 +3160,9 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
   }
   function updateNodeSource(id, value) {
     if (!nodeDraft) return;
-    const previous = nodeDraft.sourceNodes[id] || [],
-      first = previous.find((s) => s.Enabled !== false) || previous[0];
-    nodeDraft.sourceNodes[id] = value.trim()
-      ? [
-          {
-            ...(first || {}),
-            Id: first?.Id || C.guid(),
-            Url: value.trim(),
-            Enabled: true,
-            Priority: first?.Priority || 0,
-            Categories: first?.Categories?.length
-              ? first.Categories
-              : ['Chronological Timeline', 'Movies', 'TV Shows', 'Collections'],
-          },
-          ...previous.filter((s) => s !== first),
-        ]
-      : previous.filter((s) => s !== first);
+    nodeDraft.sourceNodes[id] = setPrimarySource(nodeDraft.sourceNodes[id] || [], value,
+      ['Chronological Timeline', 'Movies', 'TV Shows', 'Collections']);
+    $('franchise-source-summary').textContent = sourceSummary(nodeDraft.sourceNodes[nodeDraft.node.Id]);
   }
   $('source-list').oninput = (e) => {
     if (!nodeDraft) return;
@@ -2932,8 +3172,22 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       if (e.target.dataset.sourceNode === nodeDraft.node.Id)
         $('franchise-imdb-url').value = e.target.value;
     }
-    if (e.target.dataset.sourceRow)
-      nodeDraft.sourceRows[e.target.dataset.sourceRow] = e.target.value;
+    if (e.target.dataset.sourceRow) {
+      const id = e.target.dataset.sourceRow, row = nodeDraft.sourceRows[id];
+      row.AutoAddSources = setPrimarySource(row.AutoAddSources || [], e.target.value,
+        [C.categoryToAutoAdd(category(getRow(id)))].filter(Boolean));
+      row.SourceUrl = e.target.value;
+    }
+  };
+  $('source-list').onclick = (event) => {
+    const node = event.target.closest('[data-choose-source-node]'),
+      row = event.target.closest('[data-choose-source-row]');
+    if (node) openSourcePicker({ kind: 'node', id: node.dataset.chooseSourceNode });
+    if (row) openSourcePicker({ kind: 'node-row', id: row.dataset.chooseSourceRow });
+  };
+  $('source-list').onchange = (event) => {
+    const id = event.target.dataset.sourceRowFormat;
+    if (id && nodeDraft) nodeDraft.sourceRows[id].EpisodeFormat = event.target.value;
   };
   $('franchise-imdb-url').oninput = () => {
     if (!nodeDraft) return;
@@ -2942,6 +3196,9 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     if (linked) linked.value = $('franchise-imdb-url').value;
   };
   $('detail-title').oninput = () => $('detail-title').setCustomValidity('');
+  $('franchise-episode-format').onchange = () => {
+    if (nodeDraft) nodeDraft.node.EpisodeFormat = $('franchise-episode-format').value;
+  };
   function nodeDraftModel() {
     if (!nodeDraft) throw Error('Open a franchise first.');
     const next = C.clone(model),
@@ -2961,9 +3218,10 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       const n = next.Nodes.find((n) => n.Id === id);
       if (n) n.AutoAddSources = C.autoAdd.sources(sources);
     }
-    for (const [id, url] of Object.entries(nodeDraft.sourceRows)) {
+    for (const [id, settings] of Object.entries(nodeDraft.sourceRows)) {
       const row = next.Rows.find((r) => r.Id === id);
-      if (row) row.SourceUrl = url.trim() ? C.autoAdd.url(url) : '';
+      if (row) Object.assign(row, { SourceUrl: settings.SourceUrl.trim() ? C.autoAdd.url(settings.SourceUrl) : '',
+        AutoAddSources: C.autoAdd.sources(settings.AutoAddSources), EpisodeFormat: settings.EpisodeFormat || '' });
     }
     applyStructure(next, nodeDraft);
     return C.normalize(next);
@@ -2999,6 +3257,9 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     $('edit-row-group-name').value = rowDraft.groupName;
     $('row-structure-tools').hidden = !rowDraft.originalId;
     $('row-structure-owner').textContent = 'Add to ' + path(row.ParentNodeId);
+    $('row-auto-settings').hidden = type === 'Sub Group';
+    $('row-format-field').hidden = type !== 'Chronological Order';
+    renderRowSources();
     artwork.render(
       $('row-photos'),
       { kind: 'row', id: row.Id, parentId: row.ParentNodeId, category: type },
@@ -3006,6 +3267,40 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       (value) => (row.Artwork = value),
     );
     pendingView();
+  }
+  function renderRowSources() {
+    if (!rowDraft) return;
+    $('row-imdb-url').value = rowDraft.row.SourceUrl || '';
+    $('row-source-summary').textContent = sourceSummary(rowDraft.row.AutoAddSources);
+    $('row-episode-format').value = rowDraft.row.EpisodeFormat || '';
+  }
+  $('row-auto-add').onclick = () => {
+    $('row-imdb-fields').hidden = false;
+    $('row-auto-add').setAttribute('aria-expanded', 'true');
+    $('row-imdb-url').focus();
+  };
+  $('row-imdb-url').oninput = () => {
+    if (!rowDraft) return;
+    const row = rowDraft.row;
+    row.AutoAddSources = setPrimarySource(row.AutoAddSources || [], $('row-imdb-url').value,
+      [C.categoryToAutoAdd(category(row))].filter(Boolean));
+    row.SourceUrl = $('row-imdb-url').value;
+    $('row-source-summary').textContent = sourceSummary(row.AutoAddSources);
+  };
+  $('row-episode-format').onchange = () => {
+    if (rowDraft) rowDraft.row.EpisodeFormat = $('row-episode-format').value;
+  };
+  function rowDraftModel() {
+    if (!rowDraft) throw Error('Open a row first.');
+    if (rowDraft.convert || category(rowDraft.row) === 'Sub Group')
+      throw Error('Save the subgroup before using Auto Add.');
+    const next = C.clone(model), row = C.clone(rowDraft.row);
+    if (!row.Name.trim()) throw Error('Enter a row name.');
+    applyStructure(next, rowDraft);
+    const existing = next.Rows.find((entry) => entry.Id === row.Id);
+    if (existing) Object.assign(existing, row);
+    else next.Rows.push(row);
+    return C.normalize(next);
   }
   function openRow(id = '', parent = selected) {
     const row = id ? getRow(id) : newRow(parent, 'Movies', 'Movies');
@@ -3016,6 +3311,9 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       customName: row.Name,
       groupName: row.Name,
     });
+    rowDraft.row.AutoAddSources = C.clone(rowSources(row));
+    $('row-imdb-fields').hidden = true;
+    $('row-auto-add').setAttribute('aria-expanded', 'false');
     $('row-heading').textContent = id ? 'Edit row' : 'Add group / row';
     $('row-owner').textContent = path(row.ParentNodeId);
     $('edit-row-custom').setCustomValidity('');
@@ -3607,37 +3905,218 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     openRow(id);
     convertRow();
   };
+  function stopSpecificRequest(draft = rangeDraft) {
+    if (!draft) return;
+    draft.pickerSerial = (draft.pickerSerial || 0) + 1;
+    draft.pickerController?.abort();
+    clearTimeout(draft.pickerTimeout);
+    draft.pickerController = null;
+  }
+  function specificCurrent(draft, serial) {
+    return rangeDraft === draft && draft.pickerSerial === serial &&
+      $('library-range-mode').value === 'specific';
+  }
+  function specificRequest(draft) {
+    stopSpecificRequest(draft);
+    const controller = new AbortController(), serial = draft.pickerSerial;
+    draft.pickerController = controller;
+    draft.pickerTimeout = setTimeout(() => controller.abort(), 45000);
+    return { serial, signal: controller.signal };
+  }
+  async function specificPages(route, params, signal) {
+    const result = [], seen = new Set(), limit = 200;
+    let offset = 0;
+    for (let page = 0; page < 100; page++) {
+      const response = await request(route + '?' + new URLSearchParams({
+        ...params, startIndex: offset, limit,
+      }), { signal });
+      const batch = response?.Items || response?.items || [],
+        total = response?.TotalRecordCount ?? response?.totalRecordCount;
+      let added = 0;
+      for (const item of batch) {
+        const key = String(item?.Id || '').replace(/-/g, '').toLowerCase();
+        if (!key || seen.has(key)) continue;
+        seen.add(key); result.push(item); added++;
+      }
+      offset += batch.length;
+      if (!batch.length || (Number.isFinite(total) ? offset >= total : batch.length < limit))
+        return result;
+      if (!added) throw Error('Jellyfin returned repeated episode pages. Try loading again.');
+    }
+    throw Error('The TV Show exceeds the episode selection scan limit.');
+  }
+  function specificLabel(episode) {
+    return 'S' + String(episode.ParentIndexNumber).padStart(2, '0') +
+      'E' + String(episode.IndexNumber).padStart(2, '0') + ' · ' + (episode.Name || 'Episode');
+  }
+  function specificChoice() {
+    const draft = rangeDraft,
+      episode = draft?.pickerEpisodes?.find((item) => item.Id === $('library-specific-episode').value);
+    return episode && episode.ParentIndexNumber === Number($('library-specific-season').value)
+      ? episode : null;
+  }
+  function syncSpecificChoice() {
+    const episode = specificChoice();
+    $('confirm-library-range').disabled = !episode;
+    $('library-specific-status').textContent = episode ? specificLabel(episode) : '';
+  }
+  function specificFailure(message) {
+    $('library-range-error').textContent = message;
+    $('library-range-error').hidden = false;
+    $('library-specific-status').textContent = '';
+    $('library-specific-retry').hidden = false;
+    $('confirm-library-range').disabled = true;
+  }
+  async function loadSpecificEpisodes(draft, season, desiredEpisode = '') {
+    const { serial, signal } = specificRequest(draft);
+    draft.pickerEpisodes = [];
+    $('library-specific-episode').innerHTML = '<option value="">Loading episodes…</option>';
+    $('library-specific-episode').disabled = true;
+    $('confirm-library-range').disabled = true;
+    $('library-range-error').hidden = true;
+    $('library-specific-retry').hidden = true;
+    $('library-specific-status').textContent = 'Loading episodes…';
+    try {
+      const episodes = await specificPages('Shows/' + encodeURIComponent(draft.media.Id) + '/Episodes', {
+        userId: ApiClient.getCurrentUserId?.() || '', season,
+        isMissing: false, enableTotalRecordCount: true,
+      }, signal);
+      if (!specificCurrent(draft, serial)) return;
+      draft.pickerEpisodes = episodes.filter((item) => item?.Type === 'Episode' &&
+        C.validGuid(item.Id) && item.ParentIndexNumber === Number(season) &&
+        Number.isInteger(item.IndexNumber) && item.IndexNumber >= 1 && item.IndexNumber <= 999 &&
+        item.IsMissing !== true && item.IsVirtualItem !== true && item.LocationType !== 'Virtual')
+        .sort((a, b) => a.IndexNumber - b.IndexNumber || String(a.Name || '').localeCompare(b.Name || ''));
+      $('library-specific-episode').innerHTML = '<option value="">Choose an episode</option>' +
+        draft.pickerEpisodes.map((episode) => '<option value="' + esc(episode.Id) + '">' +
+          esc(specificLabel(episode)) + '</option>').join('');
+      $('library-specific-episode').disabled = !draft.pickerEpisodes.length;
+      const selected = draft.pickerEpisodes.find((episode) => episode.IndexNumber === Number(desiredEpisode));
+      $('library-specific-episode').value = selected?.Id || '';
+      draft.specificEpisode = selected?.IndexNumber ?? '';
+      syncSpecificChoice();
+      if (!draft.pickerEpisodes.length)
+        specificFailure('No available episodes were found for this season.');
+      else if (desiredEpisode !== '' && !selected)
+        specificFailure('The saved episode is no longer available. Choose an available episode.');
+    } catch (error) {
+      if (specificCurrent(draft, serial))
+        specificFailure('Could not load episodes. ' + error.message);
+    } finally {
+      if (specificCurrent(draft, serial)) clearTimeout(draft.pickerTimeout);
+    }
+  }
+  async function loadSpecificSeasons() {
+    const draft = rangeDraft;
+    if (!draft || $('library-range-mode').value !== 'specific') return;
+    const { serial, signal } = specificRequest(draft);
+    draft.pickerEpisodes = [];
+    $('library-specific-season').innerHTML = '<option value="">Loading seasons…</option>';
+    $('library-specific-season').disabled = true;
+    $('library-specific-episode').innerHTML = '<option value="">Choose an episode</option>';
+    $('library-specific-episode').disabled = true;
+    $('confirm-library-range').disabled = true;
+    $('library-range-error').hidden = true;
+    $('library-specific-retry').hidden = true;
+    $('library-specific-status').textContent = 'Loading seasons…';
+    try {
+      const seasons = await specificPages('Shows/' + encodeURIComponent(draft.media.Id) + '/Seasons', {
+        userId: ApiClient.getCurrentUserId?.() || '', isMissing: false,
+      }, signal);
+      if (!specificCurrent(draft, serial)) return;
+      const seen = new Set();
+      draft.pickerSeasons = seasons.filter((season) => {
+        if (!C.validGuid(season?.Id) || season.Type !== 'Season' ||
+            !Number.isInteger(season.IndexNumber) || season.IndexNumber < 0 ||
+            season.IndexNumber > 999 || seen.has(season.IndexNumber)) return false;
+        seen.add(season.IndexNumber); return true;
+      }).sort((a, b) => a.IndexNumber - b.IndexNumber);
+      $('library-specific-season').innerHTML = draft.pickerSeasons.map((season) =>
+        '<option value="' + season.IndexNumber + '">' +
+        esc(season.IndexNumber === 0 ? 'Specials · Season 0' : season.Name || 'Season ' + season.IndexNumber) +
+        '</option>').join('');
+      if (!draft.pickerSeasons.length) {
+        specificFailure('No available seasons with episode numbers were found for this TV Show.');
+        return;
+      }
+      const season = (draft.specificSeason !== '' &&
+          draft.pickerSeasons.find((value) => value.IndexNumber === Number(draft.specificSeason))) ||
+        draft.pickerSeasons.find((value) => value.IndexNumber > 0) || draft.pickerSeasons[0],
+        desiredEpisode = season.IndexNumber === Number(draft.specificSeason) ? draft.specificEpisode : '';
+      $('library-specific-season').value = String(season.IndexNumber);
+      $('library-specific-season').disabled = false;
+      draft.specificSeason = season.IndexNumber;
+      await loadSpecificEpisodes(draft, season.IndexNumber, desiredEpisode);
+    } catch (error) {
+      if (specificCurrent(draft, serial))
+        specificFailure('Could not load seasons. ' + error.message);
+    } finally {
+      if (specificCurrent(draft, serial)) clearTimeout(draft.pickerTimeout);
+    }
+  }
   function rangeFieldsVisibility() {
     const mode = $('library-range-mode').value;
-    $('library-range-endpoints').hidden = mode === 'full';
+    stopSpecificRequest();
+    $('library-range-endpoints').hidden = mode === 'full' || mode === 'specific';
+    $('library-specific-picker').hidden = mode !== 'specific';
     page
       .querySelectorAll('#library-range-endpoints .episode-field')
       .forEach((el) => (el.hidden = mode !== 'episodes'));
     $('library-range-error').hidden = true;
+    $('confirm-library-range').disabled = mode === 'specific';
+    if (mode === 'specific') void loadSpecificSeasons();
   }
   function openRange(state, media, existing = null) {
-    rangeDraft = { state, media, existing };
+    stopSpecificRequest();
+    rangeDraft = { state, media, existing, pickerEpisodes: [], pickerSerial: 0 };
     const ref = existing?.ref;
     $('library-range-title').textContent = media.Name;
-    $('library-range-mode').value =
+    const singleton = ref?.RangeMode === 'Episodes' && ref.StartSeason === ref.EndSeason &&
+      ref.StartEpisode === ref.EndEpisode;
+    $('library-range-mode').value = singleton ? 'specific' :
       { Full: 'full', Seasons: 'seasons', Episodes: 'episodes' }[ref?.RangeMode] || 'full';
+    rangeDraft.specificSeason = singleton ? ref.StartSeason : '';
+    rangeDraft.specificEpisode = singleton ? ref.StartEpisode : '';
     for (const [id, key, fallback] of [
       ['library-from-season', 'StartSeason', 1],
       ['library-to-season', 'EndSeason', 1],
       ['library-from-episode', 'StartEpisode', 1],
       ['library-to-episode', 'EndEpisode', 3],
     ])
-      $(id).value = ref?.[key] || fallback;
+      $(id).value = ref?.[key] ?? fallback;
     $('confirm-library-range').textContent = ref ? 'Save range' : 'Add to row';
     rangeFieldsVisibility();
     show('library-range-dialog');
   }
   $('library-range-mode').onchange = rangeFieldsVisibility;
+  $('library-specific-season').onchange = () => {
+    if (!rangeDraft) return;
+    const season = Number($('library-specific-season').value);
+    if (!rangeDraft.pickerSeasons?.some((entry) => entry.IndexNumber === season)) return;
+    rangeDraft.specificSeason = season;
+    rangeDraft.specificEpisode = '';
+    void loadSpecificEpisodes(rangeDraft, season);
+  };
+  $('library-specific-episode').onchange = () => {
+    if (!rangeDraft) return;
+    rangeDraft.specificEpisode = specificChoice()?.IndexNumber ?? '';
+    $('library-range-error').hidden = true;
+    $('library-specific-retry').hidden = true;
+    syncSpecificChoice();
+  };
+  $('library-specific-retry').onclick = () => void loadSpecificSeasons();
   $('confirm-library-range').onclick = () => {
     try {
       if (!rangeDraft) return;
       const { state, media, existing } = rangeDraft,
-        fields = C.rangeFields({
+        mode = $('library-range-mode').value,
+        episode = mode === 'specific' ? specificChoice() : null;
+      if (mode === 'specific' && !episode) throw Error('Choose an available episode first.');
+      const fields = C.rangeFields(mode === 'specific' ? {
+          ItemType: 'Series', RangeMode: 'Episodes',
+          StartSeason: episode.ParentIndexNumber, EndSeason: episode.ParentIndexNumber,
+          StartEpisode: episode.IndexNumber, EndEpisode: episode.IndexNumber,
+        } : {
           ItemType: 'Series',
           RangeMode: { full: 'Full', seasons: 'Seasons', episodes: 'Episodes' }[
             $('library-range-mode').value
@@ -3674,7 +4153,10 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       $('library-range-error').hidden = false;
     }
   };
-  $('library-range-dialog').addEventListener('close', () => (rangeDraft = null));
+  $('library-range-dialog').addEventListener('close', () => {
+    stopSpecificRequest();
+    rangeDraft = null;
+  });
   async function editRange(rowId, id) {
     const found = reference(rowId, id);
     if (!found) return;
@@ -3693,7 +4175,8 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       r.MediaOrder = r.MediaOrder.filter((id) => refs.has(id));
     }
     for (const n of model.Nodes) {
-      n.AutoAddRows = n.AutoAddRows.filter((m) => rowIds.has(m.RowId));
+      // Retain the mapped row ID after deletion so Auto Add respects the deletion.
+      // The model accepts these mappings; scopedJobs skips a missing mapped row.
       n.AutoAddRecords = n.AutoAddRecords.filter(
         (r) =>
           (!r.ScopeRowId || rowIds.has(r.ScopeRowId)) &&
@@ -3833,12 +4316,14 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     review.cells = [];
     for (const job of review.jobs) {
       const titleAdds = new Map(
-          job.diff.additions.filter((a) => a.kind === 'title').map((a) => [a.entry.imdbId, a]),
-        ),
-        plan = C.autoAdd.plan(
-          job.entries.map((e) => (titleAdds.has(e.imdbId) ? e : { ...e, status: 'excluded' })),
-        );
-      for (const group of plan.groups) {
+        job.diff.additions.filter((addition) => addition.kind === 'title').map((addition) => [addition.entry.imdbId, addition]),
+      );
+      for (const mapping of job.mappings.filter((entry) => entry.Category !== 'TV Shows')) {
+        const format = mapping.Category === 'Chronological Timeline' ? job.episodeFormat : 'Bundles',
+          plan = C.autoAdd.plan(job.entries.map((entry) =>
+            titleAdds.get(entry.imdbId)?.rowIds?.includes(mapping.RowId)
+              ? { ...entry, categories: [mapping.Category] } : { ...entry, status: 'excluded' }), undefined, format);
+        for (const group of plan.groups) {
         const entries = group.episodes || [group.entry],
           adds = entries.map((e) => titleAdds.get(e.imdbId)).filter(Boolean);
         if (!adds.length) continue;
@@ -3846,13 +4331,14 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         review.cells.push({
           change: 'add',
           title: group.label,
-          type: group.episodes ? 'TV Show' : shortType(group.entry.item.Type),
-          where: reviewWhere(job, group, false, [...new Set(adds.flatMap((a) => a.rowIds || []))]),
+          type: group.episodes ? (format === 'Individual' ? 'Episode' : 'TV Show') : shortType(group.entry.item.Type),
+          where: reviewWhere(job, group, false, [mapping.RowId]),
           keys,
-          children: group.episodes
+          children: group.episodes && group.episodes.length > 1
             ? adds.map((a) => ({ key: reviewKey(job, a.key), title: a.label }))
             : null,
         });
+        }
       }
       for (const addition of job.diff.additions.filter((a) => a.kind === 'show'))
         review.cells.push({
@@ -3912,6 +4398,15 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
   function renderReview() {
     if (!review) return;
     reconcileReviewSelection();
+    $('review-format-controls').innerHTML = review.jobs.flatMap((job) => job.mappings
+      .filter((mapping) => mapping.Category === 'Chronological Timeline')
+      .map((mapping) => '<label class="field"><span>' +
+        esc(review.base.Rows.find((row) => row.Id === mapping.RowId)?.Name || 'Chronological Order') +
+        ' · Episode format</span><select data-review-format-row="' + mapping.RowId + '">' +
+        ['Bundles', 'Individual'].map((format) => '<option value="' + format + '"' +
+          (job.episodeFormat === format ? ' selected' : '') + '>' +
+          (format === 'Bundles' ? 'Episode bundles' : 'Individual episodes') + '</option>').join('') + '</select></label>'))
+      .join('');
     $('review-counts').innerHTML = ['add', 'remove', 'missing']
       .map(
         (type) =>
@@ -3988,16 +4483,48 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     $('selected-count').textContent = review.selected.size + ' selected';
     $('apply-selected').disabled = !review.selected.size;
   }
-  $('franchise-preview').onclick = () =>
-    attempt(async () => {
+  async function previewAutoAdd(origin = 'node') {
+    return attempt(async () => {
       const generation = ++autoGeneration,
-        base = nodeDraftModel();
+        draft = origin === 'row' ? rowDraft : nodeDraft,
+        base = origin === 'row' ? rowDraftModel() : nodeDraftModel();
       if (!base) return;
-      const nodeId = nodeDraft.node.Id,
-        jobs = C.scopedJobs(base, nodeId),
-        modelBefore = fingerprint(model);
+      const rowId = origin === 'row' ? draft.row.Id : '',
+        nodeId = origin === 'row' ? draft.row.ParentNodeId : draft.node.Id,
+        modelBefore = fingerprint(model),
+        button = $(origin === 'row' ? 'row-preview' : 'franchise-preview');
+      let jobs;
+      if (rowId) {
+        const row = base.Rows.find((entry) => entry.Id === rowId),
+          owner = base.Nodes.find((node) => node.Id === nodeId),
+          inherited = !row.SourceUrl && !row.AutoAddSources?.length,
+          planning = C.clone(base),
+          planned = C.scopedJobs(planning, nodeId),
+          mapped = inherited && planned.find((job) => !job.scopeRowId && job.nodeId === nodeId &&
+            job.mappings.some((mapping) => mapping.RowId === rowId));
+        if (mapped) {
+          const mappings = mapped.mappings.filter((mapping) => mapping.RowId === rowId),
+            allowed = new Set(mappings.map((mapping) => mapping.Category));
+          owner.AutoAddRows = [
+            ...owner.AutoAddRows.filter((mapping) => !allowed.has(mapping.Category)),
+            ...C.clone(mappings),
+          ];
+          jobs = [{ ...mapped, rowIds: [rowId], mappings,
+            episodeFormat: row.EpisodeFormat || owner.EpisodeFormat || 'Bundles',
+            sources: mapped.sources.map((source) => ({ ...source,
+              Categories: source.Categories.filter((name) => allowed.has(name)) })).filter((source) => source.Categories.length) }];
+        } else {
+          if (inherited) {
+            const name = C.categoryToAutoAdd(category(row));
+            row.AutoAddSources = (owner.AutoAddSources || []).filter((source) => source.Enabled !== false)
+              .map((source) => ({ ...C.clone(source), Id: C.guid(), Categories: [name] }));
+            row.SourceUrl = row.AutoAddSources[0]?.Url || '';
+          }
+          jobs = C.scopedJobs(C.clone(base), nodeId).filter((job) => job.scopeRowId === rowId);
+        }
+      } else jobs = C.scopedJobs(base, nodeId);
       if (!jobs.length) throw Error('Add an IMDb URL to the franchise, subgroup or a media row.');
-      $('franchise-preview').disabled = true;
+      button.disabled = true;
       notify('Reading IMDb and comparing your Jellyfin library…');
       try {
         const cache = new Map();
@@ -4036,8 +4563,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         }
         if (
           generation !== autoGeneration ||
-          !nodeDraft ||
-          nodeDraft.node.Id !== nodeId ||
+          (origin === 'row' ? rowDraft !== draft : nodeDraft !== draft) ||
           fingerprint(model) !== modelBefore
         )
           return;
@@ -4054,6 +4580,8 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
           base,
           jobs,
           nodeId,
+          origin,
+          rowId,
           modelBefore,
           cells: [],
           expanded: new Set(),
@@ -4067,10 +4595,16 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         renderReview();
         show('review');
       } finally {
-        $('franchise-preview').disabled = false;
+        button.disabled = false;
       }
     });
+  }
+  $('franchise-preview').onclick = () => previewAutoAdd('node');
+  $('row-preview').onclick = () => previewAutoAdd('row');
   $('franchise-dialog').addEventListener('close', () => autoGeneration++);
+  $('row-dialog').addEventListener('close', () => autoGeneration++);
+  for (const dialog of [$('franchise-dialog'), $('row-dialog')])
+    dialog.addEventListener('input', () => autoGeneration++);
   $('review-list').onclick = (e) => {
     const toggle = e.target.closest('[data-review-expand]');
     if (toggle && review) {
@@ -4091,6 +4625,22 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       e.target.checked ? review.selected.add(key) : review.selected.delete(key);
     renderReview();
   };
+  $('review-format-controls').onchange = (event) => attempt(() => {
+    const rowId = event.target.dataset.reviewFormatRow;
+    if (!review || !rowId) return;
+    const row = review.base.Rows.find((entry) => entry.Id === rowId);
+    if (!row) return;
+    row.EpisodeFormat = event.target.value;
+    for (const job of review.jobs) {
+      if (job.mappings.some((mapping) => mapping.RowId === rowId)) job.episodeFormat = event.target.value;
+      job.diff = C.autoAdd.changes(C.scopeModel(review.base, job), job.nodeId, job.entries, job.results);
+    }
+    review.selected = new Set(review.jobs.flatMap((job) =>
+      [...job.diff.additions, ...job.diff.removals].map((entry) => reviewKey(job, entry.key))));
+    review.expanded.clear();
+    buildReviewCells();
+    renderReview();
+  });
   function selectReview(all) {
     if (!review) return;
     review.selected.clear();
@@ -4124,14 +4674,15 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
           );
         next = C.mergeScope(next, before, applied.model, job);
       }
-      const nodeId = review.nodeId;
+      const { nodeId, rowId, origin } = review;
       remember();
       model = C.normalize(next);
       markDirty();
       expandPath(nodeId);
       render();
       $('review').close();
-      openNode(nodeId);
+      if (origin === 'row') openRow(rowId);
+      else openNode(nodeId);
       notify('Review applied. Save changes to persist.');
     });
 

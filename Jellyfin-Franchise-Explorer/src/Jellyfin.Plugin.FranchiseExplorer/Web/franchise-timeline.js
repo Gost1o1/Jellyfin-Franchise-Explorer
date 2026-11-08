@@ -397,14 +397,30 @@
       throw new Error('Direct playback is unavailable on this Jellyfin client. Open Jellyfin Home and retry; no Details page was opened.');
     }
     makeState(row,queue,index=0){
-      const old=this.getState(row.id);const same=old && Array.isArray(old.queueKeys) &&
-        queue.some(q=>q.key===old.queueKeys[old.index]);
-      const restored=same?queue.findIndex(q=>q.key===old.queueKeys[old.index]):index;
+      const old=this.getState(row.id),oldKeys=Array.isArray(old?.queueKeys)?old.queueKeys:[];
+      const itemKey=key=>{
+        if(typeof key!=='string'||key.lastIndexOf(':')<1)return '';
+        const value=key.slice(key.lastIndexOf(':')+1);
+        return guid(value)?value.replace(/-/g,'').toLowerCase():'';
+      };
+      // Bundle/single-episode changes can replace reference IDs without changing
+      // the playable queue. Remap by position only for the entire identical item
+      // sequence; item ID lookup alone is ambiguous when an episode appears twice.
+      const remap=oldKeys.length>0 && oldKeys.length===queue.length &&
+        new Set(oldKeys).size===oldKeys.length && new Set(queue.map(q=>q.key)).size===queue.length &&
+        oldKeys.every((key,i)=>{
+          const item=itemKey(key),next=queue[i];
+          return item && guid(next.id) && item===String(next.id).replace(/-/g,'').toLowerCase() &&
+            itemKey(next.key)===item;
+        })?new Map(oldKeys.map((key,i)=>[key,queue[i].key])):null;
+      const currentKey=oldKeys[old?.index],restoredKey=remap?.get(currentKey)||currentKey;
+      const found=typeof restoredKey==='string'&&restoredKey?queue.findIndex(q=>q.key===restoredKey):-1,same=found>=0;
+      const restored=same?found:index;
       return {
         rowId:row.id,parentNodeId:row.parentNodeId||'',name:row.name,
         itemId:queue[Math.max(0,restored)]?.id||'',sessionId:old?.sessionId||'',playbackMode:'paused',
         index:Math.max(0,restored),total:queue.length,positionTicks:same?n(old.positionTicks):0,
-        completedKeys:(old?.completedKeys||[]).filter(key=>queue.some(q=>q.key===key)),queueKeys:queue.map(q=>q.key),queueLengths:queue.map(q=>q.runTimeTicks),
+        completedKeys:(old?.completedKeys||[]).map(key=>remap?.get(key)||key).filter(key=>queue.some(q=>q.key===key)),queueKeys:queue.map(q=>q.key),queueLengths:queue.map(q=>q.runTimeTicks),
         queueSourceItemIds:queue.map(q=>q.sourceItemId),queueSeasons:queue.map(q=>q.season),queueEpisodes:queue.map(q=>q.episode)
       };
     }

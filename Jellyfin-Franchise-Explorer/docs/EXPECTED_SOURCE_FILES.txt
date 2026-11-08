@@ -160,6 +160,13 @@ Jellyfin-Franchise-Explorer/scripts/test_settings_v9_browser.py
 Jellyfin-Franchise-Explorer/scripts/test_media_ordering_browser.py
 Jellyfin-Franchise-Explorer/scripts/test_playback_subtitles.js
 Jellyfin-Franchise-Explorer/scripts/test_viewer_preferences_browser.py
+Jellyfin-Franchise-Explorer/scripts/test_specific_episode_browser.py
+Jellyfin-Franchise-Explorer/scripts/test_imdb_lists_episode_ui_browser.py
+Jellyfin-Franchise-Explorer/scripts/test_episode_presentation_browser.py
+Jellyfin-Franchise-Explorer/scripts/test_episode_formats.js
+Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Models/FranchiseImdbList.cs
+Jellyfin-Franchise-Explorer/tests/AutoAdd.Tests/ImdbListConfigurationTests.cs
+Jellyfin-Franchise-Explorer/docs/VALIDATION_V08925.md
 Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Api/FranchisePlaybackPreferencesController.cs
 Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Web/PlaybackSubtitlePolicy.cs
 Jellyfin-Franchise-Explorer/tests/AutoAdd.Tests/PlaybackSubtitleTests.cs

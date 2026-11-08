@@ -22,6 +22,7 @@ jobs:
           python3 scripts/check_repo.py
           python3 scripts/build_settings_page.py --check
           node scripts/test_settings_core.js
+          node scripts/test_episode_formats.js
           python3 scripts/check_repository_completeness.py
           python3 scripts/smoke_tests.py
           node scripts/test_autoadd.js
@@ -82,6 +83,9 @@ jobs:
         run: |
           python3 scripts/test_timeline_browser.py
           python3 scripts/test_settings_v9_browser.py
+          python3 scripts/test_specific_episode_browser.py
+          python3 scripts/test_imdb_lists_episode_ui_browser.py
+          python3 scripts/test_episode_presentation_browser.py
           python3 scripts/test_viewer_preferences_browser.py
           python3 scripts/test_media_ordering_browser.py
           python3 scripts/test_card_navigation_v081.py

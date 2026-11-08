@@ -19,6 +19,8 @@ public sealed class FranchiseRow
     /// <summary>Optional IMDb list override for this row.</summary>
     public string SourceUrl { get; set; } = string.Empty;
     public List<FranchiseSource> AutoAddSources { get; set; } = new();
+    /// <summary>Chronological Auto Add format override. Empty inherits the owning franchise or subgroup.</summary>
+    public string EpisodeFormat { get; set; } = string.Empty;
     public ArtworkMetadata Artwork { get; set; } = new();
     public int SortOrder { get; set; }
     public List<string> NodeIds { get; set; } = new();

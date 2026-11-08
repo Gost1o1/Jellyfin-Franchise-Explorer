@@ -13,6 +13,9 @@ public sealed class FranchiseNode
 
     public System.Collections.Generic.List<FranchiseAutoAddRecord> AutoAddRecords { get; set; } = new();
 
+    /// <summary>Chronological Auto Add presentation: Bundles or Individual. Older configurations retain bundles.</summary>
+    public string EpisodeFormat { get; set; } = "Bundles";
+
     public string Id { get; set; } = Guid.NewGuid().ToString("D");
     public string ParentId { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;

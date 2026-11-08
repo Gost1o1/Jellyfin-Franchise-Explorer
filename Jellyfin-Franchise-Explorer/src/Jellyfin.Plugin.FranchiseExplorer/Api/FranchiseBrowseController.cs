@@ -97,6 +97,15 @@ public sealed class FranchiseBrowseController : ControllerBase
         bannerUrl = artwork?.BannerUrl ?? string.Empty
     };
 
+    private static string DisplayEpisodeFormat(string? rowFormat, string? ownerFormat)
+    {
+        var value = rowFormat?.Trim();
+        if (string.Equals(value, "Individual", StringComparison.OrdinalIgnoreCase)) return "Individual";
+        if (string.Equals(value, "Bundles", StringComparison.OrdinalIgnoreCase)) return "Bundles";
+        return string.Equals(ownerFormat?.Trim(), "Individual", StringComparison.OrdinalIgnoreCase)
+            ? "Individual" : "Bundles";
+    }
+
     [HttpGet("Catalog")]
     [Authorize]
     public IActionResult Catalog()
@@ -111,7 +120,7 @@ public sealed class FranchiseBrowseController : ControllerBase
         // titles that a particular user isn't allowed to browse.
         return Ok(new
         {
-            version = "0.8.9.24",
+            version = "0.8.9.25",
             title = string.IsNullOrWhiteSpace(config.NavigationLabel) ? "Franchises" : config.NavigationLabel,
             nodes = config.Nodes.Select(n => new
             {
@@ -131,6 +140,8 @@ public sealed class FranchiseBrowseController : ControllerBase
                 name = r.Name,
                 rowType = r.RowType,
                 category = r.Category,
+                episodeFormat = DisplayEpisodeFormat(r.EpisodeFormat,
+                    config.Nodes.FirstOrDefault(n => n.Id == r.ParentNodeId)?.EpisodeFormat),
                 artwork = ArtworkPayload(r.Artwork),
                 autoAddCategory = config.Nodes.SelectMany(n => n.AutoAddRows ?? new()).FirstOrDefault(m => m.RowId == r.Id)?.Category ?? "",
                 sortOrder = r.SortOrder,

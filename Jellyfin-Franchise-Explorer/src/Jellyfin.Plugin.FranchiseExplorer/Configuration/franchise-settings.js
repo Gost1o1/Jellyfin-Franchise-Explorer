@@ -53,6 +53,7 @@
         Nodes: value.Nodes,
         Rows: value.Rows,
         MediaLinks: value.MediaLinks,
+        ImdbLists: value.ImdbLists,
       },
       (_key, entry) =>
         entry && typeof entry === 'object' && !Array.isArray(entry)
@@ -142,6 +143,7 @@
       AutoAddSources: [],
       AutoAddRows: [],
       AutoAddRecords: [],
+      EpisodeFormat: 'Bundles',
     };
   }
   function newRow(parent, type, name) {
@@ -152,6 +154,8 @@
       Category: type,
       RowType: C.rowTypeForCategory(type),
       SourceUrl: '',
+      AutoAddSources: [],
+      EpisodeFormat: '',
       SortOrder: rows(parent).length,
       NodeIds: [],
       MediaLinkIds: [],
@@ -286,6 +290,7 @@
         Nodes: safe.Nodes,
         Rows: safe.Rows,
         MediaLinks: safe.MediaLinks,
+        ImdbLists: safe.ImdbLists,
       };
     await ApiClient.updatePluginConfiguration(pluginId, next);
     model = safe;
@@ -536,6 +541,7 @@
       '<div class="board-drop" data-drop="root">Move to top level</div>' +
       (roots.length ? '' : '<div class="empty">No franchises. Add a franchise to begin.</div>');
     $('undo').disabled = !history.length;
+    renderSavedLists();
     if ($('media-dialog').open) renderMedia(true);
   }
   function show(id) {
@@ -608,6 +614,130 @@
             '</ul>'
           : '';
   }
+  let editingImdbList = '', sourcePicker = null;
+  const canonicalSource = (value) => {
+    try { return C.autoAdd.url(value); } catch (_) { return ''; }
+  };
+  function renderSavedLists() {
+    $('saved-imdb-lists').innerHTML = (model.ImdbLists || []).map((list) =>
+      '<div class="imdb-list-card"><div><strong>' + esc(list.Name) + '</strong><small>' +
+      esc(list.Url) + (list.Enabled ? '' : ' · Unavailable for new selections') +
+      '</small></div><div class="button-row"><button class="icon-button quiet" data-edit-imdb-list="' +
+      list.Id + '" aria-label="Edit ' + esc(list.Name) + '">' + icon('gear') +
+      '</button><button class="icon-button danger" data-delete-imdb-list="' + list.Id +
+      '" aria-label="Delete saved list ' + esc(list.Name) + '">' + icon('trash') + '</button></div></div>',
+    ).join('') || '<div class="empty">No saved IMDb lists.</div>';
+  }
+  function openImdbList(id = '') {
+    const list = (model.ImdbLists || []).find((entry) => entry.Id === id);
+    editingImdbList = id;
+    $('imdb-list-heading').textContent = id ? 'Edit IMDb list' : 'Add IMDb list';
+    $('imdb-list-name').value = list?.Name || '';
+    $('imdb-list-url').value = list?.Url || '';
+    $('imdb-list-enabled').checked = list?.Enabled !== false;
+    show('imdb-list-dialog');
+    $('imdb-list-name').focus();
+  }
+  $('add-imdb-list').onclick = () => openImdbList();
+  $('saved-imdb-lists').onclick = (event) => {
+    const edit = event.target.closest('[data-edit-imdb-list]'),
+      remove = event.target.closest('[data-delete-imdb-list]');
+    if (edit) openImdbList(edit.dataset.editImdbList);
+    if (remove) {
+      change(() => { model.ImdbLists = model.ImdbLists.filter((entry) => entry.Id !== remove.dataset.deleteImdbList); });
+      notify('Saved list removed. Assigned Auto Add sources are preserved.');
+    }
+  };
+  $('save-imdb-list').onclick = () => attempt(() => {
+    const previous = (model.ImdbLists || []).find((entry) => entry.Id === editingImdbList),
+      value = { ...(previous || {}), Id: previous?.Id || C.guid(),
+        Name: $('imdb-list-name').value.trim(), Url: $('imdb-list-url').value.trim(),
+        Enabled: $('imdb-list-enabled').checked },
+      lists = (model.ImdbLists || []).map((entry) => entry.Id === editingImdbList ? value : entry);
+    if (!previous) lists.push(value);
+    const safe = C.normalizeImdbLists(lists);
+    change(() => { model.ImdbLists = safe; });
+    $('imdb-list-dialog').close();
+    notify('IMDb list staged. Save changes to persist.');
+  });
+  function sourceSummary(sources) {
+    return (sources || []).filter((source) => source.Enabled !== false).map((source) =>
+      (model.ImdbLists || []).find((list) => canonicalSource(list.Url) === canonicalSource(source.Url))?.Name || source.Url,
+    ).join(' · ') || 'No IMDb sources selected';
+  }
+  function rowSources(row) {
+    if (row.AutoAddSources?.length) return row.AutoAddSources;
+    return row.SourceUrl ? [{ Id: C.guid(), Url: row.SourceUrl, Enabled: true, Priority: 0,
+      Categories: [C.categoryToAutoAdd(category(row))].filter(Boolean) }] : [];
+  }
+  function setPrimarySource(previous, value, categories) {
+    const first = previous.find((source) => source.Enabled !== false) || previous[0];
+    if (!value.trim()) return previous.filter((source) => source !== first);
+    const duplicate = previous.find((source) => source !== first && canonicalSource(source.Url) &&
+      canonicalSource(source.Url) === canonicalSource(value));
+    if (duplicate) return previous.filter((source) => source !== first);
+    return [{ ...(first || {}), Id: first?.Id || C.guid(), Url: value.trim(), Enabled: true,
+      Priority: first?.Priority || 0, Categories: first?.Categories?.length ? first.Categories : categories },
+      ...previous.filter((source) => source !== first)];
+  }
+  function pickerSources(target) {
+    if (target.kind === 'node') return nodeDraft?.sourceNodes[target.id] || [];
+    if (target.kind === 'node-row') return nodeDraft?.sourceRows[target.id]?.AutoAddSources || [];
+    return rowDraft?.row.AutoAddSources || [];
+  }
+  function openSourcePicker(target) {
+    sourcePicker = target;
+    const assigned = new Set(pickerSources(target).map((source) => canonicalSource(source.Url)));
+    $('imdb-source-options').innerHTML = (model.ImdbLists || []).map((list) => {
+      const selected = assigned.has(canonicalSource(list.Url));
+      return '<label class="saved-source-option"><input type="checkbox" data-saved-imdb-list="' +
+        list.Id + '"' + (selected ? ' checked' : '') + (!list.Enabled && !selected ? ' disabled' : '') +
+        '><span>' + esc(list.Name) + '<small>' + esc(list.Url) +
+        (!list.Enabled ? ' · Unavailable for new selections' : '') + '</small></span></label>';
+    }).join('') || '<div class="empty">Add named lists under Settings → Advanced settings.</div>';
+    show('imdb-source-picker');
+  }
+  $('imdb-source-picker').addEventListener('close', () => { sourcePicker = null; });
+  $('use-imdb-sources').onclick = () => attempt(() => {
+    const target = sourcePicker;
+    if (!target) return;
+    const previous = pickerSources(target),
+      presets = model.ImdbLists || [],
+      known = new Set(presets.map((list) => canonicalSource(list.Url))),
+      picked = new Set([...$('imdb-source-options').querySelectorAll('[data-saved-imdb-list]:checked')]
+        .map((input) => input.dataset.savedImdbList)),
+      categories = target.kind === 'node'
+        ? ['Chronological Timeline', 'Movies', 'TV Shows', 'Collections']
+        : [C.categoryToAutoAdd(category(target.kind === 'row' ? rowDraft.row : getRow(target.id)))].filter(Boolean),
+      next = previous.filter((source) => !known.has(canonicalSource(source.Url)));
+    for (const list of presets.filter((entry) => picked.has(entry.Id))) {
+      const existing = previous.find((source) => canonicalSource(source.Url) === canonicalSource(list.Url));
+      next.push(existing ? C.clone(existing) : { Id: C.guid(), Url: list.Url, Enabled: true,
+        Priority: next.length, Categories: categories });
+    }
+    const sources = C.autoAdd.sources(next);
+    if (target.kind === 'node') {
+      if (!nodeDraft) return;
+      nodeDraft.sourceNodes[target.id] = sources;
+      if (target.id === nodeDraft.node.Id) $('franchise-imdb-url').value = sources.find((s) => s.Enabled)?.Url || '';
+      renderSources();
+    } else {
+      const row = target.kind === 'row' ? rowDraft?.row : nodeDraft?.sourceRows[target.id];
+      if (!row) return;
+      row.AutoAddSources = sources;
+      row.SourceUrl = sources.find((source) => source.Enabled)?.Url || '';
+      if (target.kind === 'row') renderRowSources();
+      else renderSources();
+    }
+    autoGeneration++;
+    $('imdb-source-picker').close();
+  });
+  $('choose-franchise-imdb-lists').onclick = () => {
+    if (nodeDraft) openSourcePicker({ kind: 'node', id: nodeDraft.node.Id });
+  };
+  $('choose-row-imdb-lists').onclick = () => {
+    if (rowDraft) openSourcePicker({ kind: 'row', id: rowDraft.row.Id });
+  };
   function openNode(id) {
     const node = getNode(id);
     if (!node) return;
@@ -616,7 +746,8 @@
     for (const n of model.Nodes.filter((n) => descendants(id).has(n.Id)))
       nodeDraft.sourceNodes[n.Id] = C.clone(n.AutoAddSources || []);
     for (const row of model.Rows.filter((r) => descendants(id).has(r.ParentNodeId)))
-      nodeDraft.sourceRows[row.Id] = row.SourceUrl || '';
+      nodeDraft.sourceRows[row.Id] = { SourceUrl: row.SourceUrl || '', AutoAddSources: C.clone(rowSources(row)),
+        EpisodeFormat: row.EpisodeFormat || '' };
     $('detail-title').value = node.Name;
     $('detail-description').value = node.Overview;
     $('detail-title').setCustomValidity('');
@@ -627,6 +758,7 @@
     $('franchise-auto-add').setAttribute('aria-expanded', 'false');
     $('franchise-imdb-url').value =
       node.AutoAddSources?.find((s) => s.Enabled !== false)?.Url || '';
+    $('franchise-episode-format').value = node.EpisodeFormat || 'Bundles';
     renderSources();
     pendingView();
     artwork.render(
@@ -642,6 +774,7 @@
   }
   function renderSources() {
     if (!nodeDraft) return;
+    $('franchise-source-summary').textContent = sourceSummary(nodeDraft.sourceNodes[nodeDraft.node.Id]);
     const branch = descendants(nodeDraft.node.Id);
     $('source-list').innerHTML = model.Nodes.filter((n) => branch.has(n.Id))
       .map(
@@ -652,7 +785,9 @@
           n.Id +
           '" value="' +
           esc(nodeDraft.sourceNodes[n.Id]?.find((s) => s.Enabled !== false)?.Url || '') +
-          '" placeholder="https://www.imdb.com/list/ls…/"></label>' +
+          '" placeholder="https://www.imdb.com/list/ls…/"></label><button data-choose-source-node="' +
+          n.Id + '">Choose saved lists</button><div class="saved-source-summary">' +
+          esc(sourceSummary(nodeDraft.sourceNodes[n.Id])) + '</div>' +
           rows(n.Id)
             .map(
               (row) =>
@@ -661,8 +796,15 @@
                 ' · Row URL</span><input type="url" data-source-row="' +
                 row.Id +
                 '" value="' +
-                esc(nodeDraft.sourceRows[row.Id]) +
-                '" placeholder="Optional row source"></label>',
+                esc(nodeDraft.sourceRows[row.Id]?.SourceUrl || '') +
+                '" placeholder="Optional row source"></label><button data-choose-source-row="' + row.Id +
+                '">Choose saved lists for ' + esc(row.Name) + '</button><div class="saved-source-summary">' +
+                esc(sourceSummary(nodeDraft.sourceRows[row.Id]?.AutoAddSources)) + '</div>' +
+                (category(row) === 'Chronological Order' ? '<label class="field"><span>' + esc(row.Name) +
+                  ' · Episode format</span><select data-source-row-format="' + row.Id + '"><option value="">Use franchise setting</option>' +
+                  ['Bundles', 'Individual'].map((format) => '<option value="' + format + '"' +
+                    (nodeDraft.sourceRows[row.Id]?.EpisodeFormat === format ? ' selected' : '') + '>' +
+                    (format === 'Bundles' ? 'Episode bundles' : 'Individual episodes') + '</option>').join('') + '</select></label>' : ''),
             )
             .join('') +
           '</section>',
@@ -671,23 +813,9 @@
   }
   function updateNodeSource(id, value) {
     if (!nodeDraft) return;
-    const previous = nodeDraft.sourceNodes[id] || [],
-      first = previous.find((s) => s.Enabled !== false) || previous[0];
-    nodeDraft.sourceNodes[id] = value.trim()
-      ? [
-          {
-            ...(first || {}),
-            Id: first?.Id || C.guid(),
-            Url: value.trim(),
-            Enabled: true,
-            Priority: first?.Priority || 0,
-            Categories: first?.Categories?.length
-              ? first.Categories
-              : ['Chronological Timeline', 'Movies', 'TV Shows', 'Collections'],
-          },
-          ...previous.filter((s) => s !== first),
-        ]
-      : previous.filter((s) => s !== first);
+    nodeDraft.sourceNodes[id] = setPrimarySource(nodeDraft.sourceNodes[id] || [], value,
+      ['Chronological Timeline', 'Movies', 'TV Shows', 'Collections']);
+    $('franchise-source-summary').textContent = sourceSummary(nodeDraft.sourceNodes[nodeDraft.node.Id]);
   }
   $('source-list').oninput = (e) => {
     if (!nodeDraft) return;
@@ -697,8 +825,22 @@
       if (e.target.dataset.sourceNode === nodeDraft.node.Id)
         $('franchise-imdb-url').value = e.target.value;
     }
-    if (e.target.dataset.sourceRow)
-      nodeDraft.sourceRows[e.target.dataset.sourceRow] = e.target.value;
+    if (e.target.dataset.sourceRow) {
+      const id = e.target.dataset.sourceRow, row = nodeDraft.sourceRows[id];
+      row.AutoAddSources = setPrimarySource(row.AutoAddSources || [], e.target.value,
+        [C.categoryToAutoAdd(category(getRow(id)))].filter(Boolean));
+      row.SourceUrl = e.target.value;
+    }
+  };
+  $('source-list').onclick = (event) => {
+    const node = event.target.closest('[data-choose-source-node]'),
+      row = event.target.closest('[data-choose-source-row]');
+    if (node) openSourcePicker({ kind: 'node', id: node.dataset.chooseSourceNode });
+    if (row) openSourcePicker({ kind: 'node-row', id: row.dataset.chooseSourceRow });
+  };
+  $('source-list').onchange = (event) => {
+    const id = event.target.dataset.sourceRowFormat;
+    if (id && nodeDraft) nodeDraft.sourceRows[id].EpisodeFormat = event.target.value;
   };
   $('franchise-imdb-url').oninput = () => {
     if (!nodeDraft) return;
@@ -707,6 +849,9 @@
     if (linked) linked.value = $('franchise-imdb-url').value;
   };
   $('detail-title').oninput = () => $('detail-title').setCustomValidity('');
+  $('franchise-episode-format').onchange = () => {
+    if (nodeDraft) nodeDraft.node.EpisodeFormat = $('franchise-episode-format').value;
+  };
   function nodeDraftModel() {
     if (!nodeDraft) throw Error('Open a franchise first.');
     const next = C.clone(model),
@@ -726,9 +871,10 @@
       const n = next.Nodes.find((n) => n.Id === id);
       if (n) n.AutoAddSources = C.autoAdd.sources(sources);
     }
-    for (const [id, url] of Object.entries(nodeDraft.sourceRows)) {
+    for (const [id, settings] of Object.entries(nodeDraft.sourceRows)) {
       const row = next.Rows.find((r) => r.Id === id);
-      if (row) row.SourceUrl = url.trim() ? C.autoAdd.url(url) : '';
+      if (row) Object.assign(row, { SourceUrl: settings.SourceUrl.trim() ? C.autoAdd.url(settings.SourceUrl) : '',
+        AutoAddSources: C.autoAdd.sources(settings.AutoAddSources), EpisodeFormat: settings.EpisodeFormat || '' });
     }
     applyStructure(next, nodeDraft);
     return C.normalize(next);
@@ -764,6 +910,9 @@
     $('edit-row-group-name').value = rowDraft.groupName;
     $('row-structure-tools').hidden = !rowDraft.originalId;
     $('row-structure-owner').textContent = 'Add to ' + path(row.ParentNodeId);
+    $('row-auto-settings').hidden = type === 'Sub Group';
+    $('row-format-field').hidden = type !== 'Chronological Order';
+    renderRowSources();
     artwork.render(
       $('row-photos'),
       { kind: 'row', id: row.Id, parentId: row.ParentNodeId, category: type },
@@ -771,6 +920,40 @@
       (value) => (row.Artwork = value),
     );
     pendingView();
+  }
+  function renderRowSources() {
+    if (!rowDraft) return;
+    $('row-imdb-url').value = rowDraft.row.SourceUrl || '';
+    $('row-source-summary').textContent = sourceSummary(rowDraft.row.AutoAddSources);
+    $('row-episode-format').value = rowDraft.row.EpisodeFormat || '';
+  }
+  $('row-auto-add').onclick = () => {
+    $('row-imdb-fields').hidden = false;
+    $('row-auto-add').setAttribute('aria-expanded', 'true');
+    $('row-imdb-url').focus();
+  };
+  $('row-imdb-url').oninput = () => {
+    if (!rowDraft) return;
+    const row = rowDraft.row;
+    row.AutoAddSources = setPrimarySource(row.AutoAddSources || [], $('row-imdb-url').value,
+      [C.categoryToAutoAdd(category(row))].filter(Boolean));
+    row.SourceUrl = $('row-imdb-url').value;
+    $('row-source-summary').textContent = sourceSummary(row.AutoAddSources);
+  };
+  $('row-episode-format').onchange = () => {
+    if (rowDraft) rowDraft.row.EpisodeFormat = $('row-episode-format').value;
+  };
+  function rowDraftModel() {
+    if (!rowDraft) throw Error('Open a row first.');
+    if (rowDraft.convert || category(rowDraft.row) === 'Sub Group')
+      throw Error('Save the subgroup before using Auto Add.');
+    const next = C.clone(model), row = C.clone(rowDraft.row);
+    if (!row.Name.trim()) throw Error('Enter a row name.');
+    applyStructure(next, rowDraft);
+    const existing = next.Rows.find((entry) => entry.Id === row.Id);
+    if (existing) Object.assign(existing, row);
+    else next.Rows.push(row);
+    return C.normalize(next);
   }
   function openRow(id = '', parent = selected) {
     const row = id ? getRow(id) : newRow(parent, 'Movies', 'Movies');
@@ -781,6 +964,9 @@
       customName: row.Name,
       groupName: row.Name,
     });
+    rowDraft.row.AutoAddSources = C.clone(rowSources(row));
+    $('row-imdb-fields').hidden = true;
+    $('row-auto-add').setAttribute('aria-expanded', 'false');
     $('row-heading').textContent = id ? 'Edit row' : 'Add group / row';
     $('row-owner').textContent = path(row.ParentNodeId);
     $('edit-row-custom').setCustomValidity('');
@@ -1372,37 +1558,218 @@
     openRow(id);
     convertRow();
   };
+  function stopSpecificRequest(draft = rangeDraft) {
+    if (!draft) return;
+    draft.pickerSerial = (draft.pickerSerial || 0) + 1;
+    draft.pickerController?.abort();
+    clearTimeout(draft.pickerTimeout);
+    draft.pickerController = null;
+  }
+  function specificCurrent(draft, serial) {
+    return rangeDraft === draft && draft.pickerSerial === serial &&
+      $('library-range-mode').value === 'specific';
+  }
+  function specificRequest(draft) {
+    stopSpecificRequest(draft);
+    const controller = new AbortController(), serial = draft.pickerSerial;
+    draft.pickerController = controller;
+    draft.pickerTimeout = setTimeout(() => controller.abort(), 45000);
+    return { serial, signal: controller.signal };
+  }
+  async function specificPages(route, params, signal) {
+    const result = [], seen = new Set(), limit = 200;
+    let offset = 0;
+    for (let page = 0; page < 100; page++) {
+      const response = await request(route + '?' + new URLSearchParams({
+        ...params, startIndex: offset, limit,
+      }), { signal });
+      const batch = response?.Items || response?.items || [],
+        total = response?.TotalRecordCount ?? response?.totalRecordCount;
+      let added = 0;
+      for (const item of batch) {
+        const key = String(item?.Id || '').replace(/-/g, '').toLowerCase();
+        if (!key || seen.has(key)) continue;
+        seen.add(key); result.push(item); added++;
+      }
+      offset += batch.length;
+      if (!batch.length || (Number.isFinite(total) ? offset >= total : batch.length < limit))
+        return result;
+      if (!added) throw Error('Jellyfin returned repeated episode pages. Try loading again.');
+    }
+    throw Error('The TV Show exceeds the episode selection scan limit.');
+  }
+  function specificLabel(episode) {
+    return 'S' + String(episode.ParentIndexNumber).padStart(2, '0') +
+      'E' + String(episode.IndexNumber).padStart(2, '0') + ' · ' + (episode.Name || 'Episode');
+  }
+  function specificChoice() {
+    const draft = rangeDraft,
+      episode = draft?.pickerEpisodes?.find((item) => item.Id === $('library-specific-episode').value);
+    return episode && episode.ParentIndexNumber === Number($('library-specific-season').value)
+      ? episode : null;
+  }
+  function syncSpecificChoice() {
+    const episode = specificChoice();
+    $('confirm-library-range').disabled = !episode;
+    $('library-specific-status').textContent = episode ? specificLabel(episode) : '';
+  }
+  function specificFailure(message) {
+    $('library-range-error').textContent = message;
+    $('library-range-error').hidden = false;
+    $('library-specific-status').textContent = '';
+    $('library-specific-retry').hidden = false;
+    $('confirm-library-range').disabled = true;
+  }
+  async function loadSpecificEpisodes(draft, season, desiredEpisode = '') {
+    const { serial, signal } = specificRequest(draft);
+    draft.pickerEpisodes = [];
+    $('library-specific-episode').innerHTML = '<option value="">Loading episodes…</option>';
+    $('library-specific-episode').disabled = true;
+    $('confirm-library-range').disabled = true;
+    $('library-range-error').hidden = true;
+    $('library-specific-retry').hidden = true;
+    $('library-specific-status').textContent = 'Loading episodes…';
+    try {
+      const episodes = await specificPages('Shows/' + encodeURIComponent(draft.media.Id) + '/Episodes', {
+        userId: ApiClient.getCurrentUserId?.() || '', season,
+        isMissing: false, enableTotalRecordCount: true,
+      }, signal);
+      if (!specificCurrent(draft, serial)) return;
+      draft.pickerEpisodes = episodes.filter((item) => item?.Type === 'Episode' &&
+        C.validGuid(item.Id) && item.ParentIndexNumber === Number(season) &&
+        Number.isInteger(item.IndexNumber) && item.IndexNumber >= 1 && item.IndexNumber <= 999 &&
+        item.IsMissing !== true && item.IsVirtualItem !== true && item.LocationType !== 'Virtual')
+        .sort((a, b) => a.IndexNumber - b.IndexNumber || String(a.Name || '').localeCompare(b.Name || ''));
+      $('library-specific-episode').innerHTML = '<option value="">Choose an episode</option>' +
+        draft.pickerEpisodes.map((episode) => '<option value="' + esc(episode.Id) + '">' +
+          esc(specificLabel(episode)) + '</option>').join('');
+      $('library-specific-episode').disabled = !draft.pickerEpisodes.length;
+      const selected = draft.pickerEpisodes.find((episode) => episode.IndexNumber === Number(desiredEpisode));
+      $('library-specific-episode').value = selected?.Id || '';
+      draft.specificEpisode = selected?.IndexNumber ?? '';
+      syncSpecificChoice();
+      if (!draft.pickerEpisodes.length)
+        specificFailure('No available episodes were found for this season.');
+      else if (desiredEpisode !== '' && !selected)
+        specificFailure('The saved episode is no longer available. Choose an available episode.');
+    } catch (error) {
+      if (specificCurrent(draft, serial))
+        specificFailure('Could not load episodes. ' + error.message);
+    } finally {
+      if (specificCurrent(draft, serial)) clearTimeout(draft.pickerTimeout);
+    }
+  }
+  async function loadSpecificSeasons() {
+    const draft = rangeDraft;
+    if (!draft || $('library-range-mode').value !== 'specific') return;
+    const { serial, signal } = specificRequest(draft);
+    draft.pickerEpisodes = [];
+    $('library-specific-season').innerHTML = '<option value="">Loading seasons…</option>';
+    $('library-specific-season').disabled = true;
+    $('library-specific-episode').innerHTML = '<option value="">Choose an episode</option>';
+    $('library-specific-episode').disabled = true;
+    $('confirm-library-range').disabled = true;
+    $('library-range-error').hidden = true;
+    $('library-specific-retry').hidden = true;
+    $('library-specific-status').textContent = 'Loading seasons…';
+    try {
+      const seasons = await specificPages('Shows/' + encodeURIComponent(draft.media.Id) + '/Seasons', {
+        userId: ApiClient.getCurrentUserId?.() || '', isMissing: false,
+      }, signal);
+      if (!specificCurrent(draft, serial)) return;
+      const seen = new Set();
+      draft.pickerSeasons = seasons.filter((season) => {
+        if (!C.validGuid(season?.Id) || season.Type !== 'Season' ||
+            !Number.isInteger(season.IndexNumber) || season.IndexNumber < 0 ||
+            season.IndexNumber > 999 || seen.has(season.IndexNumber)) return false;
+        seen.add(season.IndexNumber); return true;
+      }).sort((a, b) => a.IndexNumber - b.IndexNumber);
+      $('library-specific-season').innerHTML = draft.pickerSeasons.map((season) =>
+        '<option value="' + season.IndexNumber + '">' +
+        esc(season.IndexNumber === 0 ? 'Specials · Season 0' : season.Name || 'Season ' + season.IndexNumber) +
+        '</option>').join('');
+      if (!draft.pickerSeasons.length) {
+        specificFailure('No available seasons with episode numbers were found for this TV Show.');
+        return;
+      }
+      const season = (draft.specificSeason !== '' &&
+          draft.pickerSeasons.find((value) => value.IndexNumber === Number(draft.specificSeason))) ||
+        draft.pickerSeasons.find((value) => value.IndexNumber > 0) || draft.pickerSeasons[0],
+        desiredEpisode = season.IndexNumber === Number(draft.specificSeason) ? draft.specificEpisode : '';
+      $('library-specific-season').value = String(season.IndexNumber);
+      $('library-specific-season').disabled = false;
+      draft.specificSeason = season.IndexNumber;
+      await loadSpecificEpisodes(draft, season.IndexNumber, desiredEpisode);
+    } catch (error) {
+      if (specificCurrent(draft, serial))
+        specificFailure('Could not load seasons. ' + error.message);
+    } finally {
+      if (specificCurrent(draft, serial)) clearTimeout(draft.pickerTimeout);
+    }
+  }
   function rangeFieldsVisibility() {
     const mode = $('library-range-mode').value;
-    $('library-range-endpoints').hidden = mode === 'full';
+    stopSpecificRequest();
+    $('library-range-endpoints').hidden = mode === 'full' || mode === 'specific';
+    $('library-specific-picker').hidden = mode !== 'specific';
     page
       .querySelectorAll('#library-range-endpoints .episode-field')
       .forEach((el) => (el.hidden = mode !== 'episodes'));
     $('library-range-error').hidden = true;
+    $('confirm-library-range').disabled = mode === 'specific';
+    if (mode === 'specific') void loadSpecificSeasons();
   }
   function openRange(state, media, existing = null) {
-    rangeDraft = { state, media, existing };
+    stopSpecificRequest();
+    rangeDraft = { state, media, existing, pickerEpisodes: [], pickerSerial: 0 };
     const ref = existing?.ref;
     $('library-range-title').textContent = media.Name;
-    $('library-range-mode').value =
+    const singleton = ref?.RangeMode === 'Episodes' && ref.StartSeason === ref.EndSeason &&
+      ref.StartEpisode === ref.EndEpisode;
+    $('library-range-mode').value = singleton ? 'specific' :
       { Full: 'full', Seasons: 'seasons', Episodes: 'episodes' }[ref?.RangeMode] || 'full';
+    rangeDraft.specificSeason = singleton ? ref.StartSeason : '';
+    rangeDraft.specificEpisode = singleton ? ref.StartEpisode : '';
     for (const [id, key, fallback] of [
       ['library-from-season', 'StartSeason', 1],
       ['library-to-season', 'EndSeason', 1],
       ['library-from-episode', 'StartEpisode', 1],
       ['library-to-episode', 'EndEpisode', 3],
     ])
-      $(id).value = ref?.[key] || fallback;
+      $(id).value = ref?.[key] ?? fallback;
     $('confirm-library-range').textContent = ref ? 'Save range' : 'Add to row';
     rangeFieldsVisibility();
     show('library-range-dialog');
   }
   $('library-range-mode').onchange = rangeFieldsVisibility;
+  $('library-specific-season').onchange = () => {
+    if (!rangeDraft) return;
+    const season = Number($('library-specific-season').value);
+    if (!rangeDraft.pickerSeasons?.some((entry) => entry.IndexNumber === season)) return;
+    rangeDraft.specificSeason = season;
+    rangeDraft.specificEpisode = '';
+    void loadSpecificEpisodes(rangeDraft, season);
+  };
+  $('library-specific-episode').onchange = () => {
+    if (!rangeDraft) return;
+    rangeDraft.specificEpisode = specificChoice()?.IndexNumber ?? '';
+    $('library-range-error').hidden = true;
+    $('library-specific-retry').hidden = true;
+    syncSpecificChoice();
+  };
+  $('library-specific-retry').onclick = () => void loadSpecificSeasons();
   $('confirm-library-range').onclick = () => {
     try {
       if (!rangeDraft) return;
       const { state, media, existing } = rangeDraft,
-        fields = C.rangeFields({
+        mode = $('library-range-mode').value,
+        episode = mode === 'specific' ? specificChoice() : null;
+      if (mode === 'specific' && !episode) throw Error('Choose an available episode first.');
+      const fields = C.rangeFields(mode === 'specific' ? {
+          ItemType: 'Series', RangeMode: 'Episodes',
+          StartSeason: episode.ParentIndexNumber, EndSeason: episode.ParentIndexNumber,
+          StartEpisode: episode.IndexNumber, EndEpisode: episode.IndexNumber,
+        } : {
           ItemType: 'Series',
           RangeMode: { full: 'Full', seasons: 'Seasons', episodes: 'Episodes' }[
             $('library-range-mode').value
@@ -1439,7 +1806,10 @@
       $('library-range-error').hidden = false;
     }
   };
-  $('library-range-dialog').addEventListener('close', () => (rangeDraft = null));
+  $('library-range-dialog').addEventListener('close', () => {
+    stopSpecificRequest();
+    rangeDraft = null;
+  });
   async function editRange(rowId, id) {
     const found = reference(rowId, id);
     if (!found) return;
@@ -1458,7 +1828,8 @@
       r.MediaOrder = r.MediaOrder.filter((id) => refs.has(id));
     }
     for (const n of model.Nodes) {
-      n.AutoAddRows = n.AutoAddRows.filter((m) => rowIds.has(m.RowId));
+      // Retain the mapped row ID after deletion so Auto Add respects the deletion.
+      // The model accepts these mappings; scopedJobs skips a missing mapped row.
       n.AutoAddRecords = n.AutoAddRecords.filter(
         (r) =>
           (!r.ScopeRowId || rowIds.has(r.ScopeRowId)) &&
@@ -1598,12 +1969,14 @@
     review.cells = [];
     for (const job of review.jobs) {
       const titleAdds = new Map(
-          job.diff.additions.filter((a) => a.kind === 'title').map((a) => [a.entry.imdbId, a]),
-        ),
-        plan = C.autoAdd.plan(
-          job.entries.map((e) => (titleAdds.has(e.imdbId) ? e : { ...e, status: 'excluded' })),
-        );
-      for (const group of plan.groups) {
+        job.diff.additions.filter((addition) => addition.kind === 'title').map((addition) => [addition.entry.imdbId, addition]),
+      );
+      for (const mapping of job.mappings.filter((entry) => entry.Category !== 'TV Shows')) {
+        const format = mapping.Category === 'Chronological Timeline' ? job.episodeFormat : 'Bundles',
+          plan = C.autoAdd.plan(job.entries.map((entry) =>
+            titleAdds.get(entry.imdbId)?.rowIds?.includes(mapping.RowId)
+              ? { ...entry, categories: [mapping.Category] } : { ...entry, status: 'excluded' }), undefined, format);
+        for (const group of plan.groups) {
         const entries = group.episodes || [group.entry],
           adds = entries.map((e) => titleAdds.get(e.imdbId)).filter(Boolean);
         if (!adds.length) continue;
@@ -1611,13 +1984,14 @@
         review.cells.push({
           change: 'add',
           title: group.label,
-          type: group.episodes ? 'TV Show' : shortType(group.entry.item.Type),
-          where: reviewWhere(job, group, false, [...new Set(adds.flatMap((a) => a.rowIds || []))]),
+          type: group.episodes ? (format === 'Individual' ? 'Episode' : 'TV Show') : shortType(group.entry.item.Type),
+          where: reviewWhere(job, group, false, [mapping.RowId]),
           keys,
-          children: group.episodes
+          children: group.episodes && group.episodes.length > 1
             ? adds.map((a) => ({ key: reviewKey(job, a.key), title: a.label }))
             : null,
         });
+        }
       }
       for (const addition of job.diff.additions.filter((a) => a.kind === 'show'))
         review.cells.push({
@@ -1677,6 +2051,15 @@
   function renderReview() {
     if (!review) return;
     reconcileReviewSelection();
+    $('review-format-controls').innerHTML = review.jobs.flatMap((job) => job.mappings
+      .filter((mapping) => mapping.Category === 'Chronological Timeline')
+      .map((mapping) => '<label class="field"><span>' +
+        esc(review.base.Rows.find((row) => row.Id === mapping.RowId)?.Name || 'Chronological Order') +
+        ' · Episode format</span><select data-review-format-row="' + mapping.RowId + '">' +
+        ['Bundles', 'Individual'].map((format) => '<option value="' + format + '"' +
+          (job.episodeFormat === format ? ' selected' : '') + '>' +
+          (format === 'Bundles' ? 'Episode bundles' : 'Individual episodes') + '</option>').join('') + '</select></label>'))
+      .join('');
     $('review-counts').innerHTML = ['add', 'remove', 'missing']
       .map(
         (type) =>
@@ -1753,16 +2136,48 @@
     $('selected-count').textContent = review.selected.size + ' selected';
     $('apply-selected').disabled = !review.selected.size;
   }
-  $('franchise-preview').onclick = () =>
-    attempt(async () => {
+  async function previewAutoAdd(origin = 'node') {
+    return attempt(async () => {
       const generation = ++autoGeneration,
-        base = nodeDraftModel();
+        draft = origin === 'row' ? rowDraft : nodeDraft,
+        base = origin === 'row' ? rowDraftModel() : nodeDraftModel();
       if (!base) return;
-      const nodeId = nodeDraft.node.Id,
-        jobs = C.scopedJobs(base, nodeId),
-        modelBefore = fingerprint(model);
+      const rowId = origin === 'row' ? draft.row.Id : '',
+        nodeId = origin === 'row' ? draft.row.ParentNodeId : draft.node.Id,
+        modelBefore = fingerprint(model),
+        button = $(origin === 'row' ? 'row-preview' : 'franchise-preview');
+      let jobs;
+      if (rowId) {
+        const row = base.Rows.find((entry) => entry.Id === rowId),
+          owner = base.Nodes.find((node) => node.Id === nodeId),
+          inherited = !row.SourceUrl && !row.AutoAddSources?.length,
+          planning = C.clone(base),
+          planned = C.scopedJobs(planning, nodeId),
+          mapped = inherited && planned.find((job) => !job.scopeRowId && job.nodeId === nodeId &&
+            job.mappings.some((mapping) => mapping.RowId === rowId));
+        if (mapped) {
+          const mappings = mapped.mappings.filter((mapping) => mapping.RowId === rowId),
+            allowed = new Set(mappings.map((mapping) => mapping.Category));
+          owner.AutoAddRows = [
+            ...owner.AutoAddRows.filter((mapping) => !allowed.has(mapping.Category)),
+            ...C.clone(mappings),
+          ];
+          jobs = [{ ...mapped, rowIds: [rowId], mappings,
+            episodeFormat: row.EpisodeFormat || owner.EpisodeFormat || 'Bundles',
+            sources: mapped.sources.map((source) => ({ ...source,
+              Categories: source.Categories.filter((name) => allowed.has(name)) })).filter((source) => source.Categories.length) }];
+        } else {
+          if (inherited) {
+            const name = C.categoryToAutoAdd(category(row));
+            row.AutoAddSources = (owner.AutoAddSources || []).filter((source) => source.Enabled !== false)
+              .map((source) => ({ ...C.clone(source), Id: C.guid(), Categories: [name] }));
+            row.SourceUrl = row.AutoAddSources[0]?.Url || '';
+          }
+          jobs = C.scopedJobs(C.clone(base), nodeId).filter((job) => job.scopeRowId === rowId);
+        }
+      } else jobs = C.scopedJobs(base, nodeId);
       if (!jobs.length) throw Error('Add an IMDb URL to the franchise, subgroup or a media row.');
-      $('franchise-preview').disabled = true;
+      button.disabled = true;
       notify('Reading IMDb and comparing your Jellyfin library…');
       try {
         const cache = new Map();
@@ -1801,8 +2216,7 @@
         }
         if (
           generation !== autoGeneration ||
-          !nodeDraft ||
-          nodeDraft.node.Id !== nodeId ||
+          (origin === 'row' ? rowDraft !== draft : nodeDraft !== draft) ||
           fingerprint(model) !== modelBefore
         )
           return;
@@ -1819,6 +2233,8 @@
           base,
           jobs,
           nodeId,
+          origin,
+          rowId,
           modelBefore,
           cells: [],
           expanded: new Set(),
@@ -1832,10 +2248,16 @@
         renderReview();
         show('review');
       } finally {
-        $('franchise-preview').disabled = false;
+        button.disabled = false;
       }
     });
+  }
+  $('franchise-preview').onclick = () => previewAutoAdd('node');
+  $('row-preview').onclick = () => previewAutoAdd('row');
   $('franchise-dialog').addEventListener('close', () => autoGeneration++);
+  $('row-dialog').addEventListener('close', () => autoGeneration++);
+  for (const dialog of [$('franchise-dialog'), $('row-dialog')])
+    dialog.addEventListener('input', () => autoGeneration++);
   $('review-list').onclick = (e) => {
     const toggle = e.target.closest('[data-review-expand]');
     if (toggle && review) {
@@ -1856,6 +2278,22 @@
       e.target.checked ? review.selected.add(key) : review.selected.delete(key);
     renderReview();
   };
+  $('review-format-controls').onchange = (event) => attempt(() => {
+    const rowId = event.target.dataset.reviewFormatRow;
+    if (!review || !rowId) return;
+    const row = review.base.Rows.find((entry) => entry.Id === rowId);
+    if (!row) return;
+    row.EpisodeFormat = event.target.value;
+    for (const job of review.jobs) {
+      if (job.mappings.some((mapping) => mapping.RowId === rowId)) job.episodeFormat = event.target.value;
+      job.diff = C.autoAdd.changes(C.scopeModel(review.base, job), job.nodeId, job.entries, job.results);
+    }
+    review.selected = new Set(review.jobs.flatMap((job) =>
+      [...job.diff.additions, ...job.diff.removals].map((entry) => reviewKey(job, entry.key))));
+    review.expanded.clear();
+    buildReviewCells();
+    renderReview();
+  });
   function selectReview(all) {
     if (!review) return;
     review.selected.clear();
@@ -1889,14 +2327,15 @@
           );
         next = C.mergeScope(next, before, applied.model, job);
       }
-      const nodeId = review.nodeId;
+      const { nodeId, rowId, origin } = review;
       remember();
       model = C.normalize(next);
       markDirty();
       expandPath(nodeId);
       render();
       $('review').close();
-      openNode(nodeId);
+      if (origin === 'row') openRow(rowId);
+      else openNode(nodeId);
       notify('Review applied. Save changes to persist.');
     });
 

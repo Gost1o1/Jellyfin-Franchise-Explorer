@@ -12,6 +12,9 @@ public sealed class PluginConfiguration : BasePluginConfiguration
 {
     public string NavigationLabel { get; set; } = "Franchises";
 
+    /// <summary>Reusable named IMDb lists. Assigning one copies its URL into a franchise or row source.</summary>
+    public List<FranchiseImdbList> ImdbLists { get; set; } = new();
+
     public List<FranchiseNode> Nodes { get; set; } = new();
 
     public List<MediaLink> MediaLinks { get; set; } = new();
