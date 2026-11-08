@@ -89,6 +89,87 @@ const mgr=new engine.TimelineManager({serverId:'test-server',token:'test',prefix
  assert.equal(JSON.stringify(catalog.links),linksBefore,'Row ordering must not alter global media positions');
  assert.equal(sharedMovie.position,17);
  assert.equal(JSON.stringify(siblingRow),siblingBefore,'A sibling sharing the movie must keep its own order');
+ // A change between bundles and singleton references must retain history when
+ // the entire playable sequence is unchanged, even across a season boundary.
+ const formatRow={...row,id:uuid(12),items:row.items.map(ref=>({...ref})),mediaOrder:[refShow,refMovie]};
+ const bundled=(await mgr.resolve(formatRow)).queue;
+ const formatProgress=mgr.makeState(formatRow,bundled);
+ Object.assign(formatProgress,{index:2,itemId:bundled[2].id,positionTicks:45678,
+   sessionId:'retained-session',playbackMode:'playing',completedKeys:bundled.slice(0,2).map(q=>q.key)});
+ mgr.states.set(formatRow.id,formatProgress);
+ const singletonItems=episodes.slice(1,5).map((episode,i)=>({id:uuid(600+i),itemId:seriesId,
+   rangeMode:'Episodes',startSeason:episode.ParentIndexNumber,endSeason:episode.ParentIndexNumber,
+   startEpisode:episode.IndexNumber,endEpisode:episode.IndexNumber}));
+ const singletonRow={...formatRow,items:[...singletonItems,{...row.items[1]}],
+   mediaOrder:[...singletonItems.map(ref=>ref.id),refMovie]};
+ const formatBefore=JSON.stringify(formatProgress),formatStoredBefore=JSON.stringify(state),
+   formatCommandsBefore=posted.length,formatEnrollmentsBefore=enrollments.length;
+ const individual=(await mgr.resolve(singletonRow)).queue;
+ assert.deepEqual(Array.from(individual,q=>q.id),Array.from(bundled,q=>q.id));
+ assert.notEqual(individual[2].key,bundled[2].key,'The singleton changes the reference owning the current episode');
+ const individualProgress=mgr.makeState(singletonRow,individual);
+ assert.equal(individualProgress.index,2);
+ assert.equal(individualProgress.itemId,formatProgress.itemId);
+ assert.equal(individualProgress.positionTicks,45678);
+ assert.equal(individualProgress.sessionId,'retained-session','Reference format does not change the existing session identity');
+ assert.equal(individualProgress.playbackMode,'paused','Building a state must not activate playback');
+ assert.deepEqual(Array.from(individualProgress.completedKeys),Array.from(individual.slice(0,2),q=>q.key));
+ assert.equal(JSON.stringify(formatProgress),formatBefore,'Format adaptation must not mutate the stored state');
+ assert.strictEqual(mgr.getState(formatRow.id),formatProgress,'No replacement state is persisted during resolution');
+ mgr.states.set(formatRow.id,individualProgress);
+ const rebundledRow={...formatRow,items:[{...formatRow.items[0],id:uuid(610)},{...row.items[1]}],
+   mediaOrder:[uuid(610),refMovie]};
+ const rebundled=(await mgr.resolve(rebundledRow)).queue;
+ const individualBefore=JSON.stringify(individualProgress);
+ const rebundledProgress=mgr.makeState(rebundledRow,rebundled);
+ assert.equal(rebundledProgress.index,2);
+ assert.equal(rebundledProgress.positionTicks,45678);
+ assert.deepEqual(Array.from(rebundledProgress.completedKeys),Array.from(rebundled.slice(0,2),q=>q.key));
+ assert.equal(JSON.stringify(individualProgress),individualBefore,'The reverse format change also leaves saved history untouched');
+ assert.equal(JSON.stringify(state),formatStoredBefore,'Changing reference format must not write timeline state');
+ assert.equal(posted.length,formatCommandsBefore,'Changing reference format must not dispatch playback');
+ assert.equal(enrollments.length,formatEnrollmentsBefore,'Changing reference format must not enroll another player');
+
+ // The same episode may intentionally occur twice. Map its occurrences by
+ // position, so completing the first never completes a later replay occurrence.
+ const repeated=[bundled[0],bundled.at(-1),{...bundled[0],key:uuid(620)+':'+bundled[0].id}];
+ const repeatedProgress=mgr.makeState({...formatRow,id:uuid(13)},repeated);
+ Object.assign(repeatedProgress,{index:2,itemId:repeated[2].id,positionTicks:3333,
+   completedKeys:repeated.slice(0,2).map(q=>q.key)});
+ mgr.states.set(uuid(13),repeatedProgress);
+ const repeatedNew=repeated.map((entry,i)=>({...entry,key:uuid(630+i)+':'+entry.id}));
+ const repeatedRestored=mgr.makeState({...formatRow,id:uuid(13)},repeatedNew);
+ assert.equal(repeatedRestored.index,2,'A later occurrence must stay selected rather than jumping to the first matching item');
+ assert.equal(repeatedRestored.positionTicks,3333);
+ assert.deepEqual(Array.from(repeatedRestored.completedKeys),repeatedNew.slice(0,2).map(q=>q.key));
+ assert(!repeatedRestored.completedKeys.includes(repeatedNew[2].key),'The later replay is still incomplete');
+ // Equivalent GUID representations still refer to the identical playable item.
+ const canonicalQueue=repeatedNew.map(entry=>({...entry,id:entry.id.replace(/-/g,'').toUpperCase()}));
+ const canonicalRestored=mgr.makeState({...formatRow,id:uuid(13)},canonicalQueue);
+ assert.equal(canonicalRestored.index,2);assert.equal(canonicalRestored.positionTicks,3333);
+
+ // Changing queue membership/order or invalid history must never guess a new
+ // reference for a formerly completed episode. Exact-key reorder remains tested above.
+ mgr.states.set(formatRow.id,formatProgress);
+ for(const altered of [individual.slice().reverse(),individual.slice(1),
+   individual.map((entry,i)=>i===0?{...entry,id:'invalid-item-id'}:entry),
+   individual.map((entry,i)=>i===0?{...entry,key:'invalid-key'}:entry)]){
+   const unadapted=mgr.makeState(singletonRow,altered);
+   assert.equal(unadapted.index,0);
+   assert.equal(unadapted.positionTicks,0,'Different/invalid queues must not inherit ticks via item ID matching');
+   assert.equal(unadapted.completedKeys.length,0);
+ }
+ const badHistory={...formatProgress,queueKeys:[...formatProgress.queueKeys]};
+ badHistory.queueKeys[0]='old-reference:not-a-guid';
+ mgr.states.set(formatRow.id,badHistory);
+ const invalidHistory=mgr.makeState(singletonRow,individual);
+ assert.equal(invalidHistory.positionTicks,0);assert.equal(invalidHistory.completedKeys.length,0);
+ // Duplicate physical items are safe only with unique reference keys.
+ const ambiguousHistory={...repeatedProgress,queueKeys:[...repeatedProgress.queueKeys]};
+ ambiguousHistory.queueKeys[2]=ambiguousHistory.queueKeys[0];
+ mgr.states.set(uuid(13),ambiguousHistory);
+ const ambiguous=mgr.makeState({...formatRow,id:uuid(13)},repeatedNew);
+ assert.equal(ambiguous.positionTicks,0);assert.equal(ambiguous.completedKeys.length,0);
  await mgr.start(row,queue,sessionId,0,0,'playing',true);
  assert.equal(state.index,0);
  assert.equal(state.queueKeys.length,5);
@@ -144,6 +225,7 @@ const mgr=new engine.TimelineManager({serverId:'test-server',token:'test',prefix
  assert.equal(JSON.stringify(state),before,'A 204 no-op must not mutate the timeline');
  mgr.verifyStarted=verifyOriginal;
  console.log('Mixed direct/shared row ordering preserves reference identity, viewing progress, and sibling rows.');
+ console.log('Episode bundle/singleton reference changes preserve cursor, ticks and occurrence-specific history only for identical playable queues.');
  console.log('Confirmed playback, unsupported-device, and HTTP 204 no-op tests passed.');
  console.log('Timeline resolution, ordering, range filtering, user progress, replay and restart checks passed.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

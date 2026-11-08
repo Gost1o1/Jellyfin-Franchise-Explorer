@@ -364,7 +364,11 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
   function openGroup(id){$('sort').value='custom';location.hash=id?'group='+encodeURIComponent(id):'';if(!id && !location.hash){current='';void render();}}
   function fallbackCover(kind){const box=document.createElement('span');box.className='fallback';const icon=text(document.createElement('span'),kind==='TV Show'?'▣':kind==='Movie'?'▶':'✦');icon.className='fallback-icon';box.append(icon,text(document.createElement('span'),kind));return box;}
   function mediaRange(l){const mode=l.rangeMode||'Full';if(mode==='Seasons')return 'Seasons '+l.startSeason+'–'+l.endSeason;
-    if(mode==='Episodes')return 'S'+l.startSeason+'E'+l.startEpisode+' – S'+l.endSeason+'E'+l.endEpisode;return '';
+    if(mode==='Episodes'){
+      const label=(season,episode)=>'S'+String(season).padStart(2,'0')+'E'+String(episode).padStart(2,'0');
+      const start=label(l.startSeason,l.startEpisode),end=label(l.endSeason,l.endEpisode);
+      return start===end?start:start+'–'+end;
+    }return '';
   }
   function makeTile(title, subtitle, tag, onClick, kind){
     // Separate focusable card and info control: nested buttons are invalid HTML.
@@ -560,7 +564,7 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
       }
       const season=item.ParentIndexNumber,number=item.IndexNumber,last=item.IndexNumberEnd??number;
       if(!chronological||!episode||show?.Type!=='Series'||!Number.isInteger(season)||season<0||!Number.isInteger(number)||number<1||!Number.isInteger(last)||last<number){pending=null;output.push(ref);continue;}
-      if(pending&&canonical(pending.itemId)===canonical(show.Id)&&pending.endSeason===season&&pending.endEpisode+1===number){pending.endEpisode=last;pending._episodeSources.push(item.Id);}
+      if(row.episodeFormat!=='Individual'&&pending&&canonical(pending.itemId)===canonical(show.Id)&&pending.endSeason===season&&pending.endEpisode+1===number){pending.endEpisode=last;pending._episodeSources.push(item.Id);}
       else{pending={...ref,itemId:show.Id,itemType:'Series',rangeMode:'Episodes',startSeason:season,endSeason:season,startEpisode:number,endEpisode:last,_episodeSources:[item.Id]};output.push(pending);}
     }
     return output;

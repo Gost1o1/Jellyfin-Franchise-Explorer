@@ -156,9 +156,30 @@
         return null;
       return { show, season, first, last };
     }
+    const covers = (link, info) => {
+      if (itemId(link.JellyfinItemId) !== itemId(info.show.Id)) return false;
+      if (!link.RangeMode || link.RangeMode === 'Full') return true;
+      if (link.RangeMode === 'Seasons')
+        return info.season >= link.StartSeason && info.season <= link.EndSeason;
+      return link.RangeMode === 'Episodes' &&
+        (info.season > link.StartSeason || (info.season === link.StartSeason && info.first >= link.StartEpisode)) &&
+        (info.season < link.EndSeason || (info.season === link.EndSeason && info.last <= link.EndEpisode));
+    };
+    const referenceKey = (ref) => itemId(ref.JellyfinItemId) + ':' +
+      [ref.StartSeason, ref.StartEpisode, ref.EndSeason, ref.EndEpisode].join(':');
+    function timelineRow(model, nodeId) {
+      const node = model.Nodes.find((n) => n.Id === nodeId),
+        mapping = node?.AutoAddRows?.find((m) => m.Category === 'Chronological Timeline');
+      return model.Rows.find((row) => row.ParentNodeId === nodeId &&
+        (mapping ? row.Id === mapping.RowId : row.RowType === 'Timeline'));
+    }
+    function effectiveFormat(model, nodeId) {
+      return timelineRow(model, nodeId)?.EpisodeFormat ||
+        model.Nodes.find((n) => n.Id === nodeId)?.EpisodeFormat || 'Bundles';
+    }
     const episodeLabel = (season, number) =>
       'S' + String(season).padStart(2, '0') + 'E' + String(number).padStart(2, '0');
-    function plan(entries, blocked = () => false) {
+    function plan(entries, blocked = () => false, episodeFormat = 'Bundles') {
       const groups = [],
         shows = new Map(),
         skipped = [];
@@ -191,6 +212,7 @@
           continue;
         }
         const same =
+          episodeFormat !== 'Individual' &&
           pending &&
           entry.orderVerified &&
           pending.entry.orderVerified &&
@@ -259,18 +281,20 @@
     }
     function removeReferences(model, records) {
       const next = JSON.parse(JSON.stringify(model)),
-        links = new Set(records.filter((r) => !r.RowId).map((r) => r.ReferenceId)),
+        links = new Set(records.filter((r) => !r.RowId && !r.DetachOnly).map((r) => r.ReferenceId)),
         items = new Set(records.filter((r) => r.RowId).map((r) => r.ReferenceId));
       next.MediaLinks = next.MediaLinks.filter((l) => !links.has(l.Id));
       for (const row of next.Rows) {
-        row.MediaLinkIds = (row.MediaLinkIds || []).filter((id) => !links.has(id));
+        const detached = new Set(records.filter((record) => record.DetachOnly &&
+          record.rowIds?.includes(row.Id)).map((record) => record.ReferenceId));
+        row.MediaLinkIds = (row.MediaLinkIds || []).filter((id) => !links.has(id) && !detached.has(id));
         row.Items = (row.Items || []).filter((i) => !items.has(i.Id));
-        row.MediaOrder = (row.MediaOrder || []).filter((id) => !links.has(id) && !items.has(id));
+        row.MediaOrder = (row.MediaOrder || []).filter((id) => !links.has(id) && !items.has(id) && !detached.has(id));
       }
       for (const node of next.Nodes)
         node.AutoAddRecords = (node.AutoAddRecords || [])
           .filter(
-            (r) => !records.some((x) => x.ReferenceId === r.ReferenceId && x.RowId === r.RowId),
+            (r) => !records.some((x) => !x.DetachOnly && x.ReferenceId === r.ReferenceId && x.RowId === r.RowId),
           )
           .map((r) =>
             r.Signature && signature(model, r) === r.Signature
@@ -287,6 +311,25 @@
         present = new Set(entries.map((e) => e.imdbId));
       const removals = [],
         protectedRefs = [];
+      const chronological = timelineRow(model, nodeId),
+        rowRefs = chronological ? [...(chronological.Items || []),
+          ...(chronological.MediaLinkIds || []).map((id) => model.MediaLinks.find((link) => link.Id === id)).filter(Boolean)] : [],
+        matched = new Map(entries.filter((entry) => entry.status === 'matched' && entry.orderVerified)
+          .map((entry) => [entry.imdbId, entry])),
+        eligible = (node.AutoAddRecords || []).filter((record) =>
+          rowRefs.some((ref) => ref.Id === record.ReferenceId && ref.RangeMode === 'Episodes') &&
+          record.SourceIds.length && record.SourceIds.every((id) => success.has(id)) &&
+          record.ImdbIds.length && record.ImdbIds.every((id) => matched.has(id))),
+        editable = new Set(eligible.filter((record) => record.Signature && signature(model, record) === record.Signature)
+          .map((record) => record.ReferenceId));
+      const desired = plan(entries.map((entry) => entry.categories.includes('Chronological Timeline')
+        ? { ...entry, categories: ['Chronological Timeline'] } : { ...entry, status: 'excluded' }),
+      (entry) => rowRefs.some((ref) => !editable.has(ref.Id) &&
+        (itemId(ref.JellyfinItemId) === itemId(entry.item.Id) ||
+          (episodeInfo(entry) && covers(ref, episodeInfo(entry))))), effectiveFormat(model, nodeId));
+      const desiredKeys = new Set(desired.groups.filter((group) => group.episodes).map((group) =>
+        referenceKey({ JellyfinItemId: group.show.Id, StartSeason: group.season, StartEpisode: group.first,
+          EndSeason: group.season, EndEpisode: group.last })));
       for (const record of node.AutoAddRecords || []) {
         if (
           !record.SourceIds.length ||
@@ -297,16 +340,15 @@
         const absent = record.RowId
           ? record.ImdbIds.every((id) => !present.has(id))
           : record.ImdbIds.some((id) => !present.has(id));
-        if (!absent) continue;
+        const ref = record.RowId
+          ? model.Rows.find((r) => r.Id === record.RowId)?.Items.find((i) => i.Id === record.ReferenceId)
+          : model.MediaLinks.find((l) => l.Id === record.ReferenceId),
+          reformat = !!ref && eligible.includes(record) && !desiredKeys.has(referenceKey(ref));
+        if (!absent && !reformat) continue;
         if (!record.Signature || signature(model, record) !== record.Signature) {
           protectedRefs.push(record);
           continue;
         }
-        const ref = record.RowId
-          ? model.Rows.find((r) => r.Id === record.RowId)?.Items.find(
-              (i) => i.Id === record.ReferenceId,
-            )
-          : model.MediaLinks.find((l) => l.Id === record.ReferenceId);
         if (ref)
           removals.push({
             ...record,
@@ -319,10 +361,13 @@
                   '–' +
                   episodeLabel(ref.EndSeason, ref.EndEpisode)
                 : ''),
+            DetachOnly: !record.RowId && (!!record.__scopeExternalRows?.length ||
+              (reformat && model.Rows.some((row) => row.Id !== chronological?.Id &&
+                row.MediaLinkIds?.includes(record.ReferenceId)))),
             rowIds: model.Rows.filter(
               (r) => r.Id === record.RowId || (r.MediaLinkIds || []).includes(record.ReferenceId),
-            ).map((r) => r.Id),
-            reason: 'No longer in the enabled IMDb source',
+            ).filter((row) => !reformat || row.Id === chronological?.Id).map((r) => r.Id),
+            reason: reformat ? 'Change chronological episode format' : 'No longer in the enabled IMDb source',
           });
       }
       let previewSequence = 0;
@@ -342,7 +387,8 @@
               l.StartSeason === info.season &&
               l.StartEpisode <= info.first &&
               l.EndEpisode >= info.last
-            : itemId(l.JellyfinItemId) === itemId(entry.item.Id),
+            : itemId(l.JellyfinItemId) === itemId(entry.item.Id) &&
+              (l.RangeMode || 'Full') === 'Full',
         );
         if (covered.length) {
           const requiresRemovals = removals
@@ -404,7 +450,8 @@
         base = removeReferences(model, removals),
         titles = new Set(),
         shows = new Set();
-      for (const add of diff.additions.filter((a) => selected.has(a.key)))
+      for (const add of diff.additions.filter((a) => selected.has(a.key) &&
+          (a.requiresRemovals || []).every((key) => selected.has(key))))
         for (const imdb of add.entryIds) (add.kind === 'show' ? shows : titles).add(imdb);
       const picked = entries.map((e) =>
         !titles.has(e.imdbId) && !shows.has(e.imdbId)
@@ -486,7 +533,8 @@
             .sort((a, b) => a.Position - b.Position)
             .map((l) => l.Id);
         place(oldOrder, current, newLinkIds).forEach((key, index) => {
-          next.MediaLinks.find((l) => l.Id === key).Position = index + 1;
+          if (editable.has(key) && !records.some((record) => record.ReferenceId === key && record.__scopeExternalRows?.length))
+            next.MediaLinks.find((l) => l.Id === key).Position = index + 1;
         });
       }
       for (const row of next.Rows) {
@@ -516,32 +564,7 @@
             changed = true;
           }
       }
-      const original = [
-        ...next.MediaLinks.filter((l) => descendant.has(l.NodeId)),
-        ...next.Rows.filter(
-          (r) => r.RowType === 'Timeline' && descendant.has(r.ParentNodeId),
-        ).flatMap((r) => r.Items || []),
-      ];
-      const covers = (link, info) => {
-        if (itemId(link.JellyfinItemId) !== itemId(info.show.Id)) return false;
-        if (!link.RangeMode || link.RangeMode === 'Full') return true;
-        if (link.RangeMode === 'Seasons')
-          return info.season >= link.StartSeason && info.season <= link.EndSeason;
-        return (
-          link.RangeMode === 'Episodes' &&
-          (info.season > link.StartSeason ||
-            (info.season === link.StartSeason && info.first >= link.StartEpisode)) &&
-          (info.season < link.EndSeason ||
-            (info.season === link.EndSeason && info.last <= link.EndEpisode))
-        );
-      };
-      const blocked = (entry) => {
-        if (original.some((l) => itemId(l.JellyfinItemId) === itemId(entry.item.Id))) return true;
-        const info = episodeInfo(entry);
-        return !!info && original.some((l) => covers(l, info));
-      };
-      const layout = plan(entries, blocked),
-        rowMap = new Map();
+      const rowMap = new Map();
       const configured = Array.isArray(node.AutoAddRows) && node.AutoAddRows.length > 0;
       if (!configured) node.AutoAddRows = [];
       categories.forEach((name, index) => {
@@ -572,6 +595,25 @@
         if (!configured) node.AutoAddRows.push({ Category: name, RowId: row.Id });
         rowMap.set(name, row);
       });
+      const assigned = new Set(next.Rows.flatMap((row) => row.MediaLinkIds || [])),
+        external = new Set((node.AutoAddRecords || []).filter((record) => record.__scopeExternalRows?.length)
+          .map((record) => record.ReferenceId)),
+        unassigned = next.MediaLinks.filter((link) => descendant.has(link.NodeId) && !assigned.has(link.Id) && !external.has(link.Id)),
+        layout = { ...plan(entries), groups: [] };
+      // Block only references belonging to this destination. A bundled Custom
+      // row must not prevent an independent chronological row from using singles.
+      for (const [category, row] of rowMap) {
+        if (category === 'TV Shows') continue;
+        const existing = [...unassigned, ...(row.Items || []),
+          ...(row.MediaLinkIds || []).map((id) => next.MediaLinks.find((link) => link.Id === id)).filter(Boolean)];
+        const blocked = (entry) => existing.some((ref) =>
+          itemId(ref.JellyfinItemId) === itemId(entry.item.Id) ||
+          (episodeInfo(entry) && covers(ref, episodeInfo(entry))));
+        const filtered = entries.map((entry) => entry.categories.includes(category)
+          ? { ...entry, categories: [category] } : { ...entry, status: 'excluded' });
+        layout.groups.push(...plan(filtered, blocked,
+          category === 'Chronological Timeline' ? effectiveFormat(next, nodeId) : 'Bundles').groups);
+      }
       node.AutoAddRecords ??= [];
       const freshRecords = [];
       let added = 0,
@@ -617,7 +659,7 @@
           });
         }
       }
-      const used = new Set();
+      const used = new Map();
       for (const group of layout.groups) {
         const entry = group.entry,
           item = entry.item;
@@ -659,8 +701,18 @@
             ':' +
             group.last
           : itemId(item.Id);
-        if (used.has(identity)) continue;
-        used.add(identity);
+        if (used.has(identity)) {
+          const existing = used.get(identity);
+          for (const category of eligible) {
+            const row = rowMap.get(category);
+            if (!row.MediaLinkIds.includes(existing.Id)) row.MediaLinkIds.push(existing.Id);
+            if (!row.MediaOrder.includes(existing.Id)) row.MediaOrder.push(existing.Id);
+          }
+          const record = freshRecords.find((record) => record.ReferenceId === existing.Id);
+          record.SourceIds = [...new Set([...record.SourceIds, entry.sourceId])];
+          record.ImdbIds = [...new Set([...record.ImdbIds, ...(group.episodes || [entry]).map((item) => item.imdbId)])];
+          continue;
+        }
         const link = {
           Id: id(),
           NodeId: nodeId,
@@ -680,6 +732,7 @@
           EndEpisode: group.episodes ? group.last : 0,
         };
         next.MediaLinks.push(link);
+        used.set(identity, link);
         added++;
         freshRecords.push({
           ReferenceId: link.Id,
@@ -697,10 +750,32 @@
         node.AutoAddRecords.push({ ...record, Signature: signature(next, record) });
       return { model: next, added: added + showCards, showCards, skipped: layout.skipped.length };
     }
-    return { categories, url, sources, match, preview, plan, apply, changes, applyChanges };
+    return { categories, url, sources, match, preview, plan, apply, changes, applyChanges, signature };
   })();
   // AUTOADD_ENGINE_END
   const clone = (value) => JSON.parse(JSON.stringify(value));
+  function episodeFormat(value, inherit = false) {
+    const format = String(value || (inherit ? '' : 'Bundles'));
+    if (!['Bundles', 'Individual', ...(inherit ? [''] : [])].includes(format))
+      throw new Error('Choose Episode bundles or Individual episodes.');
+    return format;
+  }
+  function normalizeImdbLists(raw) {
+    if (raw == null) return [];
+    if (!Array.isArray(raw) || raw.length > 100)
+      throw new Error('Maximum 100 saved IMDb lists.');
+    const ids = new Set(), urls = new Set();
+    return raw.map((list) => {
+      if (!list || !validGuid(list.Id)) throw new Error('Invalid saved IMDb list ID.');
+      const id = String(list.Id).replace(/-/g, '').toLowerCase(), url = autoAdd.url(list.Url),
+        name = String(list.Name || '').trim();
+      if (ids.has(id)) throw new Error('Duplicate saved IMDb list ID.');
+      if (urls.has(url)) throw new Error('This IMDb URL is already saved.');
+      if (!name || name.length > 120) throw new Error('Enter an IMDb list name of 1–120 characters.');
+      ids.add(id); urls.add(url);
+      return { ...list, Id: String(list.Id), Name: name, Url: url, Enabled: list.Enabled !== false };
+    });
+  }
   const num = (value) =>
     Number.isFinite(Number(value)) ? Math.max(0, Math.min(100000, Math.trunc(Number(value)))) : 0;
   const categories = [
@@ -888,6 +963,7 @@
           node.CollectionArtworkMode === 'Preserve' ? 'Preserve' : 'Collection',
         Overview: String(node.Overview || '').slice(0, 1500),
         SortOrder: num(node.SortOrder),
+        EpisodeFormat: episodeFormat(node.EpisodeFormat),
         AutoAddSources: autoAdd.sources(node.AutoAddSources),
         AutoAddRows: (Array.isArray(node.AutoAddRows) ? node.AutoAddRows : [])
           .filter(
@@ -1051,6 +1127,7 @@
           Category: categoryForRow(row, { Nodes: safeNodes }),
           SourceUrl: row.SourceUrl ? autoAdd.url(row.SourceUrl) : '',
           AutoAddSources: autoAdd.sources(row.AutoAddSources),
+          EpisodeFormat: episodeFormat(row.EpisodeFormat, true),
           SortOrder: num(row.SortOrder),
           NodeIds: nodeIds.slice(0, 250),
           MediaLinkIds: linkIds.slice(0, 3000),
@@ -1074,6 +1151,7 @@
       Nodes: safeNodes,
       MediaLinks: safeLinks,
       Rows: safeRows,
+      ImdbLists: normalizeImdbLists(raw.ImdbLists),
     };
   }
   function scopedJobs(base, nodeId) {
@@ -1092,17 +1170,18 @@
       const ownRows = base.Rows.filter((r) => r.ParentNodeId === node.Id),
         mappings = [],
         mainSources = autoAdd.sources(node.AutoAddSources).filter((s) => s.Enabled);
+      const hasOwnSources = (row) => !!row.SourceUrl || !!row.AutoAddSources?.length;
       for (const name of autoAdd.categories) {
         if (!mainSources.some((s) => s.Categories.includes(name))) continue;
         const category = categoryFromAutoAdd(name),
           previous = node.AutoAddRows.find((m) => m.Category === name);
         let row =
-          ownRows.find((r) => r.Id === previous?.RowId && !r.SourceUrl) ||
-          ownRows.find((r) => !r.SourceUrl && categoryForRow(r, base) === category);
+          ownRows.find((r) => r.Id === previous?.RowId && !hasOwnSources(r)) ||
+          ownRows.find((r) => !hasOwnSources(r) && categoryForRow(r, base) === category);
         // Respect a deleted mapped row, or a row deliberately using its own source.
         if (
           !row &&
-          (previous || ownRows.some((r) => r.SourceUrl && categoryForRow(r, base) === category))
+          (previous || ownRows.some((r) => hasOwnSources(r) && categoryForRow(r, base) === category))
         )
           continue;
         if (!row) {
@@ -1136,30 +1215,31 @@
             rowIds: mappings.map((m) => m.RowId),
             mappings,
             sources,
+            episodeFormat: episodeFormat(ownRows.find((r) =>
+              mappings.some((m) => m.Category === 'Chronological Timeline' && m.RowId === r.Id))?.EpisodeFormat || node.EpisodeFormat),
           });
         node.AutoAddRows = [
           ...node.AutoAddRows.filter((m) => !enabled.has(m.Category)),
           ...mappings,
         ];
       }
-      for (const row of ownRows.filter((r) => r.SourceUrl)) {
+      for (const row of ownRows.filter(hasOwnSources)) {
         const name = categoryToAutoAdd(categoryForRow(row, base));
         if (!name) continue;
-        const previous = row.AutoAddSources?.[0],
-          source = {
-            Id: previous?.Id || guid(),
-            Url: autoAdd.url(row.SourceUrl),
-            Enabled: true,
-            Priority: 0,
-            Categories: [name],
-          };
-        row.AutoAddSources = [source];
+        const assigned = row.AutoAddSources?.length
+          ? autoAdd.sources(row.AutoAddSources)
+          : [{ Id: guid(), Url: autoAdd.url(row.SourceUrl), Enabled: true, Priority: 0, Categories: [name] }];
+        row.AutoAddSources = assigned;
+        const sources = assigned.filter((source) => source.Enabled)
+          .map((source) => ({ ...source, Categories: [name] }));
+        if (!sources.length) continue;
         jobs.push({
           nodeId: node.Id,
           scopeRowId: row.Id,
           rowIds: [row.Id],
           mappings: [{ Category: name, RowId: row.Id }],
-          sources: [source],
+          sources,
+          episodeFormat: episodeFormat(row.EpisodeFormat || node.EpisodeFormat),
         });
       }
     }
@@ -1182,11 +1262,21 @@
       }
       node.AutoAddRows = clone(job.mappings);
       node.AutoAddSources = clone(job.sources);
+      node.EpisodeFormat = episodeFormat(job.episodeFormat || node.EpisodeFormat);
       node.AutoAddRecords = node.AutoAddRecords.filter(
         (r) =>
           String(r.ScopeRowId || '') === job.scopeRowId &&
-          (r.RowId || !external.has(r.ReferenceId)),
+          (r.RowId ? ids.has(r.RowId) : linked.has(r.ReferenceId)),
       );
+    }
+    const owner = next.Nodes.find((node) => node.Id === job.nodeId);
+    for (const record of owner?.AutoAddRecords || []) {
+      if (record.RowId || !external.has(record.ReferenceId)) continue;
+      const clean = !!record.Signature && autoAdd.signature(full, record) === record.Signature;
+      record.__scopeExternalRows = full.Rows.filter((row) => !ids.has(row.Id) &&
+        row.MediaLinkIds.includes(record.ReferenceId)).map((row) => row.Id);
+      record.__scopeOwnershipClean = clean;
+      if (clean) record.Signature = autoAdd.signature(next, record);
     }
     return next;
   }
@@ -1215,14 +1305,20 @@
         String(r.ScopeRowId || '') !== job.scopeRowId ||
         !processed.has(r.ReferenceId + ':' + r.RowId),
     );
-    owner.AutoAddRecords.push(
-      ...imported.AutoAddRecords.map((r) => ({ ...clone(r), ScopeRowId: job.scopeRowId })),
-    );
+    for (const raw of imported.AutoAddRecords) {
+      const record = { ...clone(raw), ScopeRowId: job.scopeRowId };
+      delete record.__scopeExternalRows;
+      delete record.__scopeOwnershipClean;
+      if (raw.__scopeOwnershipClean) record.Signature = autoAdd.signature(full, record);
+      owner.AutoAddRecords.push(record);
+    }
     return full;
   }
   global.FranchiseSettingsCore = {
     autoAdd,
     normalize,
+    normalizeImdbLists,
+    episodeFormat,
     guid,
     validGuid,
     emptyArt,
