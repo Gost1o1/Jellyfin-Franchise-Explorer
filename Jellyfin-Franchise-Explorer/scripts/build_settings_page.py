@@ -16,6 +16,7 @@ def generate():
         '{{PLUGIN_VERSION}}':version,
         '{{SETTINGS_CORE}}':(CONFIG/'franchise-settings-core.js').read_text(encoding='utf-8'),
         '{{SETTINGS_ARTWORK}}':(CONFIG/'franchise-settings-artwork.js').read_text(encoding='utf-8'),
+        '{{SETTINGS_AUTOMATION}}':(CONFIG/'franchise-settings-automation.js').read_text(encoding='utf-8'),
         '{{SETTINGS_MAIN}}':(CONFIG/'franchise-settings.js').read_text(encoding='utf-8'),
     }
     for marker,content in replacements.items():

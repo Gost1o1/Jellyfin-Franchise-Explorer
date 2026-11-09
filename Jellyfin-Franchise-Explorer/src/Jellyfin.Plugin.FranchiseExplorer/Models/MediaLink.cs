@@ -11,6 +11,7 @@ public sealed class MediaLink
     public string Id { get; set; } = Guid.NewGuid().ToString("D");
     public string NodeId { get; set; } = string.Empty;
     public string JellyfinItemId { get; set; } = string.Empty;
+    public MediaIdentity? Identity { get; set; }
     public string DisplayName { get; set; } = string.Empty;
     public string ItemType { get; set; } = "Movie";
     public string ViewingOrder { get; set; } = "Custom";

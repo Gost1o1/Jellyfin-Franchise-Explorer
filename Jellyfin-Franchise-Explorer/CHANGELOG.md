@@ -1,4 +1,13 @@
-## 0.8.9.25 (unreleased)
+## 0.8.9.26 (unreleased)
+
+- Add opt-in server-side Auto Franchises for the eleven configured IMDb lists, running at midnight in the Jellyfin server's local timezone with restart catch-up and no overlapping runs.
+- Create TV Shows, Movies and Chronological Order rows; expand eligible series episodes at their source position, with bundles by default and individual-episode overrides.
+- Preserve manual exclusions, edited ranges and deleted rows/franchises; hold removals and protected changes for detailed review and explicit saved-choice restoration.
+- Capture portable media identities and reconnect uniquely verified replacements after library changes; review ambiguous and legacy manual references while retaining plugin timeline progress.
+- Render referenced subgroups within their rows and pack franchise cards into the available space while preserving saved and keyboard order.
+- Guard all configuration writes with an optimistic revision and shared commit gate; roll back timeline files when a recovery configuration commit fails.
+
+## 0.8.9.25
 
 - Select one real library episode by season and episode while retaining full-show, season and episode-range selections.
 - Save named IMDb lists under Settings → Advanced settings and select reusable lists for a franchise, subgroup or row.

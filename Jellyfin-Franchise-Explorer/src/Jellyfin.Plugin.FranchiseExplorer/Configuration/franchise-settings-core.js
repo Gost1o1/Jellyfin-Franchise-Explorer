@@ -1152,6 +1152,15 @@
       MediaLinks: safeLinks,
       Rows: safeRows,
       ImdbLists: normalizeImdbLists(raw.ImdbLists),
+      ConfigurationRevision: Number.isSafeInteger(raw.ConfigurationRevision) ? raw.ConfigurationRevision : 0,
+      AutoFranchises: {
+        Enabled: false, Registry: [], Exclusions: [], PendingChanges: [], Ownership: [],
+        ...(raw.AutoFranchises && typeof raw.AutoFranchises === 'object' ? raw.AutoFranchises : {}),
+      },
+      MediaRecovery: {
+        Enabled: true, AutoReconnect: true, KnownItems: [],
+        ...(raw.MediaRecovery && typeof raw.MediaRecovery === 'object' ? raw.MediaRecovery : {}),
+      },
     };
   }
   function scopedJobs(base, nodeId) {
@@ -1314,8 +1323,48 @@
     }
     return full;
   }
+  // The same durable choices also protect explicit IMDb previews, before episode bundling.
+  function automationAllowed(model, nodeId, rowId, entry) {
+    if (!entry?.item) return true;
+    const config = model.AutoFranchises || {}, branch = new Set();
+    let current = nodeId;
+    while (current && !branch.has(current)) {
+      branch.add(current); current = model.Nodes.find((node) => node.Id === current)?.ParentId;
+    }
+    const registrations = new Set((config.Registry || []).filter((r) => branch.has(r.FranchiseNodeId) || (r.Rows || []).some((row) => row.RowId === rowId)).map((r) => r.Id)),
+      media = entry.item, show = entry.series, episode = media.Type === 'Episode',
+      target = episode ? show : media,
+      canonical = (value) => String(value || '').replace(/-/g, '').toLowerCase(),
+      provider = (value, name) => Object.entries(value?.ProviderIds || {}).find(([key]) => key.toLowerCase() === String(name || 'Imdb').toLowerCase())?.[1],
+      season = Number(media.ParentIndexNumber || 0),
+      first = Number(media.IndexNumber || 0), last = Number(media.IndexNumberEnd ?? media.IndexNumber ?? 0);
+    return !(config.Exclusions || []).some((rule) => {
+      if (rule.Enabled === false || (rule.RowId && rule.RowId !== rowId)) return false;
+      if (rule.RegistrationId ? !registrations.has(rule.RegistrationId) : !branch.has(rule.FranchiseNodeId)) return false;
+      const idMatch = canonical(rule.JellyfinItemId) && [target?.Id, media.SeriesId, media.Id].some((id) => canonical(id) === canonical(rule.JellyfinItemId)),
+        providerMatch = rule.ProviderId && [provider(target, rule.ProviderName), provider(media, rule.ProviderName)].some((id) => String(id || '').toLowerCase() === rule.ProviderId.toLowerCase());
+      if (!idMatch && !providerMatch) return false;
+      const scope = String(rule.Scope || '').toLowerCase();
+      if (scope === 'movie') return media.Type === 'Movie';
+      if (['show', 'wholeshow', 'series'].includes(scope)) return media.Type === 'Series' || episode;
+      if (!episode) return false;
+      const fromSeason = Number(rule.StartSeason || 0), toSeason = Number(rule.EndSeason || fromSeason);
+      if (scope === 'season') return season >= fromSeason && season <= toSeason;
+      const fromEpisode = Number(rule.StartEpisode || 0), toEpisode = Number(rule.EndEpisode || fromEpisode),
+        directMediaMatch = canonical(rule.JellyfinItemId) && canonical(rule.JellyfinItemId) === canonical(media.Id) ||
+          rule.ProviderId && String(provider(media, rule.ProviderName) || '').toLowerCase() === String(rule.ProviderId).toLowerCase(),
+        inside = (number) => season >= fromSeason && season <= toSeason &&
+          (season > fromSeason || number >= fromEpisode) && (season < toSeason || number <= toEpisode);
+      if (scope === 'allowedrange') return !inside(first) || !inside(last);
+      if (scope === 'episode' && directMediaMatch && !fromEpisode) return true;
+      return ['episode', 'range'].includes(scope) &&
+        (season > fromSeason || season === fromSeason && last >= fromEpisode) &&
+        (season < toSeason || season === toSeason && first <= toEpisode);
+    });
+  }
   global.FranchiseSettingsCore = {
     autoAdd,
+    automationAllowed,
     normalize,
     normalizeImdbLists,
     episodeFormat,

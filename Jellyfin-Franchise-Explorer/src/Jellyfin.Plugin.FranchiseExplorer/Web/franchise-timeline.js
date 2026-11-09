@@ -178,7 +178,7 @@
     async getEpisodes(seriesId){
       const all=[];let offset=0;const size=250;
       for(let page=0;page<100;page++){
-        const result=await this.request('/Shows/'+encodeURIComponent(seriesId)+'/Episodes?userId='+encodeURIComponent(this.context.userId)+'&startIndex='+offset+'&limit='+size+'&isMissing=false');
+        const result=await this.request('/Shows/'+encodeURIComponent(seriesId)+'/Episodes?userId='+encodeURIComponent(this.context.userId)+'&startIndex='+offset+'&limit='+size+'&isMissing=false&Fields=ProviderIds');
         const part=(result?.Items||[]).filter(e=>e && guid(e.Id) && e.Type==='Episode');
         all.push(...part);offset+=(result?.Items||[]).length;
         if(!result?.Items?.length || offset >= (result.TotalRecordCount||0))break;
@@ -188,11 +188,42 @@
     async getCollection(id){
       const all=[];let offset=0;
       for(let page=0;page<100;page++){
-        const r=await this.request('/Items?ParentId='+encodeURIComponent(id)+'&Recursive=true&IncludeItemTypes=Movie,Series&StartIndex='+offset+'&Limit=250&UserId='+encodeURIComponent(this.context.userId));
+        const r=await this.request('/Items?ParentId='+encodeURIComponent(id)+'&Recursive=true&IncludeItemTypes=Movie,Series&StartIndex='+offset+'&Limit=250&UserId='+encodeURIComponent(this.context.userId)+'&Fields=ProviderIds');
         all.push(...(r.Items||[]));offset+=(r.Items||[]).length;
         if(!r.Items?.length || offset >= (r.TotalRecordCount||0))break;
       }
       return all.filter(i=>i&&['Movie','Series'].includes(i.Type));
+    }
+    allowed(media,row,parentSeries=null){
+      const canonical=value=>String(value||'').replace(/-/g,'').toLowerCase();
+      const provider=(item,name)=>Object.entries(item?.ProviderIds||{}).find(([key])=>key.toLowerCase()===String(name||'Imdb').toLowerCase())?.[1];
+      const matches=(rule,item,extraId='')=>{
+        const ids=[rule.itemId,...(rule.itemIds||[])].map(canonical).filter(Boolean);
+        return ids.includes(canonical(item?.Id)) || ids.includes(canonical(extraId)) ||
+          !!rule.providerId && String(provider(item,rule.providerName)||'').toLowerCase()===String(rule.providerId).toLowerCase();
+      };
+      const episode=media.Type==='Episode';
+      const show=parentSeries||(episode?{Id:media.SeriesId,ProviderIds:media.SeriesProviderIds}:media.Type==='Series'?media:null);
+      const season=n(media.ParentIndexNumber),first=n(media.IndexNumber),last=Math.max(first,n(media.IndexNumberEnd)||first);
+      for(const rule of row.exclusions||[]){
+        if(rule.enabled===false)continue;
+        const scope=String(rule.scope||'').toLowerCase(),showMatch=!!show&&matches(rule,show,media.SeriesId),mediaMatch=matches(rule,media);
+        if(scope==='movie'){if(media.Type==='Movie'&&mediaMatch)return false;continue;}
+        if(['wholeshow','show','series'].includes(scope)){if((episode||media.Type==='Series')&&showMatch)return false;continue;}
+        if(!episode||!showMatch&&!mediaMatch)continue;
+        const startSeason=n(rule.startSeason),endSeason=n(rule.endSeason)||startSeason;
+        const startEpisode=n(rule.startEpisode),endEpisode=n(rule.endEpisode)||startEpisode;
+        if(scope==='season'&&season>=startSeason&&season<=endSeason)return false;
+        // One physical episode item can contain several numbered episodes. Excluding
+        // any part excludes the file; playback cannot start in only its allowed half.
+        const inside=value=>season>=startSeason&&season<=endSeason&&
+          (season>startSeason||value>=startEpisode)&&(season<endSeason||value<=endEpisode);
+        if(scope==='allowedrange'&&(!inside(first)||!inside(last)))return false;
+        if(scope==='episode'&&((mediaMatch&&startEpisode===0)||
+          (season>startSeason||season===startSeason&&last>=startEpisode)&&
+          (season<endSeason||season===endSeason&&first<=endEpisode)))return false;
+      }
+      return true;
     }
     async resolve(row){
       if(row.rowType!=='Timeline')throw new Error('Choose a chronological / viewing-order row.');
@@ -202,31 +233,38 @@
       const ranks=new Map((row.mediaOrder||[]).map((id,i)=>[id,i]));
       const refs=[...links,...own];
       if(ranks.size) refs.sort((a,b)=>(ranks.get(a.id)??99999)-(ranks.get(b.id)??99999));
-      const queue=[],warnings=[],duplicateCheck=new Set();
+      const queue=[],warnings=[],duplicateCheck=new Set(),parents=new Map();
       for(const ref of refs){
         if(!guid(ref.itemId)){warnings.push('A saved reference has no valid Jellyfin item ID.');continue;}
         const item=await this.context.getItem(ref.itemId);
         if(!item){warnings.push('An item is missing or not accessible to your Jellyfin account.');continue;}
         let items=[];
         try {
-          if(item.Type==='Movie' || item.Type==='Episode')items=[item];
-          else if(item.Type==='Series')items=(await this.getEpisodes(item.Id)).filter(ep=>inRange(ep,ref));
+          if(item.Type==='Movie' || item.Type==='Episode')items=[{media:item,parent:null}];
+          else if(item.Type==='Series')items=(await this.getEpisodes(item.Id)).filter(ep=>inRange(ep,ref)).map(media=>({media,parent:item}));
           else if(item.Type==='BoxSet'){
             const members=await this.getCollection(item.Id);
-            for(const member of members){if(member.Type==='Movie')items.push(member);
-              else if(member.Type==='Series')items.push(...await this.getEpisodes(member.Id));}
+            for(const member of members){if(member.Type==='Movie')items.push({media:member,parent:null});
+              else if(member.Type==='Series')items.push(...(await this.getEpisodes(member.Id)).map(media=>({media,parent:member})));}
           }else{warnings.push('Cannot queue unsupported type '+item.Type+'.');continue;}
         }catch(e){warnings.push('Unable to resolve '+(item.Name||'item')+': '+e.message);continue;}
         if(!items.length){warnings.push((item.Name||'TV Show')+' has no accessible episodes matching '+rangeLabel(ref)+'.');continue;}
-        for(const media of items){
+        for(const resolved of items){
+          const media=resolved.media;let parent=resolved.parent;
           if(!guid(media.Id))continue;
+          if(media.Type==='Episode'&&!parent&&guid(media.SeriesId)&&(row.exclusions||[]).length){
+            const id=String(media.SeriesId).toLowerCase();
+            if(!parents.has(id))parents.set(id,Promise.resolve(this.context.getItem(media.SeriesId)).catch(()=>null));
+            parent=await parents.get(id);
+          }
+          if(!this.allowed(media,row,parent))continue;
           const key=ref.id+':'+media.Id.toLowerCase();
           if(duplicateCheck.has(key))continue;
           duplicateCheck.add(key);
           const label=media.Type==='Episode'
             ? (item.Name||media.SeriesName||'TV Show')+' · S'+n(media.ParentIndexNumber)+'E'+n(media.IndexNumber)+' · '+(media.Name||'Episode')
             : (media.Name||'Movie');
-          queue.push({key,id:media.Id,label,kind:media.Type,seriesId:media.SeriesId||'',
+          queue.push({key,id:media.Id,label,kind:media.Type,seriesId:media.SeriesId||parent?.Id||'',
             sourceItemId:item.Id,season:n(media.ParentIndexNumber),episode:n(media.IndexNumber),
             runTimeTicks:n(media.RunTimeTicks),referenceId:ref.id,range:rangeLabel(ref)});
         }

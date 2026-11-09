@@ -432,6 +432,68 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
 #FranchiseExplorerConfigPage .media-entry>.grip{width:44px;min-height:44px}}
 #FranchiseExplorerConfigPage .media-entry.drop-before{box-shadow:0 -3px 0 var(--accent)!important}
 #FranchiseExplorerConfigPage .media-entry.drop-after{box-shadow:0 3px 0 var(--accent)!important}
+/* Pack cards visually while retaining their saved DOM and keyboard sequence. */
+#FranchiseExplorerConfigPage .board{display:block;position:relative;min-height:85px}
+#FranchiseExplorerConfigPage .board>.node-card{position:absolute;left:0;top:0;box-sizing:border-box;max-width:100%}
+#FranchiseExplorerConfigPage.is-dragging:not(.is-dragging-media) .board{padding-bottom:0}
+#FranchiseExplorerConfigPage .node-body{overflow-x:visible;min-width:0}
+#FranchiseExplorerConfigPage .subgroup,#FranchiseExplorerConfigPage .row-entry{min-width:0}
+#FranchiseExplorerConfigPage .row-groups>.subgroup{margin-left:0}
+#FranchiseExplorerConfigPage .row-contents:has(>.row-groups){margin-left:9px;padding-left:5px}
+#FranchiseExplorerConfigPage .tree-name .row-count{flex-shrink:0;display:inline-block;font-size:10px}
+#FranchiseExplorerConfigPage .node-head,#FranchiseExplorerConfigPage .tree-row{grid-template-columns:18px 20px minmax(0,1fr) auto}
+@media(max-width:660px){#FranchiseExplorerConfigPage .node-head,#FranchiseExplorerConfigPage .tree-row{gap:2px}
+#FranchiseExplorerConfigPage .node-actions,#FranchiseExplorerConfigPage .row-actions{gap:1px}
+#FranchiseExplorerConfigPage .node-actions .icon-button,#FranchiseExplorerConfigPage .row-actions .icon-button{width:27px;padding:4px}
+#FranchiseExplorerConfigPage .row-contents:has(>.row-groups){margin-left:4px;padding-left:3px}
+#FranchiseExplorerConfigPage .subgroup{margin-left:3px;padding-left:3px}
+#FranchiseExplorerConfigPage .tree-row .tree-name{gap:3px}
+#FranchiseExplorerConfigPage .tree-name .icon{width:12px;height:12px}}
+/* Automation and recovery use the same controls on desktop and narrow screens. */
+#FranchiseExplorerConfigPage .automation-section{border-top:1px solid var(--line);margin-top:22px;padding-top:12px}
+#FranchiseExplorerConfigPage .automation-section h3{font-size:15px;margin:8px 0 12px}
+#FranchiseExplorerConfigPage .automation-section p,#FranchiseExplorerConfigPage .automation-section small{color:var(--muted);font-size:12px;overflow-wrap:anywhere}
+#FranchiseExplorerConfigPage .automation-toolbar,#FranchiseExplorerConfigPage .automation-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#FranchiseExplorerConfigPage .automation-toolbar{margin:13px 0}
+#FranchiseExplorerConfigPage .automation-notice{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid #6b5e3c;background:#332e22;border-radius:9px;margin:0 0 14px;padding:10px 13px;font-size:13px}
+#FranchiseExplorerConfigPage .automation-registry-entry{display:flex;justify-content:space-between;gap:12px;align-items:center;border-bottom:1px solid var(--line);padding:14px 0;min-width:0}
+#FranchiseExplorerConfigPage .automation-entry-summary{min-width:0;flex:1}
+#FranchiseExplorerConfigPage .automation-entry-summary a{font-size:12px;overflow-wrap:anywhere}
+#FranchiseExplorerConfigPage .automation-entry-summary small{display:block;color:var(--muted);margin-top:4px}
+#FranchiseExplorerConfigPage .automation-actions{flex-shrink:0}
+#FranchiseExplorerConfigPage .automation-actions label{display:flex;align-items:center;gap:5px;font-size:12px}
+#FranchiseExplorerConfigPage .automation-actions button{font-size:12px;padding:7px 10px;min-height:36px}
+#FranchiseExplorerConfigPage .automation-entry-fields{display:grid;gap:16px}
+#FranchiseExplorerConfigPage .automation-change{border:1px solid var(--line);border-radius:9px;padding:14px;margin:0 0 12px;overflow-wrap:anywhere;min-width:0}
+#FranchiseExplorerConfigPage .automation-change h3{font-size:15px;margin:0 0 8px}
+#FranchiseExplorerConfigPage .automation-change p{font-size:12px;color:var(--muted)}
+#FranchiseExplorerConfigPage .automation-select{display:flex;align-items:center;gap:10px;font-size:14px}
+#FranchiseExplorerConfigPage .automation-select span{font-size:12px;color:var(--amber);margin-left:auto}
+#FranchiseExplorerConfigPage .automation-details{display:grid;grid-template-columns:115px minmax(0,1fr);gap:7px 12px;font-size:12px;margin:13px 0 0}
+#FranchiseExplorerConfigPage .automation-details dt{color:var(--muted)}
+#FranchiseExplorerConfigPage .automation-details dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+#FranchiseExplorerConfigPage .automation-change details{font-size:12px;margin-top:12px}
+#FranchiseExplorerConfigPage .automation-change summary{cursor:pointer}
+#FranchiseExplorerConfigPage .automation-preview-row{border-top:1px solid var(--line);margin-top:10px;padding-top:9px;font-size:13px}
+#FranchiseExplorerConfigPage .automation-preview-row ul{padding-left:20px;margin:5px 0}
+#FranchiseExplorerConfigPage .automation-recovery-search{display:flex;align-items:end;gap:8px;margin-top:13px}
+#FranchiseExplorerConfigPage .automation-recovery-search .field{flex:1;min-width:0}
+#FranchiseExplorerConfigPage .automation-candidate{padding-left:18px;color:var(--muted);font-size:11px}
+#FranchiseExplorerConfigPage .automation-dialog-note{font-size:12px;color:var(--muted)}
+#FranchiseExplorerConfigPage #automation-error{border:1px solid #90515c;background:#4c292e;border-radius:8px;padding:10px 12px;color:#ffd1d1;font-size:13px;overflow-wrap:anywhere}
+#FranchiseExplorerConfigPage .automation-section a,#FranchiseExplorerConfigPage .automation-change a,#FranchiseExplorerConfigPage .automation-entry-summary a{color:#8edbe4}
+@media(max-width:660px){#FranchiseExplorerConfigPage .automation-registry-entry{align-items:start;flex-wrap:wrap;gap:9px}
+#FranchiseExplorerConfigPage .automation-entry-summary{flex-basis:100%}
+#FranchiseExplorerConfigPage .automation-actions{width:100%;flex-wrap:nowrap;justify-content:flex-end}
+#FranchiseExplorerConfigPage .automation-actions label{margin-right:auto}
+#FranchiseExplorerConfigPage .automation-toolbar{gap:7px}
+#FranchiseExplorerConfigPage .automation-toolbar button{font-size:12px;padding:8px 10px}
+#FranchiseExplorerConfigPage .automation-details{grid-template-columns:82px minmax(0,1fr);gap:7px}
+#FranchiseExplorerConfigPage .automation-change{padding:11px}
+#FranchiseExplorerConfigPage .automation-notice{font-size:12px;gap:7px;padding:9px}
+#FranchiseExplorerConfigPage .automation-notice button{font-size:12px;padding:7px 9px;min-height:36px}
+#FranchiseExplorerConfigPage .automation-recovery-search{flex-wrap:wrap}
+#FranchiseExplorerConfigPage .automation-recovery-search .field{flex-basis:100%}}
 </style>
 
 <svg style="display:none" aria-hidden="true"><defs>
@@ -454,16 +516,26 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
 <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
 </defs></svg>
 <main class="fx-wrap">
-<header class="top"><div><h1>Franchise Explorer<span class="version">v0.8.9.25</span></h1></div><div class="top-actions"><span id="save-state" class="save-state" role="status">Loading configuration…</span><button class="icon-button quiet" id="undo" aria-label="Undo" data-help="Undo the most recent unsaved edit or move." disabled><svg class="icon"><use href="#i-undo"/></svg></button><button class="icon-button quiet" id="reset" aria-label="Reload saved settings" data-help="Reload the saved plugin configuration. Unsaved changes can be restored with Undo."><svg class="icon"><use href="#i-reset"/></svg></button><button class="primary" id="save" data-help="Save these changes to the Jellyfin plugin configuration.">Save changes</button></div></header>
+<header class="top"><div><h1>Franchise Explorer<span class="version">v0.8.9.26</span></h1></div><div class="top-actions"><span id="save-state" class="save-state" role="status">Loading configuration…</span><button class="icon-button quiet" id="undo" aria-label="Undo" data-help="Undo the most recent unsaved edit or move." disabled><svg class="icon"><use href="#i-undo"/></svg></button><button class="icon-button quiet" id="reset" aria-label="Reload saved settings" data-help="Reload the saved plugin configuration. Unsaved changes can be restored with Undo."><svg class="icon"><use href="#i-reset"/></svg></button><button class="primary" id="save" data-help="Save these changes to the Jellyfin plugin configuration.">Save changes</button></div></header>
+<div id="automation-notice" class="automation-notice" role="status" hidden><span id="automation-notice-count"></span><button id="automation-notice-review">Review changes</button></div><p id="automation-error" role="alert" hidden></p>
 <details class="panel" id="settings"><summary><svg class="icon label-icon"><use href="#i-settings"/></svg>Settings<span class="section-count"></span></summary><div class="panel-body settings-grid">
 <div class="setting" data-help="Enable subtitles for franchise playback in this browser."><label class="setting-label" id="subtitles-label" for="subtitles">Enable subtitles</label><button type="button" class="switch" role="switch" aria-checked="false" aria-labelledby="subtitles-label" id="subtitles"><span class="switch-label">Off</span><span class="switch-track"></span></button></div>
 <label class="setting" data-help="Choose the subtitle language to use when subtitles are enabled."><span class="setting-label">Subtitle language</span><select id="language" aria-label="Subtitle language"><option value="auto">Jellyfin preference</option><option value="en">English</option><option value="de">Deutsch</option><option value="es">Español</option><option value="fr">Français</option><option value="ja">日本語</option></select></label>
 <div class="setting" data-help="Hide titles managed by a franchise from the main menu's Continue Watching and Next Up rows. Their watched history is preserved."><label class="setting-label" id="hide-label" for="hide-native">Hide franchise Continue Watching and Next Up from main menu</label><button type="button" class="switch" role="switch" aria-checked="false" aria-labelledby="hide-label" id="hide-native"><span class="switch-label">Off</span><span class="switch-track"></span></button></div>
-<details class="panel" id="advanced"><summary><svg class="icon label-icon"><use href="#i-box"/></svg>Advanced settings<span class="section-count"></span></summary><div class="panel-body"><div class="button-row"><button id="export" data-help="Download a JSON backup of the plugin configuration.">Export backup</button><button id="import" data-help="Import a Franchise Explorer configuration backup for review before saving.">Import backup</button><input id="import-file" type="file" accept=".json,application/json" hidden></div><section class="imdb-library" aria-labelledby="imdb-library-heading"><h3 id="imdb-library-heading">IMDb lists</h3><div id="saved-imdb-lists"></div><button id="add-imdb-list" data-help="Save a named IMDb URL for use in Auto Add. Saving a list does not import titles. Use Save changes to persist the library.">＋ Add IMDb list</button></section></div></details>
+<details class="panel" id="advanced"><summary><svg class="icon label-icon"><use href="#i-box"/></svg>Advanced settings<span class="section-count"></span></summary><div class="panel-body"><div class="button-row"><button id="export" data-help="Download a JSON backup of the plugin configuration.">Export backup</button><button id="import" data-help="Import a Franchise Explorer configuration backup for review before saving.">Import backup</button><input id="import-file" type="file" accept=".json,application/json" hidden></div><section class="imdb-library" aria-labelledby="imdb-library-heading"><h3 id="imdb-library-heading">IMDb lists</h3><div id="saved-imdb-lists"></div><button id="add-imdb-list" data-help="Save a named IMDb URL for use in Auto Add. Saving a list does not import titles. Use Save changes to persist the library.">＋ Add IMDb list</button></section>
+<section class="automation-section" aria-labelledby="auto-settings-heading"><h3 id="auto-settings-heading">Auto Franchises</h3><label class="setting"><span>Enable midnight updates</span><input id="auto-enabled" type="checkbox" data-automation-action></label><p id="auto-schedule">Daily · 12:00 AM · Jellyfin server local time</p><small id="auto-registry-count">Loading server registry…</small><div class="automation-toolbar"><button id="auto-manage" data-automation-action>Manage auto list</button><button id="auto-preview" data-automation-action>Preview build</button><button id="auto-run" data-automation-action>Run now</button><button id="auto-review">Pending review (0)</button><button id="auto-manage-choices">Saved choices (0)</button></div><p>Only enabled entries in this auto list are scheduled. Reusable IMDb lists remain separate. New franchises have TV Shows, Movies and Chronological Order rows.</p><p>New verified matches can be added. Saved skips, deleted rows, manual ranges, artwork and custom rows are protected. Removals and protected changes need review.</p><p id="auto-run-status" role="status">Last run: loading…</p></section>
+<section class="automation-section" aria-labelledby="recovery-settings-heading"><h3 id="recovery-settings-heading">Media recovery</h3><label class="setting"><span>Keep stable media identities for recovery</span><input id="recovery-enabled" type="checkbox" checked></label><label class="setting"><span>Reconnect verified matches after a healthy library scan</span><input id="recovery-auto" type="checkbox" checked></label><p>Save changes to store recovery preferences. Recovery preserves rows, artwork, ranges and plugin progress. Ambiguous or missing matches need review.</p><div class="automation-toolbar"><button id="recovery-check" data-automation-action>Check recovery</button><button id="recovery-review">Review recovery (0)</button></div><p id="recovery-status" role="status">Last check: loading…</p></section>
+</div></details>
 </div></details>
 <details class="panel" id="franchises"><summary><svg class="icon label-icon"><use href="#i-grid"/></svg>Franchises<span id="franchise-count" class="section-count"></span></summary><div class="panel-body"><div class="franchises-toolbar"><button id="add-franchise" data-help="Create a franchise, then use its settings icon for IMDb Auto Add and its + icon for rows or subcategories.">＋ Add franchise</button></div><div id="board" class="board"></div></div></details>
 </main>
 <div id="help" role="tooltip" hidden></div><div id="toast" class="toast" role="status" aria-live="polite" hidden></div><div id="drag-status" class="sr-only" aria-live="polite"></div>
+<dialog id="auto-registry-dialog" aria-labelledby="auto-registry-heading"><div class="dialog-head"><h2 id="auto-registry-heading">Auto Franchises list</h2><button class="icon-button quiet" data-close="auto-registry-dialog" aria-label="Close auto list">✕</button></div><div class="dialog-content"><button id="auto-add-entry" data-automation-action>＋ Add auto franchise</button><div id="auto-registry-list"></div><p class="automation-dialog-note">Removing an entry keeps its existing franchise and saved choices.</p></div><div class="dialog-footer"><button data-close="auto-registry-dialog">Done</button></div></dialog>
+<dialog id="auto-entry-dialog" class="compact-dialog" aria-labelledby="auto-entry-heading"><div class="dialog-head"><h2 id="auto-entry-heading">Add auto franchise</h2><button class="icon-button quiet" data-close="auto-entry-dialog" aria-label="Close auto entry">✕</button></div><div class="dialog-content automation-entry-fields"><label class="field"><span>Franchise name</span><input id="auto-entry-name" maxlength="120" required></label><label class="field"><span>IMDb list URL</span><input id="auto-entry-url" type="url" maxlength="300" placeholder="https://www.imdb.com/list/ls…/" required></label><label class="field"><span>Use an existing franchise or create one</span><select id="auto-entry-target"></select></label><label class="field"><span>Chronological Order · Episode format</span><select id="auto-entry-mode"><option value="Bundles">Episode bundles</option><option value="Individual">Individual episodes</option></select></label><label class="setting"><span>Include in midnight task</span><input id="auto-entry-enabled" type="checkbox" checked></label><p id="auto-entry-error" class="inline-error" role="alert" hidden></p></div><div class="dialog-footer"><button data-close="auto-entry-dialog">Cancel</button><button id="auto-entry-save" class="primary" data-automation-action>Save entry</button></div></dialog>
+<dialog id="auto-preview-dialog" aria-labelledby="auto-preview-heading"><div class="dialog-head"><h2 id="auto-preview-heading">Auto Franchises · Build preview</h2><button class="icon-button quiet" data-close="auto-preview-dialog" aria-label="Close build preview">✕</button></div><div class="dialog-content"><p class="automation-dialog-note">Current server configuration and library matches. Apply only selected changes; midnight updates can stay off. Protected changes start unselected.</p><div id="auto-preview-results"></div></div><div class="dialog-footer"><span id="auto-preview-selected-count" class="selected-count"></span><button data-close="auto-preview-dialog">Close</button><button id="auto-preview-apply" class="primary" data-automation-action disabled>Apply selected</button></div></dialog>
+<dialog id="auto-inbox-dialog" aria-labelledby="auto-inbox-heading"><div class="dialog-head"><h2 id="auto-inbox-heading">Auto Franchises · Pending changes</h2><button class="icon-button quiet" data-close="auto-inbox-dialog" aria-label="Close pending changes">✕</button></div><div class="dialog-content"><p class="automation-dialog-note">Protected changes start unselected. Restore / Apply selected rechecks the current configuration and library. Keep my choices acknowledges selected changes, or all shown changes when none are selected.</p><div id="auto-inbox-list"></div></div><div class="dialog-footer"><button data-close="auto-inbox-dialog">Close</button><button id="auto-keep-choices" data-automation-action>Keep my choices</button><button id="auto-restore-selected" class="primary" data-automation-action disabled>Restore / Apply selected</button></div></dialog>
+<dialog id="auto-choices-dialog" aria-labelledby="auto-choices-heading"><div class="dialog-head"><h2 id="auto-choices-heading">Auto Franchises · Saved choices</h2><button class="icon-button quiet" data-close="auto-choices-dialog" aria-label="Close saved choices">✕</button></div><div class="dialog-content"><p class="automation-dialog-note">Only selected restrictions are restored. Other show, season and episode restrictions stay protected. The server verifies an available candidate before clearing a restriction; later builds can add verified media.</p><div id="auto-choices-list"></div></div><div class="dialog-footer"><button data-close="auto-choices-dialog">Close</button><button id="auto-restore-rules" class="primary" data-automation-action disabled>Restore selected choices</button></div></dialog>
+<dialog id="recovery-dialog" aria-labelledby="recovery-heading"><div class="dialog-head"><h2 id="recovery-heading">Media recovery · Review matches</h2><button class="icon-button quiet" data-close="recovery-dialog" aria-label="Close recovery review">✕</button></div><div class="dialog-content"><p class="automation-dialog-note">Verified identity matches, ambiguous candidates and missing media are shown separately. Choose the actual library item explicitly. Missing media stays in place until it becomes available.</p><div id="recovery-results"></div></div><div class="dialog-footer"><button data-close="recovery-dialog">Close</button><button id="recovery-apply" class="primary" data-automation-action disabled>Reconnect selected</button></div></dialog>
 <dialog id="franchise-dialog" class="franchise-dialog" aria-labelledby="franchise-heading"><div class="dialog-head"><div><h2 id="franchise-heading"><svg class="icon"><use href="#i-gear"/></svg>Franchise settings</h2><div id="franchise-scope" class="scope-title"></div></div><button class="icon-button quiet" data-close="franchise-dialog" aria-label="Close franchise settings">✕</button></div><div class="dialog-content"><div class="franchise-fields"><section class="structure-tools"><h3>Groups and subgroups</h3><div id="franchise-structure-owner" class="structure-owner"></div><div class="button-row"><button id="franchise-add-row">＋ Add group / row</button><button id="franchise-add-subgroup">＋ Add subgroup</button></div><div id="franchise-pending-structure" class="pending-structure"></div></section>
 <label class="field" data-help="Rename this franchise or subgroup. Changes are staged until you save or apply selected changes."><span>Title</span><input id="detail-title" maxlength="120" required></label>
 <label class="field" data-help="Edit the description for this franchise or subgroup."><span>Description</span><textarea id="detail-description" maxlength="1500"></textarea></label>
@@ -1641,6 +1713,15 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       MediaLinks: safeLinks,
       Rows: safeRows,
       ImdbLists: normalizeImdbLists(raw.ImdbLists),
+      ConfigurationRevision: Number.isSafeInteger(raw.ConfigurationRevision) ? raw.ConfigurationRevision : 0,
+      AutoFranchises: {
+        Enabled: false, Registry: [], Exclusions: [], PendingChanges: [], Ownership: [],
+        ...(raw.AutoFranchises && typeof raw.AutoFranchises === 'object' ? raw.AutoFranchises : {}),
+      },
+      MediaRecovery: {
+        Enabled: true, AutoReconnect: true, KnownItems: [],
+        ...(raw.MediaRecovery && typeof raw.MediaRecovery === 'object' ? raw.MediaRecovery : {}),
+      },
     };
   }
   function scopedJobs(base, nodeId) {
@@ -1803,8 +1884,48 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     }
     return full;
   }
+  // The same durable choices also protect explicit IMDb previews, before episode bundling.
+  function automationAllowed(model, nodeId, rowId, entry) {
+    if (!entry?.item) return true;
+    const config = model.AutoFranchises || {}, branch = new Set();
+    let current = nodeId;
+    while (current && !branch.has(current)) {
+      branch.add(current); current = model.Nodes.find((node) => node.Id === current)?.ParentId;
+    }
+    const registrations = new Set((config.Registry || []).filter((r) => branch.has(r.FranchiseNodeId) || (r.Rows || []).some((row) => row.RowId === rowId)).map((r) => r.Id)),
+      media = entry.item, show = entry.series, episode = media.Type === 'Episode',
+      target = episode ? show : media,
+      canonical = (value) => String(value || '').replace(/-/g, '').toLowerCase(),
+      provider = (value, name) => Object.entries(value?.ProviderIds || {}).find(([key]) => key.toLowerCase() === String(name || 'Imdb').toLowerCase())?.[1],
+      season = Number(media.ParentIndexNumber || 0),
+      first = Number(media.IndexNumber || 0), last = Number(media.IndexNumberEnd ?? media.IndexNumber ?? 0);
+    return !(config.Exclusions || []).some((rule) => {
+      if (rule.Enabled === false || (rule.RowId && rule.RowId !== rowId)) return false;
+      if (rule.RegistrationId ? !registrations.has(rule.RegistrationId) : !branch.has(rule.FranchiseNodeId)) return false;
+      const idMatch = canonical(rule.JellyfinItemId) && [target?.Id, media.SeriesId, media.Id].some((id) => canonical(id) === canonical(rule.JellyfinItemId)),
+        providerMatch = rule.ProviderId && [provider(target, rule.ProviderName), provider(media, rule.ProviderName)].some((id) => String(id || '').toLowerCase() === rule.ProviderId.toLowerCase());
+      if (!idMatch && !providerMatch) return false;
+      const scope = String(rule.Scope || '').toLowerCase();
+      if (scope === 'movie') return media.Type === 'Movie';
+      if (['show', 'wholeshow', 'series'].includes(scope)) return media.Type === 'Series' || episode;
+      if (!episode) return false;
+      const fromSeason = Number(rule.StartSeason || 0), toSeason = Number(rule.EndSeason || fromSeason);
+      if (scope === 'season') return season >= fromSeason && season <= toSeason;
+      const fromEpisode = Number(rule.StartEpisode || 0), toEpisode = Number(rule.EndEpisode || fromEpisode),
+        directMediaMatch = canonical(rule.JellyfinItemId) && canonical(rule.JellyfinItemId) === canonical(media.Id) ||
+          rule.ProviderId && String(provider(media, rule.ProviderName) || '').toLowerCase() === String(rule.ProviderId).toLowerCase(),
+        inside = (number) => season >= fromSeason && season <= toSeason &&
+          (season > fromSeason || number >= fromEpisode) && (season < toSeason || number <= toEpisode);
+      if (scope === 'allowedrange') return !inside(first) || !inside(last);
+      if (scope === 'episode' && directMediaMatch && !fromEpisode) return true;
+      return ['episode', 'range'].includes(scope) &&
+        (season > fromSeason || season === fromSeason && last >= fromEpisode) &&
+        (season < toSeason || season === toSeason && first <= toEpisode);
+    });
+  }
   global.FranchiseSettingsCore = {
     autoAdd,
+    automationAllowed,
     normalize,
     normalizeImdbLists,
     episodeFormat,
@@ -2345,6 +2466,372 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
   global.FranchiseSettingsArtwork = { create };
 })(window);
 
+/* Server-owned automation and recovery. No registry, inbox or selection rules use browser storage. */
+(function () {
+  'use strict';
+  const esc = (value) => String(value ?? '').replace(/[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const list = (value) => Array.isArray(value) ? value : [];
+  const get = (value, key, fallback = '') => value?.[key] ?? value?.[key[0].toUpperCase() + key.slice(1)] ?? fallback;
+  const clone = (value) => JSON.parse(JSON.stringify(value));
+  const camel = (value) => Array.isArray(value) ? value.map(camel) : value && typeof value === 'object'
+    ? Object.fromEntries(Object.entries(value).map(([key, entry]) => [key[0].toLowerCase() + key.slice(1), camel(entry)])) : value;
+  const sourceLink = (url) => /^https:\/\/www\.imdb\.com\/list\/ls\d+\/?$/.test(url || '')
+    ? '<a href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">' + esc(url) + '</a>' : esc(url);
+  const when = (value) => value ? new Date(value).toLocaleString() : 'Never';
+  const range = (entry) => {
+    if (!entry.startSeason && !entry.endSeason && !entry.startEpisode && !entry.endEpisode) return '';
+    return ' · S' + String(entry.startSeason ?? 0).padStart(2, '0') +
+      (entry.startEpisode ? 'E' + String(entry.startEpisode).padStart(2, '0') : '') +
+      '–S' + String(entry.endSeason ?? entry.startSeason ?? 0).padStart(2, '0') +
+      (entry.endEpisode ? 'E' + String(entry.endEpisode).padStart(2, '0') : '');
+  };
+  function init(context) {
+    const { page, $, getModel, load, notify, request, change } = context;
+    if (!$('auto-manage')) return null;
+    let status = null, recovery = null, preview = null, busy = false, generation = 0, editingId = '';
+    const selected = new Set(), selectedRules = new Set(), previewSelected = new Set(), recoveryChoices = new Map();
+    const settings = () => camel((context.isDirty?.() && getModel().AutoFranchises) || status?.settings || getModel().AutoFranchises || {});
+    const registrations = () => list(settings().registry);
+    const pending = () => list(settings().pendingChanges).filter((entry) => entry.status === 'Pending');
+    const rules = () => list(settings().exclusions).filter((entry) => entry.enabled !== false);
+    const modelDirty = () => !!context.isDirty?.();
+    const show = (id) => context.show ? context.show(id) : $(id).showModal();
+    const post = (route, body) => request('FranchiseExplorer/' + route, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    function problem(message) {
+      $('automation-error').textContent = message;
+      $('automation-error').hidden = !message;
+      if (message) notify(message, true);
+    }
+    function syncBusy() {
+      for (const element of page.querySelectorAll('[data-automation-action]')) element.disabled = busy;
+      $('auto-restore-selected').disabled = busy || !selected.size;
+      $('auto-restore-rules').disabled = busy || !selectedRules.size;
+      $('auto-preview-apply').disabled = busy || !previewSelected.size;
+      $('auto-preview-selected-count').textContent = previewSelected.size + ' selected';
+      $('auto-keep-choices').disabled = busy || !pending().length;
+      $('recovery-apply').disabled = busy || !recoveryChoices.size || recovery?.libraryHealthy === false;
+      $('auto-run').disabled = busy || !!status?.running;
+    }
+    async function act(action, { write = false, reload = write } = {}) {
+      if (busy) return null;
+      if (write && modelDirty()) {
+        problem('Save or reload your unsaved configuration changes before changing server automation or recovery.');
+        render();
+        return null;
+      }
+      if (write) generation++;
+      busy = true; syncBusy(); problem('');
+      try {
+        const result = await action();
+        if (reload) {
+          if (modelDirty()) problem('The server update finished. Your unsaved edits were kept. Save or reload them before another server action.');
+          else await load();
+        }
+        return result;
+      } catch (error) {
+        problem(error.message || 'The server operation failed. Your current choices were kept.');
+        return null;
+      } finally {
+        busy = false; render();
+      }
+    }
+    async function refresh() {
+      const current = ++generation;
+      const results = await Promise.allSettled([
+        request('FranchiseExplorer/Automation/Status'), request('FranchiseExplorer/Recovery/Status'),
+      ]);
+      if (current !== generation) return;
+      if (results[0].status === 'fulfilled') status = camel(results[0].value);
+      if (results[1].status === 'fulfilled') recovery = camel(results[1].value);
+      const failures = results.filter((result) => result.status === 'rejected');
+      if (failures.length) {
+        $('automation-error').textContent = failures.map((result) => result.reason?.message || 'Status could not be loaded.').join(' ');
+        $('automation-error').hidden = false;
+      }
+      render();
+    }
+    function render() {
+      const config = settings(), queued = pending(), protectedRules = rules();
+      $('auto-enabled').checked = config.enabled === true;
+      $('auto-registry-count').textContent = registrations().filter((entry) => entry.enabled && !entry.deleted).length +
+        ' of ' + registrations().length + ' enabled';
+      $('auto-schedule').textContent = 'Daily · 12:00 AM · Jellyfin server local time' +
+        (status?.serverTimeZone ? ' (' + status.serverTimeZone + ')' : '');
+      $('auto-review').textContent = 'Pending review (' + queued.length + ')';
+      $('auto-manage-choices').textContent = 'Saved choices (' + protectedRules.length + ')';
+      $('automation-notice').hidden = !queued.length;
+      $('automation-notice-count').textContent = queued.length + ' automation change' + (queued.length === 1 ? '' : 's') + ' need review';
+      const last = config.lastRun;
+      $('auto-run-status').textContent = last
+        ? 'Last run: ' + (last.status || 'Completed') + ' · ' + when(last.completedUtc || last.startedUtc) +
+          ' · ' + (last.message || '') + ' · ' + (last.added || 0) + ' added, ' + (last.held || 0) + ' held, ' + (last.errors || 0) + ' errors'
+        : 'Last run: Never. Midnight updates are off until you enable them.';
+      if (status?.running) $('auto-run-status').textContent += ' · A server run is active.';
+      $('auto-registry-list').innerHTML = registrations().map((entry) => {
+        const target = list(getModel().Nodes).find((node) => node.Id === entry.franchiseNodeId);
+        return '<article class="automation-registry-entry"><div class="automation-entry-summary"><strong>' + esc(entry.name) +
+          '</strong><div>' + sourceLink(entry.url) + '</div><small>' + esc(target?.Name || (entry.franchiseNodeId ? 'Saved franchise' : 'Create new franchise')) +
+          ' · ' + (entry.episodeFormat === 'Individual' ? 'Individual episodes' : 'Episode bundles') +
+          (entry.deleted ? ' · Deleted franchise protected' : '') + '</small></div><div class="automation-actions">' +
+          '<label><input type="checkbox" data-auto-toggle="' + esc(entry.id) + '" aria-label="Enable ' + esc(entry.name) + '"' +
+          (entry.enabled ? ' checked' : '') + ' data-automation-action> Enabled</label>' +
+          '<button data-auto-edit="' + esc(entry.id) + '" data-automation-action>Edit</button>' +
+          '<button data-auto-remove="' + esc(entry.id) + '" data-automation-action>Remove</button></div></article>';
+      }).join('') || '<p>No auto franchises. Add an entry to include it in the midnight task.</p>';
+      if ($('auto-inbox-dialog').open) renderInbox();
+      if ($('auto-choices-dialog').open) renderRules();
+      const recoveryConfig = getModel().MediaRecovery || {};
+      $('recovery-enabled').checked = get(recoveryConfig, 'enabled', true) !== false;
+      $('recovery-auto').checked = get(recoveryConfig, 'autoReconnect', true) !== false;
+      $('recovery-status').textContent = recovery
+        ? 'Last check: ' + when(recovery.checkedUtc) + ' · ' + (recovery.message || 'Ready') +
+          (recovery.libraryHealthy === false ? ' · Library unavailable; reconnection is paused.' : '')
+        : 'Recovery status is loading.';
+      $('recovery-review').textContent = 'Review recovery (' + list(recovery?.entries).filter((entry) => entry.status !== 'Healthy').length + ')';
+      if ($('recovery-dialog').open) renderRecovery();
+      syncBusy();
+    }
+    function openEntry(id = '') {
+      editingId = id;
+      const entry = registrations().find((item) => item.id === id) || {};
+      $('auto-entry-heading').textContent = id ? 'Edit auto franchise' : 'Add auto franchise';
+      $('auto-entry-name').value = entry.name || '';
+      $('auto-entry-url').value = entry.url || '';
+      $('auto-entry-target').innerHTML = '<option value="">Create new franchise</option>' + list(getModel().Nodes)
+        .filter((node) => !node.ParentId && node.NodeType === 'Franchise')
+        .map((node) => '<option value="' + esc(node.Id) + '">' + esc(node.Name) + '</option>').join('');
+      $('auto-entry-target').value = entry.franchiseNodeId || '';
+      $('auto-entry-mode').value = entry.episodeFormat || 'Bundles';
+      $('auto-entry-enabled').checked = entry.enabled !== false;
+      $('auto-entry-error').hidden = true;
+      show('auto-entry-dialog');
+    }
+    async function saveRegistry(next, enabled = settings().enabled === true) {
+      if (!status?.fingerprint) throw Error('Load server status before saving automation settings.');
+      status = camel(await post('Automation/Settings', { expectedFingerprint: status.fingerprint, enabled, registry: next }));
+    }
+    function restorationScope(entry) {
+      const registration = registrations().find((item) => item.id === entry.registrationId);
+      if (registration?.deleted) return 'entire deleted franchise';
+      if (list(registration?.rows).some((mapping) => mapping.rowId === entry.rowId && mapping.deleted)) return 'entire deleted row';
+      return '';
+    }
+    function detail(entry) {
+      const row = list(getModel().Rows).find((item) => item.Id === entry.rowId);
+      const restoreScope = restorationScope(entry);
+      return '<dl class="automation-details"><dt>Franchise</dt><dd>' + esc(entry.franchiseName || registrations().find((item) => item.id === entry.registrationId)?.name || 'Saved franchise') +
+        '</dd><dt>Type / range</dt><dd>' + esc((entry.itemType || entry.scope || 'Media') + range(entry)) +
+        '</dd><dt>Affected rows</dt><dd>' + esc(row?.Name || entry.rowKind || entry.rowId || 'All applicable rows') +
+        '</dd><dt>Source / order</dt><dd>' + sourceLink(entry.sourceUrl || registrations().find((item) => item.id === entry.registrationId)?.url || '') +
+        (entry.sourcePosition ? ' · #' + esc(entry.sourcePosition) : '') + '</dd><dt>Reason</dt><dd>' + esc(entry.reason || 'Protected choice requires review') +
+        '</dd><dt>Before</dt><dd>' + esc(entry.existing || 'No current reference') + '</dd><dt>After</dt><dd>' + esc(entry.proposed || entry.kind || 'Restore selected choice') + '</dd></dl>' +
+        (restoreScope ? '<p><strong>Applying this restores the ' + restoreScope + ' for future midnight updates; only selected media is added now.</strong></p>' : '') +
+        (list(entry.exclusionIds).length || entry.kind === 'Excluded'
+          ? '<p class="automation-dialog-note">A saved restriction protects this item. Restore only the intended restrictions in Saved choices, then preview or run again.</p><button data-auto-open-rules>Review saved choices</button>' : '');
+    }
+    function renderInbox() {
+      const entries = pending();
+      for (const id of selected) if (!entries.some((entry) => entry.id === id && !list(entry.exclusionIds).length && entry.kind !== 'Excluded')) selected.delete(id);
+      $('auto-inbox-list').innerHTML = entries.map((entry) => '<article class="automation-change"><label class="automation-select"><input type="checkbox" data-auto-change="' + esc(entry.id) +
+        '" aria-label="Select ' + esc(entry.title || entry.kind) + (restorationScope(entry) ? ' and restore ' + restorationScope(entry) : '') + '"' + (selected.has(entry.id) ? ' checked' : '') +
+        (list(entry.exclusionIds).length || entry.kind === 'Excluded' ? ' disabled' : '') +
+        '><strong>' + esc(entry.title || entry.kind) + '</strong><span>' + esc(entry.kind) + '</span></label>' + detail(entry) +
+        (list(entry.episodeIds).length ? '<details><summary>Individual episodes (' + entry.episodeIds.length + ')</summary><ul>' + entry.episodeIds.map((id) => '<li>' + esc(id) + '</li>').join('') + '</ul></details>' : '') +
+        '</article>').join('') || '<p>No pending changes. Kept choices stay saved without repeating the same notification.</p>';
+      $('auto-keep-choices').disabled = busy || !entries.length;
+      syncBusy();
+    }
+    function renderRules() {
+      const entries = rules();
+      for (const id of selectedRules) if (!entries.some((entry) => entry.id === id)) selectedRules.delete(id);
+      $('auto-choices-list').innerHTML = entries.map((entry) => '<article class="automation-change"><label class="automation-select"><input type="checkbox" data-auto-rule="' + esc(entry.id) +
+        '" aria-label="Restore ' + esc(entry.reason || entry.providerId || entry.jellyfinItemId) + '"' + (selectedRules.has(entry.id) ? ' checked' : '') + '><strong>' +
+        esc(entry.reason || 'Saved exclusion') + '</strong></label><p>' + esc(entry.scope + range(entry) + ' · ' + (entry.providerName || 'Jellyfin') + ': ' + (entry.providerId || entry.jellyfinItemId)) +
+        '</p><p>' + esc(registrations().find((item) => item.id === entry.registrationId)?.name || list(getModel().Nodes).find((node) => node.Id === entry.franchiseNodeId)?.Name || 'Saved franchise') +
+        ' · ' + esc(list(getModel().Rows).find((row) => row.Id === entry.rowId)?.Name || 'All applicable rows') + '</p></article>').join('') || '<p>No saved exclusions.</p>';
+      syncBusy();
+    }
+    function renderPreview() {
+      $('auto-preview-results').innerHTML = list(preview?.plans).map((plan) => '<section class="automation-change"><h3>' + esc(plan.franchiseName) + '</h3>' +
+        '<p>' + list(plan.safeAdditions).length + ' safe additions · ' + list(plan.pending).length + ' protected changes · ' + list(plan.missing).length + ' missing' +
+        (plan.sourceFailed ? ' · Source retrieval failed; existing choices will be kept.' : '') + '</p>' +
+        ['TV Shows', 'Movies', 'Chronological Order'].map((name) => {
+          const kind = name === 'Chronological Order' ? 'Chronological' : name === 'TV Shows' ? 'TVShows' : 'Movies';
+          const entries = list(plan.safeAdditions).filter((entry) => (entry.rowKind || '').replace(/\s/g, '').startsWith(kind));
+          return '<div class="automation-preview-row"><strong>' + name + '</strong>' + entries.map((entry) => '<details><summary><label class="automation-select"><input type="checkbox" data-auto-preview-change="' + esc(entry.id) +
+            '" aria-label="Apply ' + esc(entry.title) + ' to ' + name + '"' + (previewSelected.has(entry.id) ? ' checked' : '') + '>' + esc(entry.title + range(entry)) + '</label></summary>' + detail(entry) + '</details>').join('') + '</div>';
+        }).join('') + list(plan.pending).map((entry) => '<details><summary><label class="automation-select"><input type="checkbox" data-auto-preview-change="' + esc(entry.id) + '" aria-label="Apply protected ' + esc(entry.title) + (restorationScope(entry) ? ' and restore ' + restorationScope(entry) : '') + '"' +
+          (previewSelected.has(entry.id) ? ' checked' : '') + (list(entry.exclusionIds).length || entry.kind === 'Excluded' ? ' disabled' : '') + '>' + esc(entry.title + ' · ' + entry.kind + ' · Held for review') +
+          '</label></summary>' + detail(entry) + '</details>').join('') +
+        list(plan.missing).map((entry) => '<p>' + esc((entry.title || 'Missing title') + ' · ' + (entry.reason || 'No library match')) + '</p>').join('') + '</section>').join('') || '<p>' + esc(preview?.message || 'No enabled registrations to preview.') + '</p>';
+      syncBusy();
+    }
+    function renderRecovery() {
+      const entries = list(recovery?.entries).filter((entry) => entry.status !== 'Healthy');
+      for (const id of recoveryChoices.keys()) if (!entries.some((entry) => entry.referenceId === id)) recoveryChoices.delete(id);
+      $('recovery-results').innerHTML = entries.map((entry) => '<article class="automation-change"><h3>' + esc(entry.title) + '</h3><p><strong>' + esc(entry.status) + '</strong> · ' + esc(entry.itemType) + ' · ' + esc(entry.reason) + '</p>' +
+        '<p>' + esc(list(getModel().Nodes).find((node) => node.Id === entry.nodeId)?.Name || 'Saved franchise') + ' / ' + esc(list(getModel().Rows).find((row) => row.Id === entry.rowId)?.Name || 'Direct reference') + '</p>' +
+        '<label class="field"><span>Choose the actual library item</span><select data-recovery-choice="' + esc(entry.referenceId) + '"' + (recovery?.libraryHealthy === false ? ' disabled' : '') + '><option value="">Keep current reference</option>' +
+        list(entry.candidates).map((candidate) => '<option value="' + esc(candidate.itemId) + '"' + (recoveryChoices.get(entry.referenceId) === candidate.itemId ? ' selected' : '') + '>' +
+          esc(candidate.title + (candidate.year ? ' (' + candidate.year + ')' : '') + ' · ' + candidate.itemType + ' · ' + candidate.itemId + (candidate.verified ? ' · Verified identity' : ' · Manual choice')) + '</option>').join('') +
+        '</select></label><div class="automation-recovery-search"><label class="field"><span>Find a library candidate</span><input data-recovery-query="' + esc(entry.referenceId) + '" type="search" maxlength="120" placeholder="Title in your Jellyfin library"></label>' +
+        '<button data-recovery-search="' + esc(entry.referenceId) + '" data-automation-action>Find candidate</button></div>' +
+        (list(entry.candidates).length ? '<ul class="automation-candidate">' + entry.candidates.map((candidate) => '<li>' + esc(candidate.title + ' · ' + candidate.itemId + ' · ' + list(candidate.providerIds).map((provider) => provider.name + ': ' + provider.value).join(', ')) + '</li>').join('') + '</ul>' : '<p>No matching candidates. Keep this reference until its media is available.</p>') + '</article>').join('') || '<p>No unresolved media references.</p>';
+      syncBusy();
+    }
+    $('auto-manage').onclick = () => { render(); show('auto-registry-dialog'); };
+    $('auto-add-entry').onclick = () => openEntry();
+    $('auto-entry-save').onclick = () => {
+      const name = $('auto-entry-name').value.trim(), rawUrl = $('auto-entry-url').value.trim();
+      if (!name || !/^https:\/\/(?:www\.)?imdb\.com\/list\/ls\d+\/?$/i.test(rawUrl)) {
+        $('auto-entry-error').textContent = 'Enter a name and a valid https://www.imdb.com/list/ls…/ URL.';
+        $('auto-entry-error').hidden = false; return;
+      }
+      const entry = { ...(registrations().find((item) => item.id === editingId) || {}), id: editingId,
+        name, url: 'https://www.imdb.com/list/' + rawUrl.match(/ls\d+/i)[0].toLowerCase() + '/',
+        franchiseNodeId: $('auto-entry-target').value, episodeFormat: $('auto-entry-mode').value, enabled: $('auto-entry-enabled').checked };
+      act(async () => {
+        await saveRegistry(editingId ? registrations().map((item) => item.id === editingId ? entry : item) : [...registrations(), entry]);
+        $('auto-entry-dialog').close();
+      }, { write: true });
+    };
+    $('auto-registry-list').addEventListener('click', (event) => {
+      const edit = event.target.closest('[data-auto-edit]'), remove = event.target.closest('[data-auto-remove]');
+      if (edit) openEntry(edit.dataset.autoEdit);
+      if (remove) act(() => saveRegistry(registrations().filter((entry) => entry.id !== remove.dataset.autoRemove)), { write: true });
+    });
+    $('auto-registry-list').addEventListener('change', (event) => {
+      const target = event.target.closest('[data-auto-toggle]');
+      if (target) act(() => saveRegistry(registrations().map((entry) => entry.id === target.dataset.autoToggle ? { ...entry, enabled: target.checked } : entry)), { write: true });
+    });
+    $('auto-enabled').onchange = () => act(() => saveRegistry(registrations(), $('auto-enabled').checked), { write: true });
+    $('auto-preview').onclick = () => act(async () => {
+      preview = camel(await post('Automation/Preview', {}));
+      previewSelected.clear();
+      for (const plan of list(preview.plans)) for (const entry of list(plan.safeAdditions)) previewSelected.add(entry.id);
+      renderPreview(); show('auto-preview-dialog');
+    });
+    $('auto-preview-results').addEventListener('change', (event) => {
+      const target = event.target.closest('[data-auto-preview-change]');
+      if (target) { if (target.checked) previewSelected.add(target.dataset.autoPreviewChange); else previewSelected.delete(target.dataset.autoPreviewChange); syncBusy(); }
+    });
+    $('auto-preview-apply').onclick = () => act(async () => {
+      status = camel(await post('Automation/Decision', { expectedFingerprint: preview.fingerprint, decision: 'Apply',
+        registrationIds: list(preview.plans).map((plan) => plan.registrationId), changeIds: [...previewSelected] }));
+      previewSelected.clear(); $('auto-preview-dialog').close(); notify('Selected automation changes applied.');
+    }, { write: true });
+    $('auto-run').onclick = () => act(async () => {
+      await post('Automation/Run', {});
+      status = camel(await request('FranchiseExplorer/Automation/Status'));
+      notify('Server automation run finished. Review held changes below.');
+    }, { write: true });
+    function openInbox() { selected.clear(); show('auto-inbox-dialog'); renderInbox(); }
+    $('auto-review').onclick = openInbox;
+    $('automation-notice-review').onclick = openInbox;
+    function openSavedChoices() {
+      selectedRules.clear();
+      if ($('auto-inbox-dialog').open) $('auto-inbox-dialog').close();
+      if ($('auto-preview-dialog').open) $('auto-preview-dialog').close();
+      show('auto-choices-dialog'); renderRules();
+    }
+    $('auto-manage-choices').onclick = openSavedChoices;
+    for (const container of [$('auto-inbox-list'), $('auto-preview-results')]) container.addEventListener('click', (event) => {
+      if (event.target.closest('[data-auto-open-rules]')) openSavedChoices();
+    });
+    $('auto-inbox-list').addEventListener('change', (event) => {
+      const target = event.target.closest('[data-auto-change]');
+      if (target) { if (target.checked) selected.add(target.dataset.autoChange); else selected.delete(target.dataset.autoChange); syncBusy(); }
+    });
+    $('auto-choices-list').addEventListener('change', (event) => {
+      const target = event.target.closest('[data-auto-rule]');
+      if (target) { if (target.checked) selectedRules.add(target.dataset.autoRule); else selectedRules.delete(target.dataset.autoRule); syncBusy(); }
+    });
+    async function decide(decision, changeIds, exclusionIds = []) {
+      status = camel(await post('Automation/Decision', { expectedFingerprint: status?.fingerprint, decision, changeIds, exclusionIds }));
+      selected.clear(); selectedRules.clear();
+    }
+    $('auto-keep-choices').onclick = () => act(() => decide('Keep', selected.size ? [...selected] : pending().map((entry) => entry.id)), { write: true });
+    $('auto-restore-selected').onclick = () => act(() => decide('Restore', [...selected]), { write: true });
+    $('auto-restore-rules').onclick = () => act(() => decide('Restore', [], [...selectedRules]), { write: true });
+    for (const id of ['recovery-enabled', 'recovery-auto']) $(id).onchange = () => change(() => {
+      getModel().MediaRecovery = { ...(getModel().MediaRecovery || {}), Enabled: $('recovery-enabled').checked, AutoReconnect: $('recovery-auto').checked };
+    });
+    $('recovery-check').onclick = () => act(async () => {
+      recovery = camel(await post('Recovery/Check', {})); recoveryChoices.clear(); show('recovery-dialog');
+    }, { write: true });
+    $('recovery-review').onclick = () => { recoveryChoices.clear(); show('recovery-dialog'); renderRecovery(); };
+    $('recovery-results').addEventListener('change', (event) => {
+      const target = event.target.closest('[data-recovery-choice]');
+      if (target) { if (target.value) recoveryChoices.set(target.dataset.recoveryChoice, target.value); else recoveryChoices.delete(target.dataset.recoveryChoice); syncBusy(); }
+    });
+    $('recovery-results').addEventListener('click', (event) => {
+      const button = event.target.closest('[data-recovery-search]');
+      if (!button) return;
+      const referenceId = button.dataset.recoverySearch;
+      const query = [...$('recovery-results').querySelectorAll('[data-recovery-query]')].find((input) => input.dataset.recoveryQuery === referenceId)?.value.trim();
+      if (!query) { problem('Enter a title to find a library candidate.'); return; }
+      act(async () => {
+        const candidates = camel(await request('FranchiseExplorer/Recovery/Candidates?' + new URLSearchParams({ referenceId, query, revision: recovery.revision, libraryRevision: recovery.libraryRevision })));
+        const entry = recovery.entries.find((item) => item.referenceId === referenceId);
+        if (entry) { entry.candidates = candidates; recoveryChoices.delete(referenceId); }
+      });
+    });
+    $('recovery-apply').onclick = () => act(async () => {
+      recovery = camel(await post('Recovery/Apply', { revision: recovery.revision, libraryRevision: recovery.libraryRevision,
+        choices: [...recoveryChoices].map(([referenceId, itemId]) => ({ referenceId, itemId })) }));
+      recoveryChoices.clear(); notify('Selected media references reconnected.');
+    }, { write: true });
+    // These hooks run inside the main controller's local configuration transaction.
+    // They never POST independently and therefore participate in Save, Undo and backup export.
+    function recordManualChoice(choice) {
+      const model = getModel(), config = model.AutoFranchises ||= { Enabled: false, Registry: [], Exclusions: [], PendingChanges: [], Ownership: [] };
+      config.Registry ||= []; config.Exclusions ||= [];
+      const nodeId = choice.FranchiseNodeId || choice.franchiseNodeId || choice.nodeId || '';
+      const ancestry = new Set([nodeId]);
+      let ancestor = list(model.Nodes).find((node) => node.Id === nodeId);
+      while (ancestor?.ParentId && !ancestry.has(ancestor.ParentId)) {
+        ancestry.add(ancestor.ParentId);
+        ancestor = list(model.Nodes).find((node) => node.Id === ancestor.ParentId);
+      }
+      const registration = config.Registry.find((entry) => entry.Id === (choice.RegistrationId || choice.registrationId) ||
+        (entry.FranchiseNodeId && ancestry.has(entry.FranchiseNodeId)));
+      const kind = choice.kind || choice.Kind;
+      if (kind === 'deleteFranchise') { if (registration?.FranchiseNodeId === nodeId) registration.Deleted = true; return; }
+      if (kind === 'deleteRow') {
+        const rowId = choice.RowId || choice.rowId;
+        const mapping = registration?.Rows?.find((entry) => entry.RowId === rowId);
+        if (mapping) mapping.Deleted = true;
+        return;
+      }
+      const rule = { Id: context.core.guid(), RegistrationId: registration?.Id || choice.RegistrationId || '', FranchiseNodeId: registration?.FranchiseNodeId || nodeId,
+        RowId: choice.RowId || choice.rowId || '', Scope: choice.Scope || choice.scope || 'Movie', ProviderName: choice.ProviderName || 'Imdb',
+        ProviderId: choice.ProviderId || choice.providerId || '', JellyfinItemId: choice.JellyfinItemId || choice.itemId || '',
+        StartSeason: choice.StartSeason || 0, EndSeason: choice.EndSeason || 0, StartEpisode: choice.StartEpisode || 0, EndEpisode: choice.EndEpisode || 0,
+        Enabled: true, Reason: choice.Reason || 'Excluded by you', CreatedUtc: new Date().toISOString() };
+      if (!rule.ProviderId && !rule.JellyfinItemId) return;
+      if (rule.Scope === 'Range' || rule.Scope === 'RestrictedRange') rule.Scope = 'AllowedRange';
+      if (rule.Scope === 'AllowedRange') {
+        const previous = config.Exclusions.find((entry) => entry.Enabled !== false && entry.Scope === 'AllowedRange' &&
+          entry.RegistrationId === rule.RegistrationId && entry.FranchiseNodeId === rule.FranchiseNodeId && entry.RowId === rule.RowId &&
+          ((entry.ProviderId && rule.ProviderId && entry.ProviderName === rule.ProviderName && entry.ProviderId === rule.ProviderId) ||
+            (entry.JellyfinItemId && entry.JellyfinItemId === rule.JellyfinItemId)));
+        if (previous) { Object.assign(previous, rule, { Id: previous.Id, CreatedUtc: previous.CreatedUtc }); return; }
+      }
+      const signature = (entry) => JSON.stringify([entry.RegistrationId, entry.FranchiseNodeId, entry.RowId, entry.Scope, entry.ProviderName, entry.ProviderId,
+        entry.JellyfinItemId, entry.StartSeason, entry.EndSeason, entry.StartEpisode, entry.EndEpisode]);
+      if (!config.Exclusions.some((entry) => entry.Enabled !== false && signature(entry) === signature(rule))) config.Exclusions.push(rule);
+    }
+    render();
+    return { afterLoad: refresh, render, isBusy: () => busy,
+      getProtectedSettings: () => ({ AutoFranchises: clone(getModel().AutoFranchises || {}), MediaRecovery: clone(getModel().MediaRecovery || {}) }),
+      recordManualChoice, excludeUncheckedReview: (choices) => choices.forEach(recordManualChoice) };
+  }
+  window.FranchiseSettingsAutomation = { init };
+})();
+
 /* Live Jellyfin settings controller. The flat plugin configuration is the source of truth. */
 (function () {
   'use strict';
@@ -2364,12 +2851,15 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     loaded = false,
     baseline = '',
     dirty = false,
-    revision = 0;
+    revision = 0,
+    saving = false,
+    automation = null;
   let selected = '',
     nodeDraft = null,
     rowDraft = null,
     structure = null,
     subgroupParent = '',
+    subgroupRowId = '',
     mediaScope = null,
     rangeDraft = null,
     deletion = null,
@@ -2401,6 +2891,9 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         Rows: value.Rows,
         MediaLinks: value.MediaLinks,
         ImdbLists: value.ImdbLists,
+        ConfigurationRevision: value.ConfigurationRevision,
+        AutoFranchises: value.AutoFranchises,
+        MediaRecovery: value.MediaRecovery,
       },
       (_key, entry) =>
         entry && typeof entry === 'object' && !Array.isArray(entry)
@@ -2522,6 +3015,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     $('undo').disabled = !history.length;
   }
   function change(action) {
+    if (saving) throw Error('Wait for the configuration save to finish.');
     const before = C.clone(model);
     action();
     try {
@@ -2624,28 +3118,28 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
   }
   async function persist() {
     if (!loaded) throw Error('Wait for the plugin configuration to load.');
-    const latest = await ApiClient.getPluginConfiguration(pluginId),
-      normalized = C.normalize(latest);
-    if (fingerprint(normalized) !== baseline)
-      throw Error(
-        'The saved configuration changed on the server. Reload before saving your edits.',
-      );
-    const safe = C.normalize(model),
-      next = {
+    if (saving || automation?.isBusy()) throw Error('Wait for the current server operation to finish.');
+    saving = true;
+    try {
+      const latest = await ApiClient.getPluginConfiguration(pluginId), normalized = C.normalize(latest);
+      if (fingerprint(normalized) !== baseline)
+        throw Error('The saved configuration changed on the server. Reload before saving your edits.');
+      const safe = C.normalize(model), next = {
         ...latest,
-        NavigationLabel: safe.NavigationLabel,
-        Nodes: safe.Nodes,
-        Rows: safe.Rows,
-        MediaLinks: safe.MediaLinks,
-        ImdbLists: safe.ImdbLists,
+        NavigationLabel: safe.NavigationLabel, Nodes: safe.Nodes, Rows: safe.Rows,
+        MediaLinks: safe.MediaLinks, ImdbLists: safe.ImdbLists,
+        AutoFranchises: safe.AutoFranchises, MediaRecovery: safe.MediaRecovery,
       };
-    await ApiClient.updatePluginConfiguration(pluginId, next);
-    model = safe;
-    baseline = fingerprint(safe);
-    dirty = false;
-    $('save-state').textContent = 'All changes saved';
-    $('save-state').classList.remove('dirty');
-    notify('Configuration saved');
+      await ApiClient.updatePluginConfiguration(pluginId, next);
+      model = C.normalize(await ApiClient.getPluginConfiguration(pluginId));
+      baseline = fingerprint(model);
+      dirty = false;
+      $('save-state').textContent = 'All changes saved';
+      $('save-state').classList.remove('dirty');
+      render();
+      void automation?.afterLoad();
+      notify('Configuration saved');
+    } finally { saving = false; }
   }
   async function load(reload = false) {
     const raw = await ApiClient.getPluginConfiguration(pluginId),
@@ -2660,6 +3154,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     $('save-state').classList.remove('dirty');
     $('save').disabled = false;
     render();
+    void automation?.afterLoad();
   }
 
   function grip(kind, id, name, parent = '') {
@@ -2782,8 +3277,14 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
           '</div>'
       : '<div class="empty-media">No media added</div>';
   }
-  function rowView(row) {
-    const open = openRows.has(row.Id);
+  const collapsedRows = new Set();
+  function rowGroups(row) {
+    return row.NodeIds.map(getNode).filter(Boolean);
+  }
+  function rowView(row, ancestors) {
+    const groups = rowGroups(row),
+      open = openRows.has(row.Id) || (groups.length > 0 && !collapsedRows.has(row.Id)),
+      count = groups.length ? groups.length + ' groups' : references(row).length;
     return (
       '<div class="row-entry" data-row-entry="' +
       row.Id +
@@ -2810,24 +3311,28 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       '<span class="row-title-text">' +
       esc(row.Name) +
       '</span><span class="row-count">' +
-      references(row).length +
+      count +
       '</span></button>' +
       actions('row', row.Id, row.Name) +
       '</div>' +
       (open
         ? '<div class="row-contents">' +
-          mediaList(row, false) +
-          (row.NodeIds.length
-            ? '<div class="empty-media">' +
-              row.NodeIds.length +
-              ' subgroup reference(s); groups remain in their hierarchy below.</div>'
+          (groups.length
+            ? '<div class="row-groups">' + groups.map((node) => nodeView(node, false, ancestors, row.Id)).join('') + '</div>'
             : '') +
+          (references(row).length || !groups.length ? mediaList(row, false) : '') +
           '</div>'
         : '') +
       '</div>'
     );
   }
-  function nodeView(node, root = true) {
+  function nodeView(node, root = true, ancestors = new Set(), rowId = '') {
+    // Membership is a presentation reference. Keep ownership in ParentId and
+    // guard each rendering path independently so a node can appear in two rows.
+    if (ancestors.has(node.Id)) return '<div class="empty-media">Group already shown in this path</div>';
+    const branch = new Set(ancestors).add(node.Id),
+      ownedRows = rows(node.Id),
+      assigned = new Set(ownedRows.flatMap((row) => row.NodeIds));
     const open = expanded.has(node.Id),
       tag = root ? 'article' : 'div';
     return (
@@ -2839,9 +3344,10 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       '" data-drop="node" data-id="' +
       node.Id +
       '" data-axis="' +
-      (root ? 'x' : 'y') +
+      (root ? 'grid' : 'y') +
+      (rowId ? '" data-group-row="' + rowId : '') +
       '"><div class="node-head">' +
-      grip('node', node.Id, node.Name) +
+      grip('node', node.Id, node.Name, rowId) +
       '<button class="expand" data-expand="' +
       node.Id +
       '" aria-expanded="' +
@@ -2865,9 +3371,10 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         ? '<div class="' +
           (root ? 'node-body' : 'subgroup-body') +
           '">' +
-          rows(node.Id).map(rowView).join('') +
+          ownedRows.map((row) => rowView(row, branch)).join('') +
           children(node.Id)
-            .map((child) => nodeView(child, false))
+            .filter((child) => !assigned.has(child.Id))
+            .map((child) => nodeView(child, false, branch))
             .join('') +
           '</div>'
         : '') +
@@ -2880,15 +3387,56 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       '>'
     );
   }
+  let boardLayoutFrame = 0;
+  const boardResize = typeof ResizeObserver === 'function'
+    ? new ResizeObserver(() => scheduleBoardLayout()) : null;
+  function scheduleBoardLayout() {
+    if (!boardLayoutFrame) boardLayoutFrame = requestAnimationFrame(layoutBoard);
+  }
+  function layoutBoard() {
+    boardLayoutFrame = 0;
+    const board = $('board');
+    if (!board?.isConnected || !board.clientWidth) return;
+    const cards = [...board.querySelectorAll(':scope > .node-card')],
+      gap = 12,
+      width = board.clientWidth,
+      columns = Math.max(1, Math.floor((width + gap) / (330 + gap))),
+      cardWidth = (width - gap * (columns - 1)) / columns,
+      heights = Array(columns).fill(0);
+    // Absolute positions preserve the saved DOM and tab sequence. Reading each
+    // card after setting its width also accounts for wrapped mobile titles.
+    for (const card of cards) {
+      const value = cardWidth + 'px';
+      if (!card.style.width || Math.abs(parseFloat(card.style.width) - cardWidth) > .001) card.style.width = value;
+      const column = heights.indexOf(Math.min(...heights)),
+        position = 'translate(' + Number((column * (cardWidth + gap)).toFixed(3)) + 'px, ' + heights[column] + 'px)';
+      if (card.style.transform !== position) card.style.transform = position;
+      heights[column] += card.getBoundingClientRect().height + gap;
+    }
+    const height = Math.max(85, Math.max(...heights) - gap) +
+      (page.classList.contains('is-dragging') && !page.classList.contains('is-dragging-media') ? 72 : 0),
+      value = height + 'px';
+    if (!board.style.height || Math.abs(parseFloat(board.style.height) - height) > .001) board.style.height = value;
+  }
   function render() {
-    const roots = children('');
+    const active = $('board').contains(document.activeElement) ? document.activeElement : null,
+      focused = active ? { data: { ...active.dataset }, row: active.closest('[data-group-row]')?.dataset.groupRow || '' } : null,
+      roots = children('');
     $('franchise-count').textContent = roots.length + ' franchises';
     $('board').innerHTML =
       roots.map((n) => nodeView(n)).join('') +
       '<div class="board-drop" data-drop="root">Move to top level</div>' +
       (roots.length ? '' : '<div class="empty">No franchises. Add a franchise to begin.</div>');
+    boardResize?.disconnect();
+    boardResize?.observe($('board'));
+    $('board').querySelectorAll(':scope > .node-card').forEach((card) => boardResize?.observe(card));
+    scheduleBoardLayout();
+    if (focused) [...$('board').querySelectorAll('button')].find((button) =>
+      (button.closest('[data-group-row]')?.dataset.groupRow || '') === focused.row &&
+      Object.entries(focused.data).every(([key, value]) => button.dataset[key] === value))?.focus({ preventScroll: true });
     $('undo').disabled = !history.length;
     renderSavedLists();
+    automation?.render();
     if ($('media-dialog').open) renderMedia(true);
   }
   function show(id) {
@@ -3390,7 +3938,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
               );
           for (const id of original.NodeIds) {
             const child = next.Nodes.find((n) => n.Id === id);
-            if (child) child.ParentId = node.Id;
+            if (child?.ParentId === original.ParentNodeId) child.ParentId = node.Id;
           }
           for (const id of original.MediaLinkIds) {
             const ref = next.MediaLinks.find((l) => l.Id === id);
@@ -3463,7 +4011,9 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
           )
         )
           throw Error('A subgroup with that name already exists.');
-        draft.pendingGroups.push(newNode(parent, name));
+        const node = newNode(parent, name);
+        draft.pendingGroups.push(node);
+        if (structure.source === 'row') draft.row.NodeIds.push(node.Id);
       } else draft.pendingRows.push(newRow(parent, type, name));
       pendingView();
       $('structure-dialog').close();
@@ -3476,8 +4026,9 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     ['row-add-subgroup', 'row', 'group'],
   ])
     $(id).onclick = () => openStructure(source, kind);
-  function openSubgroup(parent) {
+  function openSubgroup(parent, rowId = '') {
     subgroupParent = parent;
+    subgroupRowId = rowId;
     $('subgroup-name').value = '';
     $('subgroup-name').setCustomValidity('');
     show('subgroup-dialog');
@@ -3497,7 +4048,17 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         $('subgroup-name').reportValidity();
         return;
       }
-      change(() => model.Nodes.push(newNode(subgroupParent, name)));
+      const node = newNode(subgroupParent, name), row = getRow(subgroupRowId);
+      if (subgroupRowId && (!row || row.ParentNodeId !== subgroupParent))
+        throw Error('The destination row no longer exists.');
+      change(() => {
+        model.Nodes.push(node);
+        if (row) row.NodeIds.push(node.Id);
+      });
+      if (row) {
+        collapsedRows.delete(row.Id);
+        openRows.add(row.Id);
+      }
       expandPath(subgroupParent);
       render();
       $('subgroup-dialog').close();
@@ -3892,11 +4453,12 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     openRow('', parent);
   };
   $('choose-add-subgroup').onclick = () => {
+    const rowId = mediaScope?.kind === 'row' ? mediaScope.id : '';
     const parent =
       mediaScope?.kind === 'row' ? getRow(mediaScope.id)?.ParentNodeId : mediaScope?.id;
     if (!parent) return;
     $('media-dialog').close();
-    openSubgroup(parent);
+    openSubgroup(parent, rowId);
   };
   $('media-convert-row').onclick = () => {
     if (mediaScope?.kind !== 'row') return;
@@ -4140,7 +4702,10 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
           )
         )
           throw Error('This TV Show range is already in the row.');
-        change(() => Object.assign(located.ref, fields));
+        change(() => {
+          Object.assign(located.ref, fields);
+          if (fields.RangeMode !== 'Full') automation?.recordManualChoice(manualChoice(located.row?.ParentNodeId || located.ref.NodeId, located.row?.Id || '', located.ref, media, 'AllowedRange'));
+        });
       } else {
         if (!destination(state, media)) throw Error('This row no longer accepts TV Shows.');
         if (duplicate(state, media, fields))
@@ -4163,6 +4728,30 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     const media = await item(found.ref.JellyfinItemId);
     if (!media) throw Error('Jellyfin could not resolve this show.');
     openRange(null, media, { ...found, rowId });
+  }
+  function manualChoice(nodeId, rowId, ref, media = null, scope = '') {
+    const owner = getNode(nodeId), identity = ref.Identity || {},
+      parentIdentity = media?.Type === 'Episode' ? identity.SeriesProviderIds : identity.ProviderIds,
+      imdb = (parentIdentity || []).find((entry) => entry.Name?.toLowerCase() === 'imdb')?.Value ||
+        (media?.Type === 'Episode' ? '' : Object.entries(media?.ProviderIds || {}).find(([key]) => key.toLowerCase() === 'imdb')?.[1]) || '',
+      type = ref.ItemType || media?.Type,
+      season = media?.ParentIndexNumber ?? ref.StartSeason,
+      number = media?.IndexNumber ?? ref.StartEpisode;
+    const choice = { FranchiseNodeId: owner?.Id || nodeId, RowId: rowId || '',
+      Scope: scope || (type === 'Series' ? ref.RangeMode === 'Full' ? 'WholeShow' : ref.RangeMode === 'Seasons' ? 'Season' : 'Episode' : type === 'Episode' ? 'Episode' : 'Movie'),
+      ProviderName: 'Imdb', ProviderId: imdb,
+      JellyfinItemId: media?.Type === 'Episode' ? media.SeriesId || ref.JellyfinItemId : ref.JellyfinItemId || media?.Id || '',
+      StartSeason: season || 0, EndSeason: media?.Type === 'Episode' ? season : ref.EndSeason || season || 0,
+      StartEpisode: number || 0, EndEpisode: media?.Type === 'Episode' ? media.IndexNumberEnd || number : ref.EndEpisode || number || 0,
+      Reason: scope === 'AllowedRange' ? 'Keep the episode range selected by you' : 'Removed or skipped by you' };
+    // Season-only permitted ranges include every episode in those seasons.
+    if (scope === 'AllowedRange' && ref.RangeMode === 'Seasons') { choice.StartEpisode = 1; choice.EndEpisode = 999; }
+    return choice;
+  }
+  function recordRemovedReference(rowId, found) {
+    const affected = found.row ? [found.row] : model.Rows.filter((row) => row.MediaLinkIds.includes(found.ref.Id));
+    if (!affected.length) automation?.recordManualChoice(manualChoice(found.ref.NodeId, '', found.ref));
+    for (const row of affected) automation?.recordManualChoice(manualChoice(row.ParentNodeId, row.Id, found.ref));
   }
   function cleanupReferences() {
     const nodes = new Set(model.Nodes.map((n) => n.Id)),
@@ -4248,10 +4837,12 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       change(() => {
         if (kind === 'node') {
           const branch = descendants(id);
+          for (const nodeId of branch) automation?.recordManualChoice({ kind: 'deleteFranchise', FranchiseNodeId: nodeId });
           model.Nodes = model.Nodes.filter((n) => !branch.has(n.Id));
           model.MediaLinks = model.MediaLinks.filter((l) => !branch.has(l.NodeId));
           model.Rows = model.Rows.filter((r) => !branch.has(r.ParentNodeId));
         } else if (kind === 'row') {
+          automation?.recordManualChoice({ kind: 'deleteRow', FranchiseNodeId: getRow(id)?.ParentNodeId, RowId: id });
           const owned = model.Nodes.flatMap((n) =>
             n.AutoAddRecords.filter((r) => r.ScopeRowId === id && !r.RowId),
           ).map((r) => r.ReferenceId);
@@ -4262,6 +4853,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         } else {
           const found = reference(rowId, id);
           if (!found) return;
+          recordRemovedReference(rowId, found);
           if (found.direct) found.row.Items = found.row.Items.filter((i) => i.Id !== id);
           else if (found.row)
             found.row.MediaLinkIds = found.row.MediaLinkIds.filter((key) => key !== id);
@@ -4481,7 +5073,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     $('review-all').checked = !!all.length && all.every((key) => review.selected.has(key));
     $('review-all').indeterminate = review.selected.size > 0 && !$('review-all').checked;
     $('selected-count').textContent = review.selected.size + ' selected';
-    $('apply-selected').disabled = !review.selected.size;
+    $('apply-selected').disabled = !review.selected.size && !review.deliberatelyUnchecked?.size;
   }
   async function previewAutoAdd(origin = 'node') {
     return attempt(async () => {
@@ -4568,7 +5160,13 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         )
           return;
         for (const job of jobs) {
-          job.entries = C.autoAdd.preview(job.results, library);
+          job.entries = C.autoAdd.preview(job.results, library).map((entry) => {
+            const allowed = entry.categories.filter((name) => {
+              const rowId = job.scopeRowId || job.mappings.find((mapping) => mapping.Category === name)?.RowId || '';
+              return C.automationAllowed(base, job.nodeId, rowId, entry);
+            });
+            return allowed.length ? { ...entry, categories: allowed } : { ...entry, status: 'excluded' };
+          });
           job.diff = C.autoAdd.changes(
             C.scopeModel(base, job),
             job.nodeId,
@@ -4585,6 +5183,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
           modelBefore,
           cells: [],
           expanded: new Set(),
+          deliberatelyUnchecked: new Set(),
           selected: new Set(
             jobs.flatMap((job) =>
               [...job.diff.additions, ...job.diff.removals].map((c) => reviewKey(job, c.key)),
@@ -4621,8 +5220,10 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         : e.target.dataset.reviewChild
           ? [e.target.dataset.reviewChild]
           : [];
-    for (const key of keys)
-      e.target.checked ? review.selected.add(key) : review.selected.delete(key);
+    for (const key of keys) {
+      if (e.target.checked) { review.selected.add(key); review.deliberatelyUnchecked?.delete(key); }
+      else { review.selected.delete(key); review.deliberatelyUnchecked?.add(key); }
+    }
     renderReview();
   };
   $('review-format-controls').onchange = (event) => attempt(() => {
@@ -4638,13 +5239,18 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     review.selected = new Set(review.jobs.flatMap((job) =>
       [...job.diff.additions, ...job.diff.removals].map((entry) => reviewKey(job, entry.key))));
     review.expanded.clear();
+    review.deliberatelyUnchecked?.clear();
     buildReviewCells();
     renderReview();
   });
   function selectReview(all) {
     if (!review) return;
     review.selected.clear();
-    if (all) for (const cell of review.cells) for (const key of cell.keys) review.selected.add(key);
+    review.deliberatelyUnchecked ||= new Set();
+    for (const cell of review.cells) for (const key of cell.keys) {
+      if (all) { review.selected.add(key); review.deliberatelyUnchecked.delete(key); }
+      else review.deliberatelyUnchecked.add(key);
+    }
     renderReview();
   }
   $('select-all').onclick = () => selectReview(true);
@@ -4652,7 +5258,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
   $('review-all').onchange = (e) => selectReview(e.target.checked);
   $('apply-selected').onclick = () =>
     attempt(() => {
-      if (!review || !review.selected.size) return;
+      if (!review || (!review.selected.size && !review.deliberatelyUnchecked?.size)) return;
       if (fingerprint(model) !== review.modelBefore)
         throw Error('The configuration changed. Preview again.');
       let next = C.clone(review.base);
@@ -4677,6 +5283,20 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       const { nodeId, rowId, origin } = review;
       remember();
       model = C.normalize(next);
+      for (const job of review.jobs) for (const addition of job.diff.additions) {
+        const key = reviewKey(job, addition.key);
+        if (review.selected.has(key) || !review.deliberatelyUnchecked?.has(key)) continue;
+        // Dependency-driven deselection cannot create a persistent exclusion.
+        if ((addition.requiresRemovals || []).some((id) => !review.selected.has(reviewKey(job, id)))) continue;
+        const entries = job.entries.filter((entry) => entry.status === 'matched' && (addition.entryIds || []).includes(entry.imdbId));
+        for (const entry of entries) for (const targetRow of addition.rowIds || []) {
+          const media = addition.kind === 'show' ? entry.series || entry.item : entry.item,
+            source = addition.kind === 'show' ? { ItemType: 'Series', JellyfinItemId: media.Id, RangeMode: 'Full' } :
+              { ItemType: media.Type, JellyfinItemId: media.Id, RangeMode: 'Full' };
+          automation?.recordManualChoice(manualChoice(job.nodeId, targetRow, source, media,
+            addition.kind === 'show' ? 'WholeShow' : media.Type === 'Episode' ? 'Episode' : 'Movie'));
+        }
+      }
       markDirty();
       expandPath(nodeId);
       render();
@@ -4686,8 +5306,28 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       notify('Review applied. Save changes to persist.');
     });
 
-  function move(kind, id, parent, index) {
+  function move(kind, id, parent, index, sourceRowId = '') {
     if (kind === 'item') return moveMedia(id, parent, index);
+    if (kind === 'node' && parent.startsWith('row:')) {
+      const row = getRow(parent.slice(4)), node = getNode(id);
+      if (!row || !node) throw Error('The destination row no longer exists.');
+      if (node.ParentId !== row.ParentNodeId)
+        throw Error('Move the group to this row’s owning group first. Row membership keeps group ownership.');
+      const ids = row.NodeIds.filter((key) => key !== id), previous = row.NodeIds.indexOf(id);
+      if (previous >= 0 && previous < index) index--;
+      ids.splice(Math.max(0, Math.min(index, ids.length)), 0, id);
+      const source = sourceRowId && sourceRowId !== row.Id ? getRow(sourceRowId) : null;
+      if (JSON.stringify(ids) === JSON.stringify(row.NodeIds) && !source?.NodeIds.includes(id)) return;
+      change(() => {
+        row.NodeIds = ids;
+        if (source) source.NodeIds = source.NodeIds.filter((key) => key !== id);
+      });
+      openRows.add(row.Id);
+      collapsedRows.delete(row.Id);
+      expandPath(row.ParentNodeId);
+      render();
+      return;
+    }
     if (kind === 'row') {
       const row = getRow(id),
         branch = descendants(parent);
@@ -4705,6 +5345,13 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     if (!getNode(parent) && parent) throw Error('Choose a valid destination.');
     if (kind === 'node' && descendants(id).has(parent))
       throw Error('A group cannot contain itself.');
+    const moving = kind === 'node' ? getNode(id) : getRow(id),
+      peers = kind === 'node' ? children(parent) : rows(parent),
+      current = peers.findIndex((entry) => entry.Id === id),
+      sameParent = moving && (kind === 'node' ? moving.ParentId : moving.ParentNodeId) === parent,
+      sourceRow = kind === 'node' && sourceRowId ? getRow(sourceRowId) : null;
+    if (sameParent && current === Math.max(0, Math.min(index - (current < index ? 1 : 0), peers.length - 1)) &&
+        !sourceRow?.NodeIds.includes(id)) return;
     change(() => {
       const entry = kind === 'node' ? getNode(id) : getRow(id);
       if (!entry) throw Error('This entry no longer exists.');
@@ -4713,7 +5360,14 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         destination = kind === 'node' ? children(parent) : rows(parent),
         previous = destination.findIndex((x) => x.Id === id);
       if (oldParent === parent && previous >= 0 && previous < index) index--;
-      if (kind === 'node') entry.ParentId = parent;
+      if (kind === 'node') {
+        entry.ParentId = parent;
+        // Remove obsolete memberships when ownership changes. Moving a displayed
+        // reference out of a row removes only that contextual membership.
+        for (const row of model.Rows)
+          if (row.ParentNodeId !== parent || row.Id === sourceRowId)
+            row.NodeIds = row.NodeIds.filter((key) => key !== id);
+      }
       else entry.ParentNodeId = parent;
       const remaining = destination.filter((x) => x.Id !== id);
       remaining.splice(Math.max(0, Math.min(index, remaining.length)), 0, entry);
@@ -4777,7 +5431,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     }
     const entry = kind === 'node' ? getNode(id) : getRow(id);
     if (!entry) return;
-    movePayload = { kind, id };
+    movePayload = { kind, id, parent };
     $('move-parent').closest('label').hidden = false;
     $('move-scope').hidden = true;
     $('move-heading').textContent = 'Move ' + entry.Name;
@@ -4786,8 +5440,10 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       (kind === 'node' ? '<option value="">Top level</option>' : '') +
       model.Nodes.filter((n) => !blocked.has(n.Id))
         .map((n) => '<option value="' + n.Id + '">' + esc(path(n.Id)) + '</option>')
-        .join('');
-    $('move-parent').value = kind === 'node' ? entry.ParentId : entry.ParentNodeId;
+        .join('') +
+      (kind === 'node' ? rows(entry.ParentId).map((row) =>
+        '<option value="row:' + row.Id + '">' + esc(path(row.ParentNodeId) + ' / ' + row.Name) + ' (row)</option>').join('') : '');
+    $('move-parent').value = kind === 'node' && parent ? 'row:' + parent : kind === 'node' ? entry.ParentId : entry.ParentNodeId;
     movePositions();
     show('move-dialog');
   }
@@ -4810,8 +5466,10 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       $('move-position').value = String(current + 1);
       return;
     }
-    const list =
-      movePayload.kind === 'node' ? children($('move-parent').value) : rows($('move-parent').value);
+    const destination = $('move-parent').value,
+      list = movePayload.kind === 'node' && destination.startsWith('row:')
+        ? rowGroups(getRow(destination.slice(4)))
+        : movePayload.kind === 'node' ? children(destination) : rows(destination);
     $('move-position').innerHTML =
       list.map((n, i) => '<option value="' + i + '">Before ' + esc(n.Name) + '</option>').join('') +
       '<option value="' +
@@ -4827,6 +5485,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         movePayload.id,
         movePayload.kind === 'item' ? movePayload.parent : $('move-parent').value,
         Number($('move-position').value),
+        movePayload.kind === 'node' ? movePayload.parent : '',
       );
       $('move-dialog').close();
     });
@@ -4869,7 +5528,17 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         el,
       };
     }
-    const el = point?.closest('[data-drop]:not([data-drop="media"])');
+    let el = point?.closest('[data-drop]:not([data-drop="media"])');
+    if (!el && drag?.kind === 'node' && point?.closest('#board')) {
+      // Packed cards leave gaps between columns and below shorter cards. Resolve
+      // those points to the nearest card in two dimensions, in saved DOM order.
+      let distance = Infinity;
+      for (const card of $('board').querySelectorAll(':scope > .node-card')) {
+        const box = card.getBoundingClientRect(),
+          next = Math.hypot(Math.max(box.left - x, 0, x - box.right), Math.max(box.top - y, 0, y - box.bottom));
+        if (next < distance) { el = card; distance = next; }
+      }
+    }
     if (!el || !page.contains(el) || !drag) return null;
     let parent, index, style;
     if (el.dataset.drop === 'root') {
@@ -4886,7 +5555,9 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       if (!row) return null;
       parent = row.ParentNodeId;
       if (drag.kind === 'node') {
-        index = children(parent).length;
+        if (getNode(drag.id)?.ParentId !== parent) return null;
+        parent = 'row:' + row.Id;
+        index = row.NodeIds.length;
         style = 'drop-into';
       } else {
         const box = el.getBoundingClientRect(),
@@ -4903,14 +5574,17 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         style = 'drop-into';
       } else {
         const box = el.getBoundingClientRect(),
-          before =
-            el.dataset.axis === 'x' ? x < box.left + box.width / 2 : y < box.top + box.height / 2;
-        parent = node.ParentId;
-        index = children(parent).findIndex((n) => n.Id === node.Id) + (before ? 0 : 1);
+          before = el.dataset.axis === 'grid'
+            ? y < box.top || (y <= box.bottom && x < box.left + box.width / 2)
+            : y < box.top + box.height / 2;
+        parent = el.dataset.groupRow ? 'row:' + el.dataset.groupRow : node.ParentId;
+        const peers = el.dataset.groupRow ? rowGroups(getRow(el.dataset.groupRow)) : children(parent);
+        index = peers.findIndex((n) => n.Id === node.Id) + (before ? 0 : 1);
         style = before ? 'drop-before' : 'drop-after';
       }
     }
-    if (drag.kind === 'node' && parent && descendants(drag.id).has(parent)) return null;
+    const owner = parent.startsWith('row:') ? getRow(parent.slice(4))?.ParentNodeId : parent;
+    if (drag.kind === 'node' && owner && descendants(drag.id).has(owner)) return null;
     return { parent, index, style, el };
   }
   function dragScroll() {
@@ -4984,6 +5658,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         drag.active = true;
         page.classList.add('is-dragging');
         page.classList.toggle('is-dragging-media', drag.kind === 'item');
+        scheduleBoardLayout();
         drag.ghost = document.createElement('div');
         drag.ghost.className = 'drag-ghost';
         drag.ghost.textContent =
@@ -5008,9 +5683,10 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     cancelAnimationFrame(old.frame);
     old.ghost?.remove();
     page.classList.remove('is-dragging', 'is-dragging-media');
+    scheduleBoardLayout();
     clearDrop();
     if (old.active && !cancel && old.target)
-      void attempt(() => move(old.kind, old.id, old.target.parent, old.target.index));
+      void attempt(() => move(old.kind, old.id, old.target.parent, old.target.index, old.parent));
   }
   page.addEventListener('pointerup', (e) => {
     if (drag?.pointerId === e.pointerId) endDrag();
@@ -5349,7 +6025,13 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       expanded.has(data.expand) ? expanded.delete(data.expand) : expanded.add(data.expand);
       render();
     } else if (data.toggleRow) {
-      openRows.has(data.toggleRow) ? openRows.delete(data.toggleRow) : openRows.add(data.toggleRow);
+      if (target.getAttribute('aria-expanded') === 'true') {
+        openRows.delete(data.toggleRow);
+        collapsedRows.add(data.toggleRow);
+      } else {
+        openRows.add(data.toggleRow);
+        collapsedRows.delete(data.toggleRow);
+      }
       render();
     } else if (data.select || data.settingsNode) openNode(data.select || data.settingsNode);
     else if (data.rowSelect || data.settingsRow) openRow(data.rowSelect || data.settingsRow);
@@ -5379,7 +6061,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       wrap.style.marginRight = '0';
     }
   }
-  addEventListener('resize', fit);
+  addEventListener('resize', () => { fit(); scheduleBoardLayout(); });
   fit();
   window.FranchiseSettings = {
     getModel: () => C.clone(model),
@@ -5387,6 +6069,10 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     load: () => load(true),
     core: C,
   };
+  automation = window.FranchiseSettingsAutomation?.init({
+    page, $, core: C, getModel: () => model, load: () => load(true), notify, request,
+    change, render, show, isDirty: () => dirty || saving,
+  }) || null;
   viewerPreferences();
   page.addEventListener('pageshow', () => {
     if (!loaded) void attempt(load);
