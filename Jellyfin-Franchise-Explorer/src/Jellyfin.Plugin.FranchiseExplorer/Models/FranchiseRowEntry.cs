@@ -10,6 +10,7 @@ public sealed class FranchiseRowEntry
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("D");
     public string JellyfinItemId { get; set; } = string.Empty;
+    public MediaIdentity? Identity { get; set; }
     public string DisplayName { get; set; } = string.Empty;
     public string ItemType { get; set; } = "Movie";
     public string RangeMode { get; set; } = "Full";

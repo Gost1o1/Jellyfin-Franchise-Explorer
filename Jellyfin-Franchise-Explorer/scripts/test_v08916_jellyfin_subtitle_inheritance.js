@@ -76,5 +76,5 @@ vm.runInNewContext(source.slice(start,end),context);
   timers.splice(0).forEach(t=>t.fn());
   assert(tracks.every(track=>track.mode==='disabled'),'A slow earlier language lookup must not re-enable subtitles after Off');
 
-  console.log('v0.8.9.25 Jellyfin subtitle default, overrides, Off, and stale preference timer tests passed.');
+  console.log('v0.8.9.26 Jellyfin subtitle default, overrides, Off, and stale preference timer tests passed.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

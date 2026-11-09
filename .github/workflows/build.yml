@@ -28,6 +28,8 @@ jobs:
           node scripts/test_autoadd.js
           node scripts/test_autoadd_grouping.js
           node scripts/test_autoadd_changes.js
+          node scripts/test_auto_franchises_exclusions.js
+          node scripts/test_auto_franchises_core_exclusions.js
           node --check src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-my-media.js
           node --check src/Jellyfin.Plugin.FranchiseExplorer/Web/franchise-timeline.js
           python3 scripts/test_my_media_tile_static.py
@@ -88,6 +90,8 @@ jobs:
           python3 scripts/test_episode_presentation_browser.py
           python3 scripts/test_viewer_preferences_browser.py
           python3 scripts/test_media_ordering_browser.py
+          python3 scripts/test_hierarchy_layout_browser.py
+          python3 scripts/test_automation_recovery_browser.py
           python3 scripts/test_card_navigation_v081.py
           python3 scripts/test_local_web_handoff.py
           python3 scripts/test_autonext_browser.py

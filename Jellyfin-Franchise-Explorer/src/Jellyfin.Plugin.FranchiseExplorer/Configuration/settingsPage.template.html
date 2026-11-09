@@ -432,6 +432,68 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
 #FranchiseExplorerConfigPage .media-entry>.grip{width:44px;min-height:44px}}
 #FranchiseExplorerConfigPage .media-entry.drop-before{box-shadow:0 -3px 0 var(--accent)!important}
 #FranchiseExplorerConfigPage .media-entry.drop-after{box-shadow:0 3px 0 var(--accent)!important}
+/* Pack cards visually while retaining their saved DOM and keyboard sequence. */
+#FranchiseExplorerConfigPage .board{display:block;position:relative;min-height:85px}
+#FranchiseExplorerConfigPage .board>.node-card{position:absolute;left:0;top:0;box-sizing:border-box;max-width:100%}
+#FranchiseExplorerConfigPage.is-dragging:not(.is-dragging-media) .board{padding-bottom:0}
+#FranchiseExplorerConfigPage .node-body{overflow-x:visible;min-width:0}
+#FranchiseExplorerConfigPage .subgroup,#FranchiseExplorerConfigPage .row-entry{min-width:0}
+#FranchiseExplorerConfigPage .row-groups>.subgroup{margin-left:0}
+#FranchiseExplorerConfigPage .row-contents:has(>.row-groups){margin-left:9px;padding-left:5px}
+#FranchiseExplorerConfigPage .tree-name .row-count{flex-shrink:0;display:inline-block;font-size:10px}
+#FranchiseExplorerConfigPage .node-head,#FranchiseExplorerConfigPage .tree-row{grid-template-columns:18px 20px minmax(0,1fr) auto}
+@media(max-width:660px){#FranchiseExplorerConfigPage .node-head,#FranchiseExplorerConfigPage .tree-row{gap:2px}
+#FranchiseExplorerConfigPage .node-actions,#FranchiseExplorerConfigPage .row-actions{gap:1px}
+#FranchiseExplorerConfigPage .node-actions .icon-button,#FranchiseExplorerConfigPage .row-actions .icon-button{width:27px;padding:4px}
+#FranchiseExplorerConfigPage .row-contents:has(>.row-groups){margin-left:4px;padding-left:3px}
+#FranchiseExplorerConfigPage .subgroup{margin-left:3px;padding-left:3px}
+#FranchiseExplorerConfigPage .tree-row .tree-name{gap:3px}
+#FranchiseExplorerConfigPage .tree-name .icon{width:12px;height:12px}}
+/* Automation and recovery use the same controls on desktop and narrow screens. */
+#FranchiseExplorerConfigPage .automation-section{border-top:1px solid var(--line);margin-top:22px;padding-top:12px}
+#FranchiseExplorerConfigPage .automation-section h3{font-size:15px;margin:8px 0 12px}
+#FranchiseExplorerConfigPage .automation-section p,#FranchiseExplorerConfigPage .automation-section small{color:var(--muted);font-size:12px;overflow-wrap:anywhere}
+#FranchiseExplorerConfigPage .automation-toolbar,#FranchiseExplorerConfigPage .automation-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#FranchiseExplorerConfigPage .automation-toolbar{margin:13px 0}
+#FranchiseExplorerConfigPage .automation-notice{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid #6b5e3c;background:#332e22;border-radius:9px;margin:0 0 14px;padding:10px 13px;font-size:13px}
+#FranchiseExplorerConfigPage .automation-registry-entry{display:flex;justify-content:space-between;gap:12px;align-items:center;border-bottom:1px solid var(--line);padding:14px 0;min-width:0}
+#FranchiseExplorerConfigPage .automation-entry-summary{min-width:0;flex:1}
+#FranchiseExplorerConfigPage .automation-entry-summary a{font-size:12px;overflow-wrap:anywhere}
+#FranchiseExplorerConfigPage .automation-entry-summary small{display:block;color:var(--muted);margin-top:4px}
+#FranchiseExplorerConfigPage .automation-actions{flex-shrink:0}
+#FranchiseExplorerConfigPage .automation-actions label{display:flex;align-items:center;gap:5px;font-size:12px}
+#FranchiseExplorerConfigPage .automation-actions button{font-size:12px;padding:7px 10px;min-height:36px}
+#FranchiseExplorerConfigPage .automation-entry-fields{display:grid;gap:16px}
+#FranchiseExplorerConfigPage .automation-change{border:1px solid var(--line);border-radius:9px;padding:14px;margin:0 0 12px;overflow-wrap:anywhere;min-width:0}
+#FranchiseExplorerConfigPage .automation-change h3{font-size:15px;margin:0 0 8px}
+#FranchiseExplorerConfigPage .automation-change p{font-size:12px;color:var(--muted)}
+#FranchiseExplorerConfigPage .automation-select{display:flex;align-items:center;gap:10px;font-size:14px}
+#FranchiseExplorerConfigPage .automation-select span{font-size:12px;color:var(--amber);margin-left:auto}
+#FranchiseExplorerConfigPage .automation-details{display:grid;grid-template-columns:115px minmax(0,1fr);gap:7px 12px;font-size:12px;margin:13px 0 0}
+#FranchiseExplorerConfigPage .automation-details dt{color:var(--muted)}
+#FranchiseExplorerConfigPage .automation-details dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+#FranchiseExplorerConfigPage .automation-change details{font-size:12px;margin-top:12px}
+#FranchiseExplorerConfigPage .automation-change summary{cursor:pointer}
+#FranchiseExplorerConfigPage .automation-preview-row{border-top:1px solid var(--line);margin-top:10px;padding-top:9px;font-size:13px}
+#FranchiseExplorerConfigPage .automation-preview-row ul{padding-left:20px;margin:5px 0}
+#FranchiseExplorerConfigPage .automation-recovery-search{display:flex;align-items:end;gap:8px;margin-top:13px}
+#FranchiseExplorerConfigPage .automation-recovery-search .field{flex:1;min-width:0}
+#FranchiseExplorerConfigPage .automation-candidate{padding-left:18px;color:var(--muted);font-size:11px}
+#FranchiseExplorerConfigPage .automation-dialog-note{font-size:12px;color:var(--muted)}
+#FranchiseExplorerConfigPage #automation-error{border:1px solid #90515c;background:#4c292e;border-radius:8px;padding:10px 12px;color:#ffd1d1;font-size:13px;overflow-wrap:anywhere}
+#FranchiseExplorerConfigPage .automation-section a,#FranchiseExplorerConfigPage .automation-change a,#FranchiseExplorerConfigPage .automation-entry-summary a{color:#8edbe4}
+@media(max-width:660px){#FranchiseExplorerConfigPage .automation-registry-entry{align-items:start;flex-wrap:wrap;gap:9px}
+#FranchiseExplorerConfigPage .automation-entry-summary{flex-basis:100%}
+#FranchiseExplorerConfigPage .automation-actions{width:100%;flex-wrap:nowrap;justify-content:flex-end}
+#FranchiseExplorerConfigPage .automation-actions label{margin-right:auto}
+#FranchiseExplorerConfigPage .automation-toolbar{gap:7px}
+#FranchiseExplorerConfigPage .automation-toolbar button{font-size:12px;padding:8px 10px}
+#FranchiseExplorerConfigPage .automation-details{grid-template-columns:82px minmax(0,1fr);gap:7px}
+#FranchiseExplorerConfigPage .automation-change{padding:11px}
+#FranchiseExplorerConfigPage .automation-notice{font-size:12px;gap:7px;padding:9px}
+#FranchiseExplorerConfigPage .automation-notice button{font-size:12px;padding:7px 9px;min-height:36px}
+#FranchiseExplorerConfigPage .automation-recovery-search{flex-wrap:wrap}
+#FranchiseExplorerConfigPage .automation-recovery-search .field{flex-basis:100%}}
 </style>
 
 <svg style="display:none" aria-hidden="true"><defs>
@@ -455,15 +517,25 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
 </defs></svg>
 <main class="fx-wrap">
 <header class="top"><div><h1>Franchise Explorer<span class="version">v{{PLUGIN_VERSION}}</span></h1></div><div class="top-actions"><span id="save-state" class="save-state" role="status">Loading configuration…</span><button class="icon-button quiet" id="undo" aria-label="Undo" data-help="Undo the most recent unsaved edit or move." disabled><svg class="icon"><use href="#i-undo"/></svg></button><button class="icon-button quiet" id="reset" aria-label="Reload saved settings" data-help="Reload the saved plugin configuration. Unsaved changes can be restored with Undo."><svg class="icon"><use href="#i-reset"/></svg></button><button class="primary" id="save" data-help="Save these changes to the Jellyfin plugin configuration.">Save changes</button></div></header>
+<div id="automation-notice" class="automation-notice" role="status" hidden><span id="automation-notice-count"></span><button id="automation-notice-review">Review changes</button></div><p id="automation-error" role="alert" hidden></p>
 <details class="panel" id="settings"><summary><svg class="icon label-icon"><use href="#i-settings"/></svg>Settings<span class="section-count"></span></summary><div class="panel-body settings-grid">
 <div class="setting" data-help="Enable subtitles for franchise playback in this browser."><label class="setting-label" id="subtitles-label" for="subtitles">Enable subtitles</label><button type="button" class="switch" role="switch" aria-checked="false" aria-labelledby="subtitles-label" id="subtitles"><span class="switch-label">Off</span><span class="switch-track"></span></button></div>
 <label class="setting" data-help="Choose the subtitle language to use when subtitles are enabled."><span class="setting-label">Subtitle language</span><select id="language" aria-label="Subtitle language"><option value="auto">Jellyfin preference</option><option value="en">English</option><option value="de">Deutsch</option><option value="es">Español</option><option value="fr">Français</option><option value="ja">日本語</option></select></label>
 <div class="setting" data-help="Hide titles managed by a franchise from the main menu's Continue Watching and Next Up rows. Their watched history is preserved."><label class="setting-label" id="hide-label" for="hide-native">Hide franchise Continue Watching and Next Up from main menu</label><button type="button" class="switch" role="switch" aria-checked="false" aria-labelledby="hide-label" id="hide-native"><span class="switch-label">Off</span><span class="switch-track"></span></button></div>
-<details class="panel" id="advanced"><summary><svg class="icon label-icon"><use href="#i-box"/></svg>Advanced settings<span class="section-count"></span></summary><div class="panel-body"><div class="button-row"><button id="export" data-help="Download a JSON backup of the plugin configuration.">Export backup</button><button id="import" data-help="Import a Franchise Explorer configuration backup for review before saving.">Import backup</button><input id="import-file" type="file" accept=".json,application/json" hidden></div><section class="imdb-library" aria-labelledby="imdb-library-heading"><h3 id="imdb-library-heading">IMDb lists</h3><div id="saved-imdb-lists"></div><button id="add-imdb-list" data-help="Save a named IMDb URL for use in Auto Add. Saving a list does not import titles. Use Save changes to persist the library.">＋ Add IMDb list</button></section></div></details>
+<details class="panel" id="advanced"><summary><svg class="icon label-icon"><use href="#i-box"/></svg>Advanced settings<span class="section-count"></span></summary><div class="panel-body"><div class="button-row"><button id="export" data-help="Download a JSON backup of the plugin configuration.">Export backup</button><button id="import" data-help="Import a Franchise Explorer configuration backup for review before saving.">Import backup</button><input id="import-file" type="file" accept=".json,application/json" hidden></div><section class="imdb-library" aria-labelledby="imdb-library-heading"><h3 id="imdb-library-heading">IMDb lists</h3><div id="saved-imdb-lists"></div><button id="add-imdb-list" data-help="Save a named IMDb URL for use in Auto Add. Saving a list does not import titles. Use Save changes to persist the library.">＋ Add IMDb list</button></section>
+<section class="automation-section" aria-labelledby="auto-settings-heading"><h3 id="auto-settings-heading">Auto Franchises</h3><label class="setting"><span>Enable midnight updates</span><input id="auto-enabled" type="checkbox" data-automation-action></label><p id="auto-schedule">Daily · 12:00 AM · Jellyfin server local time</p><small id="auto-registry-count">Loading server registry…</small><div class="automation-toolbar"><button id="auto-manage" data-automation-action>Manage auto list</button><button id="auto-preview" data-automation-action>Preview build</button><button id="auto-run" data-automation-action>Run now</button><button id="auto-review">Pending review (0)</button><button id="auto-manage-choices">Saved choices (0)</button></div><p>Only enabled entries in this auto list are scheduled. Reusable IMDb lists remain separate. New franchises have TV Shows, Movies and Chronological Order rows.</p><p>New verified matches can be added. Saved skips, deleted rows, manual ranges, artwork and custom rows are protected. Removals and protected changes need review.</p><p id="auto-run-status" role="status">Last run: loading…</p></section>
+<section class="automation-section" aria-labelledby="recovery-settings-heading"><h3 id="recovery-settings-heading">Media recovery</h3><label class="setting"><span>Keep stable media identities for recovery</span><input id="recovery-enabled" type="checkbox" checked></label><label class="setting"><span>Reconnect verified matches after a healthy library scan</span><input id="recovery-auto" type="checkbox" checked></label><p>Save changes to store recovery preferences. Recovery preserves rows, artwork, ranges and plugin progress. Ambiguous or missing matches need review.</p><div class="automation-toolbar"><button id="recovery-check" data-automation-action>Check recovery</button><button id="recovery-review">Review recovery (0)</button></div><p id="recovery-status" role="status">Last check: loading…</p></section>
+</div></details>
 </div></details>
 <details class="panel" id="franchises"><summary><svg class="icon label-icon"><use href="#i-grid"/></svg>Franchises<span id="franchise-count" class="section-count"></span></summary><div class="panel-body"><div class="franchises-toolbar"><button id="add-franchise" data-help="Create a franchise, then use its settings icon for IMDb Auto Add and its + icon for rows or subcategories.">＋ Add franchise</button></div><div id="board" class="board"></div></div></details>
 </main>
 <div id="help" role="tooltip" hidden></div><div id="toast" class="toast" role="status" aria-live="polite" hidden></div><div id="drag-status" class="sr-only" aria-live="polite"></div>
+<dialog id="auto-registry-dialog" aria-labelledby="auto-registry-heading"><div class="dialog-head"><h2 id="auto-registry-heading">Auto Franchises list</h2><button class="icon-button quiet" data-close="auto-registry-dialog" aria-label="Close auto list">✕</button></div><div class="dialog-content"><button id="auto-add-entry" data-automation-action>＋ Add auto franchise</button><div id="auto-registry-list"></div><p class="automation-dialog-note">Removing an entry keeps its existing franchise and saved choices.</p></div><div class="dialog-footer"><button data-close="auto-registry-dialog">Done</button></div></dialog>
+<dialog id="auto-entry-dialog" class="compact-dialog" aria-labelledby="auto-entry-heading"><div class="dialog-head"><h2 id="auto-entry-heading">Add auto franchise</h2><button class="icon-button quiet" data-close="auto-entry-dialog" aria-label="Close auto entry">✕</button></div><div class="dialog-content automation-entry-fields"><label class="field"><span>Franchise name</span><input id="auto-entry-name" maxlength="120" required></label><label class="field"><span>IMDb list URL</span><input id="auto-entry-url" type="url" maxlength="300" placeholder="https://www.imdb.com/list/ls…/" required></label><label class="field"><span>Use an existing franchise or create one</span><select id="auto-entry-target"></select></label><label class="field"><span>Chronological Order · Episode format</span><select id="auto-entry-mode"><option value="Bundles">Episode bundles</option><option value="Individual">Individual episodes</option></select></label><label class="setting"><span>Include in midnight task</span><input id="auto-entry-enabled" type="checkbox" checked></label><p id="auto-entry-error" class="inline-error" role="alert" hidden></p></div><div class="dialog-footer"><button data-close="auto-entry-dialog">Cancel</button><button id="auto-entry-save" class="primary" data-automation-action>Save entry</button></div></dialog>
+<dialog id="auto-preview-dialog" aria-labelledby="auto-preview-heading"><div class="dialog-head"><h2 id="auto-preview-heading">Auto Franchises · Build preview</h2><button class="icon-button quiet" data-close="auto-preview-dialog" aria-label="Close build preview">✕</button></div><div class="dialog-content"><p class="automation-dialog-note">Current server configuration and library matches. Apply only selected changes; midnight updates can stay off. Protected changes start unselected.</p><div id="auto-preview-results"></div></div><div class="dialog-footer"><span id="auto-preview-selected-count" class="selected-count"></span><button data-close="auto-preview-dialog">Close</button><button id="auto-preview-apply" class="primary" data-automation-action disabled>Apply selected</button></div></dialog>
+<dialog id="auto-inbox-dialog" aria-labelledby="auto-inbox-heading"><div class="dialog-head"><h2 id="auto-inbox-heading">Auto Franchises · Pending changes</h2><button class="icon-button quiet" data-close="auto-inbox-dialog" aria-label="Close pending changes">✕</button></div><div class="dialog-content"><p class="automation-dialog-note">Protected changes start unselected. Restore / Apply selected rechecks the current configuration and library. Keep my choices acknowledges selected changes, or all shown changes when none are selected.</p><div id="auto-inbox-list"></div></div><div class="dialog-footer"><button data-close="auto-inbox-dialog">Close</button><button id="auto-keep-choices" data-automation-action>Keep my choices</button><button id="auto-restore-selected" class="primary" data-automation-action disabled>Restore / Apply selected</button></div></dialog>
+<dialog id="auto-choices-dialog" aria-labelledby="auto-choices-heading"><div class="dialog-head"><h2 id="auto-choices-heading">Auto Franchises · Saved choices</h2><button class="icon-button quiet" data-close="auto-choices-dialog" aria-label="Close saved choices">✕</button></div><div class="dialog-content"><p class="automation-dialog-note">Only selected restrictions are restored. Other show, season and episode restrictions stay protected. The server verifies an available candidate before clearing a restriction; later builds can add verified media.</p><div id="auto-choices-list"></div></div><div class="dialog-footer"><button data-close="auto-choices-dialog">Close</button><button id="auto-restore-rules" class="primary" data-automation-action disabled>Restore selected choices</button></div></dialog>
+<dialog id="recovery-dialog" aria-labelledby="recovery-heading"><div class="dialog-head"><h2 id="recovery-heading">Media recovery · Review matches</h2><button class="icon-button quiet" data-close="recovery-dialog" aria-label="Close recovery review">✕</button></div><div class="dialog-content"><p class="automation-dialog-note">Verified identity matches, ambiguous candidates and missing media are shown separately. Choose the actual library item explicitly. Missing media stays in place until it becomes available.</p><div id="recovery-results"></div></div><div class="dialog-footer"><button data-close="recovery-dialog">Close</button><button id="recovery-apply" class="primary" data-automation-action disabled>Reconnect selected</button></div></dialog>
 <dialog id="franchise-dialog" class="franchise-dialog" aria-labelledby="franchise-heading"><div class="dialog-head"><div><h2 id="franchise-heading"><svg class="icon"><use href="#i-gear"/></svg>Franchise settings</h2><div id="franchise-scope" class="scope-title"></div></div><button class="icon-button quiet" data-close="franchise-dialog" aria-label="Close franchise settings">✕</button></div><div class="dialog-content"><div class="franchise-fields"><section class="structure-tools"><h3>Groups and subgroups</h3><div id="franchise-structure-owner" class="structure-owner"></div><div class="button-row"><button id="franchise-add-row">＋ Add group / row</button><button id="franchise-add-subgroup">＋ Add subgroup</button></div><div id="franchise-pending-structure" class="pending-structure"></div></section>
 <label class="field" data-help="Rename this franchise or subgroup. Changes are staged until you save or apply selected changes."><span>Title</span><input id="detail-title" maxlength="120" required></label>
 <label class="field" data-help="Edit the description for this franchise or subgroup."><span>Description</span><textarea id="detail-description" maxlength="1500"></textarea></label>
@@ -489,6 +561,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
 /* Generated by scripts/build_settings_page.py. Edit the source modules/template. */
 {{SETTINGS_CORE}}
 {{SETTINGS_ARTWORK}}
+{{SETTINGS_AUTOMATION}}
 {{SETTINGS_MAIN}}
 </script>
 </div></body></html>

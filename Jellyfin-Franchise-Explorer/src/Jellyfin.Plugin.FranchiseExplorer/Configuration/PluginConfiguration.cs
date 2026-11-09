@@ -10,6 +10,12 @@ namespace Jellyfin.Plugin.FranchiseExplorer.Configuration;
 /// </summary>
 public sealed class PluginConfiguration : BasePluginConfiguration
 {
+    public long ConfigurationRevision { get; set; }
+
+    public AutoFranchiseSettings AutoFranchises { get; set; } = new();
+
+    public MediaRecoverySettings MediaRecovery { get; set; } = new();
+
     public string NavigationLabel { get; set; } = "Franchises";
 
     /// <summary>Reusable named IMDb lists. Assigning one copies its URL into a franchise or row source.</summary>

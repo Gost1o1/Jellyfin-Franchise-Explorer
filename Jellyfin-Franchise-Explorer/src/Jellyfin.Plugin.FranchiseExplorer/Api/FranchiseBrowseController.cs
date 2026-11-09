@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using Jellyfin.Plugin.FranchiseExplorer.Configuration;
 using Jellyfin.Plugin.FranchiseExplorer.Models;
 using MediaBrowser.Common.Api;
 using Microsoft.AspNetCore.Authorization;
@@ -106,6 +107,30 @@ public sealed class FranchiseBrowseController : ControllerBase
             ? "Individual" : "Bundles";
     }
 
+    // Playback needs only identity/range restrictions. Never publish the automation
+    // registry, source URLs, admin labels, review inbox or exclusion explanations.
+    private static object[] PlaybackExclusions(PluginConfiguration config, FranchiseRow row)
+    {
+        var owners = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        static string ScopeId(string value) => Guid.TryParse(value, out var parsed) ? parsed.ToString("N") : value;
+        var cursor = row.ParentNodeId;
+        while (cursor.Length > 0 && owners.Add(ScopeId(cursor))) cursor = config.Nodes.FirstOrDefault(n => ScopeId(n.Id) == ScopeId(cursor))?.ParentId ?? "";
+        var registrations = config.AutoFranchises.Registry.Where(r => owners.Contains(ScopeId(r.FranchiseNodeId)) || r.Rows.Any(m => ScopeId(m.RowId) == ScopeId(row.Id))).Select(r => ScopeId(r.Id)).ToHashSet();
+        var scopes = new HashSet<string>(new[] { "Movie", "WholeShow", "Show", "Series", "Season", "Episode", "AllowedRange" }, StringComparer.OrdinalIgnoreCase);
+        string Id(string value) => Guid.TryParse(value, out var id) ? id.ToString("N") : "";
+        return config.AutoFranchises.Exclusions.Where(e => e.Enabled && scopes.Contains(e.Scope) && (e.RowId.Length == 0 || ScopeId(e.RowId) == ScopeId(row.Id)) &&
+                (e.RegistrationId.Length > 0 ? registrations.Contains(ScopeId(e.RegistrationId)) : owners.Contains(ScopeId(e.FranchiseNodeId))))
+            .Select(e => (object)new
+            {
+                scope = e.Scope, providerName = e.ProviderName, providerId = e.ProviderId, itemId = Id(e.JellyfinItemId),
+                itemIds = config.MediaRecovery.KnownItems.Where(s =>
+                        (s.Identity.ItemType == "Series" || e.Scope.Equals("Movie", StringComparison.OrdinalIgnoreCase) && s.Identity.ItemType == "Movie" || e.Scope.Equals("Episode", StringComparison.OrdinalIgnoreCase) && s.Identity.ItemType == "Episode") &&
+                        e.ProviderId.Length > 0 && s.Identity.ProviderIds.Any(p => p.Name.Equals(e.ProviderName, StringComparison.OrdinalIgnoreCase) && p.Value.Equals(e.ProviderId, StringComparison.OrdinalIgnoreCase)))
+                    .Select(s => Id(s.ItemId)).Where(id => id.Length > 0).Distinct().ToArray(),
+                startSeason = e.StartSeason, endSeason = e.EndSeason, startEpisode = e.StartEpisode, endEpisode = e.EndEpisode
+            }).ToArray();
+    }
+
     [HttpGet("Catalog")]
     [Authorize]
     public IActionResult Catalog()
@@ -120,7 +145,7 @@ public sealed class FranchiseBrowseController : ControllerBase
         // titles that a particular user isn't allowed to browse.
         return Ok(new
         {
-            version = "0.8.9.25",
+            version = "0.8.9.26",
             title = string.IsNullOrWhiteSpace(config.NavigationLabel) ? "Franchises" : config.NavigationLabel,
             nodes = config.Nodes.Select(n => new
             {
@@ -148,6 +173,7 @@ public sealed class FranchiseBrowseController : ControllerBase
                 nodeIds = r.NodeIds,
                 mediaLinkIds = r.MediaLinkIds,
                 mediaOrder = r.MediaOrder,
+                exclusions = PlaybackExclusions(config, r),
                 items = r.Items?.Select(i => new
                 {
                     id = i.Id,

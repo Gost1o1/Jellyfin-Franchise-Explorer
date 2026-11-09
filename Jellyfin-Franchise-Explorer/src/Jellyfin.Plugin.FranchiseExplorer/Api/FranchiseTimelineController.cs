@@ -303,6 +303,128 @@ public sealed class FranchiseTimelineController : ControllerBase
         finally { if (System.IO.File.Exists(temp)) System.IO.File.Delete(temp); }
     }
 
+    /// <summary>Holds the timeline write lock until the caller commits configuration or rolls the change back.</summary>
+    public sealed class TimelineRemapTransaction : IAsyncDisposable
+    {
+        private readonly List<(string Path, byte[] Original)> _originals;
+        private bool _committed;
+        private bool _disposed;
+        internal TimelineRemapTransaction(List<(string Path, byte[] Original)> originals) => _originals = originals;
+        public int ChangedFiles => _originals.Count;
+        public void Commit() => _committed = true;
+        public async ValueTask DisposeAsync()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            try
+            {
+                if (!_committed)
+                    foreach (var (path, original) in _originals)
+                    {
+                        var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+                        try
+                        {
+                            await System.IO.File.WriteAllBytesAsync(temporary, original).ConfigureAwait(false);
+                            System.IO.File.Move(temporary, path, true);
+                        }
+                        finally { if (System.IO.File.Exists(temporary)) System.IO.File.Delete(temporary); }
+                    }
+            }
+            finally { WriteLock.Release(); }
+        }
+    }
+
+    /// <summary>Remap all users' progress without changing saved position, queue order or completed markers.</summary>
+    public static Task<TimelineRemapTransaction> RemapItemIdsAsync(IReadOnlyDictionary<string, string> mapping, CancellationToken cancellationToken = default)
+        => RemapItemIdsAsync(Plugin.Instance?.DataFolderPath ?? throw new InvalidOperationException("Plugin data folder unavailable."), mapping, cancellationToken);
+
+    public static async Task<TimelineRemapTransaction> RemapItemIdsAsync(string dataRoot, IReadOnlyDictionary<string, string> mapping, CancellationToken cancellationToken = default)
+    {
+        static string Normalize(string id) => Guid.TryParse(id, out var value) ? value.ToString("N") : id;
+        var normalized = mapping.ToDictionary(p => Normalize(p.Key), p => p.Value, StringComparer.OrdinalIgnoreCase);
+        string Remap(string id) => normalized.GetValueOrDefault(Normalize(id), id);
+        string Key(string key)
+        {
+            var colon = key.LastIndexOf(':');
+            return colon >= 0 ? key[..(colon + 1)] + Remap(key[(colon + 1)..]) : Remap(key);
+        }
+        await WriteLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        var originals = new List<(string Path, byte[] Original)>();
+        var transaction = new TimelineRemapTransaction(originals);
+        try
+        {
+            var folder = Path.Combine(dataRoot, "timeline-progress");
+            var staged = new List<(string Path, byte[] Original, TimelineProgress State)>();
+            if (Directory.Exists(folder))
+                foreach (var path in Directory.EnumerateFiles(folder, "*.json", SearchOption.AllDirectories))
+                {
+                    var original = await System.IO.File.ReadAllBytesAsync(path, cancellationToken).ConfigureAwait(false);
+                    // A malformed record aborts the repair. Skipping it would leave part of a user's queue stale.
+                    var state = JsonSerializer.Deserialize<TimelineProgress>(original, JsonOptions)
+                        ?? throw new JsonException("Timeline state requires repair before media recovery.");
+                    var before = JsonSerializer.Serialize(state, JsonOptions);
+                    var currentKey = state.QueueKeys is not null && state.Index >= 0 && state.Index < state.QueueKeys.Count ? state.QueueKeys[state.Index] : string.Empty;
+                    var currentSource = state.QueueSourceItemIds is not null && state.Index >= 0 && state.Index < state.QueueSourceItemIds.Count ? state.QueueSourceItemIds[state.Index] : string.Empty;
+                    var staleIntent = Remap(state.ItemId) != state.ItemId || Key(currentKey) != currentKey || Remap(currentSource) != currentSource
+                        || Key(state.PendingAutoAdvanceFromKey) != state.PendingAutoAdvanceFromKey || Key(state.PendingAutoAdvanceToKey) != state.PendingAutoAdvanceToKey;
+                    state.ItemId = Remap(state.ItemId);
+                    state.QueueKeys = (state.QueueKeys ?? []).Select(Key).ToList();
+                    state.CompletedKeys = (state.CompletedKeys ?? []).Select(Key).ToList();
+                    state.QueueSourceItemIds = (state.QueueSourceItemIds ?? []).Select(Remap).ToList();
+                    var changed = before != JsonSerializer.Serialize(state, JsonOptions)
+                        || Key(state.PendingAutoAdvanceFromKey) != state.PendingAutoAdvanceFromKey
+                        || Key(state.PendingAutoAdvanceToKey) != state.PendingAutoAdvanceToKey;
+                    if (!changed) continue;
+                    if (staleIntent)
+                    {
+                        state.SessionId = string.Empty;
+                        state.ArmedUtc = null;
+                        state.PendingAutoAdvanceFromKey = string.Empty;
+                        state.PendingAutoAdvanceToKey = string.Empty;
+                        state.PendingAutoAdvanceUtc = null;
+                        if (state.PlaybackMode is "playing" or "armed") state.PlaybackMode = "paused";
+                    }
+                    state.UpdatedUtc = DateTimeOffset.UtcNow;
+                    staged.Add((path, original, state));
+                }
+            foreach (var (path, original, state) in staged)
+            {
+                originals.Add((path, original));
+                await WriteProgressAsync(path, state, cancellationToken).ConfigureAwait(false);
+            }
+            return transaction;
+        }
+        catch
+        {
+            await transaction.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
+    }
+
+    public static async Task<IReadOnlyList<string>> StoredItemIdsAsync(string dataRoot, CancellationToken cancellationToken = default)
+    {
+        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        await WriteLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var root = Path.Combine(dataRoot, "timeline-progress");
+            if (!Directory.Exists(root)) return [];
+            foreach (var path in Directory.EnumerateFiles(root, "*.json", SearchOption.AllDirectories))
+            {
+                TimelineProgress? state;
+                try { state = JsonSerializer.Deserialize<TimelineProgress>(await System.IO.File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false), JsonOptions); }
+                catch (JsonException) { continue; }
+                if (state is null) continue;
+                void Add(string value) { if (Guid.TryParse(value, out var id)) ids.Add(id.ToString("D")); }
+                Add(state.ItemId);
+                foreach (var id in state.QueueSourceItemIds ?? []) Add(id);
+                foreach (var key in (state.QueueKeys ?? []).Concat(state.CompletedKeys ?? [])) Add(key[(key.LastIndexOf(':') + 1)..]);
+            }
+            return ids.ToArray();
+        }
+        finally { WriteLock.Release(); }
+    }
+
     /// <summary>
     /// Called by the Jellyfin server playback listener. Track only a previously
     /// started, explicitly selected timeline and its exact session and item.

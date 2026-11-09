@@ -17,12 +17,15 @@
     loaded = false,
     baseline = '',
     dirty = false,
-    revision = 0;
+    revision = 0,
+    saving = false,
+    automation = null;
   let selected = '',
     nodeDraft = null,
     rowDraft = null,
     structure = null,
     subgroupParent = '',
+    subgroupRowId = '',
     mediaScope = null,
     rangeDraft = null,
     deletion = null,
@@ -54,6 +57,9 @@
         Rows: value.Rows,
         MediaLinks: value.MediaLinks,
         ImdbLists: value.ImdbLists,
+        ConfigurationRevision: value.ConfigurationRevision,
+        AutoFranchises: value.AutoFranchises,
+        MediaRecovery: value.MediaRecovery,
       },
       (_key, entry) =>
         entry && typeof entry === 'object' && !Array.isArray(entry)
@@ -175,6 +181,7 @@
     $('undo').disabled = !history.length;
   }
   function change(action) {
+    if (saving) throw Error('Wait for the configuration save to finish.');
     const before = C.clone(model);
     action();
     try {
@@ -277,28 +284,28 @@
   }
   async function persist() {
     if (!loaded) throw Error('Wait for the plugin configuration to load.');
-    const latest = await ApiClient.getPluginConfiguration(pluginId),
-      normalized = C.normalize(latest);
-    if (fingerprint(normalized) !== baseline)
-      throw Error(
-        'The saved configuration changed on the server. Reload before saving your edits.',
-      );
-    const safe = C.normalize(model),
-      next = {
+    if (saving || automation?.isBusy()) throw Error('Wait for the current server operation to finish.');
+    saving = true;
+    try {
+      const latest = await ApiClient.getPluginConfiguration(pluginId), normalized = C.normalize(latest);
+      if (fingerprint(normalized) !== baseline)
+        throw Error('The saved configuration changed on the server. Reload before saving your edits.');
+      const safe = C.normalize(model), next = {
         ...latest,
-        NavigationLabel: safe.NavigationLabel,
-        Nodes: safe.Nodes,
-        Rows: safe.Rows,
-        MediaLinks: safe.MediaLinks,
-        ImdbLists: safe.ImdbLists,
+        NavigationLabel: safe.NavigationLabel, Nodes: safe.Nodes, Rows: safe.Rows,
+        MediaLinks: safe.MediaLinks, ImdbLists: safe.ImdbLists,
+        AutoFranchises: safe.AutoFranchises, MediaRecovery: safe.MediaRecovery,
       };
-    await ApiClient.updatePluginConfiguration(pluginId, next);
-    model = safe;
-    baseline = fingerprint(safe);
-    dirty = false;
-    $('save-state').textContent = 'All changes saved';
-    $('save-state').classList.remove('dirty');
-    notify('Configuration saved');
+      await ApiClient.updatePluginConfiguration(pluginId, next);
+      model = C.normalize(await ApiClient.getPluginConfiguration(pluginId));
+      baseline = fingerprint(model);
+      dirty = false;
+      $('save-state').textContent = 'All changes saved';
+      $('save-state').classList.remove('dirty');
+      render();
+      void automation?.afterLoad();
+      notify('Configuration saved');
+    } finally { saving = false; }
   }
   async function load(reload = false) {
     const raw = await ApiClient.getPluginConfiguration(pluginId),
@@ -313,6 +320,7 @@
     $('save-state').classList.remove('dirty');
     $('save').disabled = false;
     render();
+    void automation?.afterLoad();
   }
 
   function grip(kind, id, name, parent = '') {
@@ -435,8 +443,14 @@
           '</div>'
       : '<div class="empty-media">No media added</div>';
   }
-  function rowView(row) {
-    const open = openRows.has(row.Id);
+  const collapsedRows = new Set();
+  function rowGroups(row) {
+    return row.NodeIds.map(getNode).filter(Boolean);
+  }
+  function rowView(row, ancestors) {
+    const groups = rowGroups(row),
+      open = openRows.has(row.Id) || (groups.length > 0 && !collapsedRows.has(row.Id)),
+      count = groups.length ? groups.length + ' groups' : references(row).length;
     return (
       '<div class="row-entry" data-row-entry="' +
       row.Id +
@@ -463,24 +477,28 @@
       '<span class="row-title-text">' +
       esc(row.Name) +
       '</span><span class="row-count">' +
-      references(row).length +
+      count +
       '</span></button>' +
       actions('row', row.Id, row.Name) +
       '</div>' +
       (open
         ? '<div class="row-contents">' +
-          mediaList(row, false) +
-          (row.NodeIds.length
-            ? '<div class="empty-media">' +
-              row.NodeIds.length +
-              ' subgroup reference(s); groups remain in their hierarchy below.</div>'
+          (groups.length
+            ? '<div class="row-groups">' + groups.map((node) => nodeView(node, false, ancestors, row.Id)).join('') + '</div>'
             : '') +
+          (references(row).length || !groups.length ? mediaList(row, false) : '') +
           '</div>'
         : '') +
       '</div>'
     );
   }
-  function nodeView(node, root = true) {
+  function nodeView(node, root = true, ancestors = new Set(), rowId = '') {
+    // Membership is a presentation reference. Keep ownership in ParentId and
+    // guard each rendering path independently so a node can appear in two rows.
+    if (ancestors.has(node.Id)) return '<div class="empty-media">Group already shown in this path</div>';
+    const branch = new Set(ancestors).add(node.Id),
+      ownedRows = rows(node.Id),
+      assigned = new Set(ownedRows.flatMap((row) => row.NodeIds));
     const open = expanded.has(node.Id),
       tag = root ? 'article' : 'div';
     return (
@@ -492,9 +510,10 @@
       '" data-drop="node" data-id="' +
       node.Id +
       '" data-axis="' +
-      (root ? 'x' : 'y') +
+      (root ? 'grid' : 'y') +
+      (rowId ? '" data-group-row="' + rowId : '') +
       '"><div class="node-head">' +
-      grip('node', node.Id, node.Name) +
+      grip('node', node.Id, node.Name, rowId) +
       '<button class="expand" data-expand="' +
       node.Id +
       '" aria-expanded="' +
@@ -518,9 +537,10 @@
         ? '<div class="' +
           (root ? 'node-body' : 'subgroup-body') +
           '">' +
-          rows(node.Id).map(rowView).join('') +
+          ownedRows.map((row) => rowView(row, branch)).join('') +
           children(node.Id)
-            .map((child) => nodeView(child, false))
+            .filter((child) => !assigned.has(child.Id))
+            .map((child) => nodeView(child, false, branch))
             .join('') +
           '</div>'
         : '') +
@@ -533,15 +553,56 @@
       '>'
     );
   }
+  let boardLayoutFrame = 0;
+  const boardResize = typeof ResizeObserver === 'function'
+    ? new ResizeObserver(() => scheduleBoardLayout()) : null;
+  function scheduleBoardLayout() {
+    if (!boardLayoutFrame) boardLayoutFrame = requestAnimationFrame(layoutBoard);
+  }
+  function layoutBoard() {
+    boardLayoutFrame = 0;
+    const board = $('board');
+    if (!board?.isConnected || !board.clientWidth) return;
+    const cards = [...board.querySelectorAll(':scope > .node-card')],
+      gap = 12,
+      width = board.clientWidth,
+      columns = Math.max(1, Math.floor((width + gap) / (330 + gap))),
+      cardWidth = (width - gap * (columns - 1)) / columns,
+      heights = Array(columns).fill(0);
+    // Absolute positions preserve the saved DOM and tab sequence. Reading each
+    // card after setting its width also accounts for wrapped mobile titles.
+    for (const card of cards) {
+      const value = cardWidth + 'px';
+      if (!card.style.width || Math.abs(parseFloat(card.style.width) - cardWidth) > .001) card.style.width = value;
+      const column = heights.indexOf(Math.min(...heights)),
+        position = 'translate(' + Number((column * (cardWidth + gap)).toFixed(3)) + 'px, ' + heights[column] + 'px)';
+      if (card.style.transform !== position) card.style.transform = position;
+      heights[column] += card.getBoundingClientRect().height + gap;
+    }
+    const height = Math.max(85, Math.max(...heights) - gap) +
+      (page.classList.contains('is-dragging') && !page.classList.contains('is-dragging-media') ? 72 : 0),
+      value = height + 'px';
+    if (!board.style.height || Math.abs(parseFloat(board.style.height) - height) > .001) board.style.height = value;
+  }
   function render() {
-    const roots = children('');
+    const active = $('board').contains(document.activeElement) ? document.activeElement : null,
+      focused = active ? { data: { ...active.dataset }, row: active.closest('[data-group-row]')?.dataset.groupRow || '' } : null,
+      roots = children('');
     $('franchise-count').textContent = roots.length + ' franchises';
     $('board').innerHTML =
       roots.map((n) => nodeView(n)).join('') +
       '<div class="board-drop" data-drop="root">Move to top level</div>' +
       (roots.length ? '' : '<div class="empty">No franchises. Add a franchise to begin.</div>');
+    boardResize?.disconnect();
+    boardResize?.observe($('board'));
+    $('board').querySelectorAll(':scope > .node-card').forEach((card) => boardResize?.observe(card));
+    scheduleBoardLayout();
+    if (focused) [...$('board').querySelectorAll('button')].find((button) =>
+      (button.closest('[data-group-row]')?.dataset.groupRow || '') === focused.row &&
+      Object.entries(focused.data).every(([key, value]) => button.dataset[key] === value))?.focus({ preventScroll: true });
     $('undo').disabled = !history.length;
     renderSavedLists();
+    automation?.render();
     if ($('media-dialog').open) renderMedia(true);
   }
   function show(id) {
@@ -1043,7 +1104,7 @@
               );
           for (const id of original.NodeIds) {
             const child = next.Nodes.find((n) => n.Id === id);
-            if (child) child.ParentId = node.Id;
+            if (child?.ParentId === original.ParentNodeId) child.ParentId = node.Id;
           }
           for (const id of original.MediaLinkIds) {
             const ref = next.MediaLinks.find((l) => l.Id === id);
@@ -1116,7 +1177,9 @@
           )
         )
           throw Error('A subgroup with that name already exists.');
-        draft.pendingGroups.push(newNode(parent, name));
+        const node = newNode(parent, name);
+        draft.pendingGroups.push(node);
+        if (structure.source === 'row') draft.row.NodeIds.push(node.Id);
       } else draft.pendingRows.push(newRow(parent, type, name));
       pendingView();
       $('structure-dialog').close();
@@ -1129,8 +1192,9 @@
     ['row-add-subgroup', 'row', 'group'],
   ])
     $(id).onclick = () => openStructure(source, kind);
-  function openSubgroup(parent) {
+  function openSubgroup(parent, rowId = '') {
     subgroupParent = parent;
+    subgroupRowId = rowId;
     $('subgroup-name').value = '';
     $('subgroup-name').setCustomValidity('');
     show('subgroup-dialog');
@@ -1150,7 +1214,17 @@
         $('subgroup-name').reportValidity();
         return;
       }
-      change(() => model.Nodes.push(newNode(subgroupParent, name)));
+      const node = newNode(subgroupParent, name), row = getRow(subgroupRowId);
+      if (subgroupRowId && (!row || row.ParentNodeId !== subgroupParent))
+        throw Error('The destination row no longer exists.');
+      change(() => {
+        model.Nodes.push(node);
+        if (row) row.NodeIds.push(node.Id);
+      });
+      if (row) {
+        collapsedRows.delete(row.Id);
+        openRows.add(row.Id);
+      }
       expandPath(subgroupParent);
       render();
       $('subgroup-dialog').close();
@@ -1545,11 +1619,12 @@
     openRow('', parent);
   };
   $('choose-add-subgroup').onclick = () => {
+    const rowId = mediaScope?.kind === 'row' ? mediaScope.id : '';
     const parent =
       mediaScope?.kind === 'row' ? getRow(mediaScope.id)?.ParentNodeId : mediaScope?.id;
     if (!parent) return;
     $('media-dialog').close();
-    openSubgroup(parent);
+    openSubgroup(parent, rowId);
   };
   $('media-convert-row').onclick = () => {
     if (mediaScope?.kind !== 'row') return;
@@ -1793,7 +1868,10 @@
           )
         )
           throw Error('This TV Show range is already in the row.');
-        change(() => Object.assign(located.ref, fields));
+        change(() => {
+          Object.assign(located.ref, fields);
+          if (fields.RangeMode !== 'Full') automation?.recordManualChoice(manualChoice(located.row?.ParentNodeId || located.ref.NodeId, located.row?.Id || '', located.ref, media, 'AllowedRange'));
+        });
       } else {
         if (!destination(state, media)) throw Error('This row no longer accepts TV Shows.');
         if (duplicate(state, media, fields))
@@ -1816,6 +1894,30 @@
     const media = await item(found.ref.JellyfinItemId);
     if (!media) throw Error('Jellyfin could not resolve this show.');
     openRange(null, media, { ...found, rowId });
+  }
+  function manualChoice(nodeId, rowId, ref, media = null, scope = '') {
+    const owner = getNode(nodeId), identity = ref.Identity || {},
+      parentIdentity = media?.Type === 'Episode' ? identity.SeriesProviderIds : identity.ProviderIds,
+      imdb = (parentIdentity || []).find((entry) => entry.Name?.toLowerCase() === 'imdb')?.Value ||
+        (media?.Type === 'Episode' ? '' : Object.entries(media?.ProviderIds || {}).find(([key]) => key.toLowerCase() === 'imdb')?.[1]) || '',
+      type = ref.ItemType || media?.Type,
+      season = media?.ParentIndexNumber ?? ref.StartSeason,
+      number = media?.IndexNumber ?? ref.StartEpisode;
+    const choice = { FranchiseNodeId: owner?.Id || nodeId, RowId: rowId || '',
+      Scope: scope || (type === 'Series' ? ref.RangeMode === 'Full' ? 'WholeShow' : ref.RangeMode === 'Seasons' ? 'Season' : 'Episode' : type === 'Episode' ? 'Episode' : 'Movie'),
+      ProviderName: 'Imdb', ProviderId: imdb,
+      JellyfinItemId: media?.Type === 'Episode' ? media.SeriesId || ref.JellyfinItemId : ref.JellyfinItemId || media?.Id || '',
+      StartSeason: season || 0, EndSeason: media?.Type === 'Episode' ? season : ref.EndSeason || season || 0,
+      StartEpisode: number || 0, EndEpisode: media?.Type === 'Episode' ? media.IndexNumberEnd || number : ref.EndEpisode || number || 0,
+      Reason: scope === 'AllowedRange' ? 'Keep the episode range selected by you' : 'Removed or skipped by you' };
+    // Season-only permitted ranges include every episode in those seasons.
+    if (scope === 'AllowedRange' && ref.RangeMode === 'Seasons') { choice.StartEpisode = 1; choice.EndEpisode = 999; }
+    return choice;
+  }
+  function recordRemovedReference(rowId, found) {
+    const affected = found.row ? [found.row] : model.Rows.filter((row) => row.MediaLinkIds.includes(found.ref.Id));
+    if (!affected.length) automation?.recordManualChoice(manualChoice(found.ref.NodeId, '', found.ref));
+    for (const row of affected) automation?.recordManualChoice(manualChoice(row.ParentNodeId, row.Id, found.ref));
   }
   function cleanupReferences() {
     const nodes = new Set(model.Nodes.map((n) => n.Id)),
@@ -1901,10 +2003,12 @@
       change(() => {
         if (kind === 'node') {
           const branch = descendants(id);
+          for (const nodeId of branch) automation?.recordManualChoice({ kind: 'deleteFranchise', FranchiseNodeId: nodeId });
           model.Nodes = model.Nodes.filter((n) => !branch.has(n.Id));
           model.MediaLinks = model.MediaLinks.filter((l) => !branch.has(l.NodeId));
           model.Rows = model.Rows.filter((r) => !branch.has(r.ParentNodeId));
         } else if (kind === 'row') {
+          automation?.recordManualChoice({ kind: 'deleteRow', FranchiseNodeId: getRow(id)?.ParentNodeId, RowId: id });
           const owned = model.Nodes.flatMap((n) =>
             n.AutoAddRecords.filter((r) => r.ScopeRowId === id && !r.RowId),
           ).map((r) => r.ReferenceId);
@@ -1915,6 +2019,7 @@
         } else {
           const found = reference(rowId, id);
           if (!found) return;
+          recordRemovedReference(rowId, found);
           if (found.direct) found.row.Items = found.row.Items.filter((i) => i.Id !== id);
           else if (found.row)
             found.row.MediaLinkIds = found.row.MediaLinkIds.filter((key) => key !== id);
@@ -2134,7 +2239,7 @@
     $('review-all').checked = !!all.length && all.every((key) => review.selected.has(key));
     $('review-all').indeterminate = review.selected.size > 0 && !$('review-all').checked;
     $('selected-count').textContent = review.selected.size + ' selected';
-    $('apply-selected').disabled = !review.selected.size;
+    $('apply-selected').disabled = !review.selected.size && !review.deliberatelyUnchecked?.size;
   }
   async function previewAutoAdd(origin = 'node') {
     return attempt(async () => {
@@ -2221,7 +2326,13 @@
         )
           return;
         for (const job of jobs) {
-          job.entries = C.autoAdd.preview(job.results, library);
+          job.entries = C.autoAdd.preview(job.results, library).map((entry) => {
+            const allowed = entry.categories.filter((name) => {
+              const rowId = job.scopeRowId || job.mappings.find((mapping) => mapping.Category === name)?.RowId || '';
+              return C.automationAllowed(base, job.nodeId, rowId, entry);
+            });
+            return allowed.length ? { ...entry, categories: allowed } : { ...entry, status: 'excluded' };
+          });
           job.diff = C.autoAdd.changes(
             C.scopeModel(base, job),
             job.nodeId,
@@ -2238,6 +2349,7 @@
           modelBefore,
           cells: [],
           expanded: new Set(),
+          deliberatelyUnchecked: new Set(),
           selected: new Set(
             jobs.flatMap((job) =>
               [...job.diff.additions, ...job.diff.removals].map((c) => reviewKey(job, c.key)),
@@ -2274,8 +2386,10 @@
         : e.target.dataset.reviewChild
           ? [e.target.dataset.reviewChild]
           : [];
-    for (const key of keys)
-      e.target.checked ? review.selected.add(key) : review.selected.delete(key);
+    for (const key of keys) {
+      if (e.target.checked) { review.selected.add(key); review.deliberatelyUnchecked?.delete(key); }
+      else { review.selected.delete(key); review.deliberatelyUnchecked?.add(key); }
+    }
     renderReview();
   };
   $('review-format-controls').onchange = (event) => attempt(() => {
@@ -2291,13 +2405,18 @@
     review.selected = new Set(review.jobs.flatMap((job) =>
       [...job.diff.additions, ...job.diff.removals].map((entry) => reviewKey(job, entry.key))));
     review.expanded.clear();
+    review.deliberatelyUnchecked?.clear();
     buildReviewCells();
     renderReview();
   });
   function selectReview(all) {
     if (!review) return;
     review.selected.clear();
-    if (all) for (const cell of review.cells) for (const key of cell.keys) review.selected.add(key);
+    review.deliberatelyUnchecked ||= new Set();
+    for (const cell of review.cells) for (const key of cell.keys) {
+      if (all) { review.selected.add(key); review.deliberatelyUnchecked.delete(key); }
+      else review.deliberatelyUnchecked.add(key);
+    }
     renderReview();
   }
   $('select-all').onclick = () => selectReview(true);
@@ -2305,7 +2424,7 @@
   $('review-all').onchange = (e) => selectReview(e.target.checked);
   $('apply-selected').onclick = () =>
     attempt(() => {
-      if (!review || !review.selected.size) return;
+      if (!review || (!review.selected.size && !review.deliberatelyUnchecked?.size)) return;
       if (fingerprint(model) !== review.modelBefore)
         throw Error('The configuration changed. Preview again.');
       let next = C.clone(review.base);
@@ -2330,6 +2449,20 @@
       const { nodeId, rowId, origin } = review;
       remember();
       model = C.normalize(next);
+      for (const job of review.jobs) for (const addition of job.diff.additions) {
+        const key = reviewKey(job, addition.key);
+        if (review.selected.has(key) || !review.deliberatelyUnchecked?.has(key)) continue;
+        // Dependency-driven deselection cannot create a persistent exclusion.
+        if ((addition.requiresRemovals || []).some((id) => !review.selected.has(reviewKey(job, id)))) continue;
+        const entries = job.entries.filter((entry) => entry.status === 'matched' && (addition.entryIds || []).includes(entry.imdbId));
+        for (const entry of entries) for (const targetRow of addition.rowIds || []) {
+          const media = addition.kind === 'show' ? entry.series || entry.item : entry.item,
+            source = addition.kind === 'show' ? { ItemType: 'Series', JellyfinItemId: media.Id, RangeMode: 'Full' } :
+              { ItemType: media.Type, JellyfinItemId: media.Id, RangeMode: 'Full' };
+          automation?.recordManualChoice(manualChoice(job.nodeId, targetRow, source, media,
+            addition.kind === 'show' ? 'WholeShow' : media.Type === 'Episode' ? 'Episode' : 'Movie'));
+        }
+      }
       markDirty();
       expandPath(nodeId);
       render();
@@ -2339,8 +2472,28 @@
       notify('Review applied. Save changes to persist.');
     });
 
-  function move(kind, id, parent, index) {
+  function move(kind, id, parent, index, sourceRowId = '') {
     if (kind === 'item') return moveMedia(id, parent, index);
+    if (kind === 'node' && parent.startsWith('row:')) {
+      const row = getRow(parent.slice(4)), node = getNode(id);
+      if (!row || !node) throw Error('The destination row no longer exists.');
+      if (node.ParentId !== row.ParentNodeId)
+        throw Error('Move the group to this row’s owning group first. Row membership keeps group ownership.');
+      const ids = row.NodeIds.filter((key) => key !== id), previous = row.NodeIds.indexOf(id);
+      if (previous >= 0 && previous < index) index--;
+      ids.splice(Math.max(0, Math.min(index, ids.length)), 0, id);
+      const source = sourceRowId && sourceRowId !== row.Id ? getRow(sourceRowId) : null;
+      if (JSON.stringify(ids) === JSON.stringify(row.NodeIds) && !source?.NodeIds.includes(id)) return;
+      change(() => {
+        row.NodeIds = ids;
+        if (source) source.NodeIds = source.NodeIds.filter((key) => key !== id);
+      });
+      openRows.add(row.Id);
+      collapsedRows.delete(row.Id);
+      expandPath(row.ParentNodeId);
+      render();
+      return;
+    }
     if (kind === 'row') {
       const row = getRow(id),
         branch = descendants(parent);
@@ -2358,6 +2511,13 @@
     if (!getNode(parent) && parent) throw Error('Choose a valid destination.');
     if (kind === 'node' && descendants(id).has(parent))
       throw Error('A group cannot contain itself.');
+    const moving = kind === 'node' ? getNode(id) : getRow(id),
+      peers = kind === 'node' ? children(parent) : rows(parent),
+      current = peers.findIndex((entry) => entry.Id === id),
+      sameParent = moving && (kind === 'node' ? moving.ParentId : moving.ParentNodeId) === parent,
+      sourceRow = kind === 'node' && sourceRowId ? getRow(sourceRowId) : null;
+    if (sameParent && current === Math.max(0, Math.min(index - (current < index ? 1 : 0), peers.length - 1)) &&
+        !sourceRow?.NodeIds.includes(id)) return;
     change(() => {
       const entry = kind === 'node' ? getNode(id) : getRow(id);
       if (!entry) throw Error('This entry no longer exists.');
@@ -2366,7 +2526,14 @@
         destination = kind === 'node' ? children(parent) : rows(parent),
         previous = destination.findIndex((x) => x.Id === id);
       if (oldParent === parent && previous >= 0 && previous < index) index--;
-      if (kind === 'node') entry.ParentId = parent;
+      if (kind === 'node') {
+        entry.ParentId = parent;
+        // Remove obsolete memberships when ownership changes. Moving a displayed
+        // reference out of a row removes only that contextual membership.
+        for (const row of model.Rows)
+          if (row.ParentNodeId !== parent || row.Id === sourceRowId)
+            row.NodeIds = row.NodeIds.filter((key) => key !== id);
+      }
       else entry.ParentNodeId = parent;
       const remaining = destination.filter((x) => x.Id !== id);
       remaining.splice(Math.max(0, Math.min(index, remaining.length)), 0, entry);
@@ -2430,7 +2597,7 @@
     }
     const entry = kind === 'node' ? getNode(id) : getRow(id);
     if (!entry) return;
-    movePayload = { kind, id };
+    movePayload = { kind, id, parent };
     $('move-parent').closest('label').hidden = false;
     $('move-scope').hidden = true;
     $('move-heading').textContent = 'Move ' + entry.Name;
@@ -2439,8 +2606,10 @@
       (kind === 'node' ? '<option value="">Top level</option>' : '') +
       model.Nodes.filter((n) => !blocked.has(n.Id))
         .map((n) => '<option value="' + n.Id + '">' + esc(path(n.Id)) + '</option>')
-        .join('');
-    $('move-parent').value = kind === 'node' ? entry.ParentId : entry.ParentNodeId;
+        .join('') +
+      (kind === 'node' ? rows(entry.ParentId).map((row) =>
+        '<option value="row:' + row.Id + '">' + esc(path(row.ParentNodeId) + ' / ' + row.Name) + ' (row)</option>').join('') : '');
+    $('move-parent').value = kind === 'node' && parent ? 'row:' + parent : kind === 'node' ? entry.ParentId : entry.ParentNodeId;
     movePositions();
     show('move-dialog');
   }
@@ -2463,8 +2632,10 @@
       $('move-position').value = String(current + 1);
       return;
     }
-    const list =
-      movePayload.kind === 'node' ? children($('move-parent').value) : rows($('move-parent').value);
+    const destination = $('move-parent').value,
+      list = movePayload.kind === 'node' && destination.startsWith('row:')
+        ? rowGroups(getRow(destination.slice(4)))
+        : movePayload.kind === 'node' ? children(destination) : rows(destination);
     $('move-position').innerHTML =
       list.map((n, i) => '<option value="' + i + '">Before ' + esc(n.Name) + '</option>').join('') +
       '<option value="' +
@@ -2480,6 +2651,7 @@
         movePayload.id,
         movePayload.kind === 'item' ? movePayload.parent : $('move-parent').value,
         Number($('move-position').value),
+        movePayload.kind === 'node' ? movePayload.parent : '',
       );
       $('move-dialog').close();
     });
@@ -2522,7 +2694,17 @@
         el,
       };
     }
-    const el = point?.closest('[data-drop]:not([data-drop="media"])');
+    let el = point?.closest('[data-drop]:not([data-drop="media"])');
+    if (!el && drag?.kind === 'node' && point?.closest('#board')) {
+      // Packed cards leave gaps between columns and below shorter cards. Resolve
+      // those points to the nearest card in two dimensions, in saved DOM order.
+      let distance = Infinity;
+      for (const card of $('board').querySelectorAll(':scope > .node-card')) {
+        const box = card.getBoundingClientRect(),
+          next = Math.hypot(Math.max(box.left - x, 0, x - box.right), Math.max(box.top - y, 0, y - box.bottom));
+        if (next < distance) { el = card; distance = next; }
+      }
+    }
     if (!el || !page.contains(el) || !drag) return null;
     let parent, index, style;
     if (el.dataset.drop === 'root') {
@@ -2539,7 +2721,9 @@
       if (!row) return null;
       parent = row.ParentNodeId;
       if (drag.kind === 'node') {
-        index = children(parent).length;
+        if (getNode(drag.id)?.ParentId !== parent) return null;
+        parent = 'row:' + row.Id;
+        index = row.NodeIds.length;
         style = 'drop-into';
       } else {
         const box = el.getBoundingClientRect(),
@@ -2556,14 +2740,17 @@
         style = 'drop-into';
       } else {
         const box = el.getBoundingClientRect(),
-          before =
-            el.dataset.axis === 'x' ? x < box.left + box.width / 2 : y < box.top + box.height / 2;
-        parent = node.ParentId;
-        index = children(parent).findIndex((n) => n.Id === node.Id) + (before ? 0 : 1);
+          before = el.dataset.axis === 'grid'
+            ? y < box.top || (y <= box.bottom && x < box.left + box.width / 2)
+            : y < box.top + box.height / 2;
+        parent = el.dataset.groupRow ? 'row:' + el.dataset.groupRow : node.ParentId;
+        const peers = el.dataset.groupRow ? rowGroups(getRow(el.dataset.groupRow)) : children(parent);
+        index = peers.findIndex((n) => n.Id === node.Id) + (before ? 0 : 1);
         style = before ? 'drop-before' : 'drop-after';
       }
     }
-    if (drag.kind === 'node' && parent && descendants(drag.id).has(parent)) return null;
+    const owner = parent.startsWith('row:') ? getRow(parent.slice(4))?.ParentNodeId : parent;
+    if (drag.kind === 'node' && owner && descendants(drag.id).has(owner)) return null;
     return { parent, index, style, el };
   }
   function dragScroll() {
@@ -2637,6 +2824,7 @@
         drag.active = true;
         page.classList.add('is-dragging');
         page.classList.toggle('is-dragging-media', drag.kind === 'item');
+        scheduleBoardLayout();
         drag.ghost = document.createElement('div');
         drag.ghost.className = 'drag-ghost';
         drag.ghost.textContent =
@@ -2661,9 +2849,10 @@
     cancelAnimationFrame(old.frame);
     old.ghost?.remove();
     page.classList.remove('is-dragging', 'is-dragging-media');
+    scheduleBoardLayout();
     clearDrop();
     if (old.active && !cancel && old.target)
-      void attempt(() => move(old.kind, old.id, old.target.parent, old.target.index));
+      void attempt(() => move(old.kind, old.id, old.target.parent, old.target.index, old.parent));
   }
   page.addEventListener('pointerup', (e) => {
     if (drag?.pointerId === e.pointerId) endDrag();
@@ -3002,7 +3191,13 @@
       expanded.has(data.expand) ? expanded.delete(data.expand) : expanded.add(data.expand);
       render();
     } else if (data.toggleRow) {
-      openRows.has(data.toggleRow) ? openRows.delete(data.toggleRow) : openRows.add(data.toggleRow);
+      if (target.getAttribute('aria-expanded') === 'true') {
+        openRows.delete(data.toggleRow);
+        collapsedRows.add(data.toggleRow);
+      } else {
+        openRows.add(data.toggleRow);
+        collapsedRows.delete(data.toggleRow);
+      }
       render();
     } else if (data.select || data.settingsNode) openNode(data.select || data.settingsNode);
     else if (data.rowSelect || data.settingsRow) openRow(data.rowSelect || data.settingsRow);
@@ -3032,7 +3227,7 @@
       wrap.style.marginRight = '0';
     }
   }
-  addEventListener('resize', fit);
+  addEventListener('resize', () => { fit(); scheduleBoardLayout(); });
   fit();
   window.FranchiseSettings = {
     getModel: () => C.clone(model),
@@ -3040,6 +3235,10 @@
     load: () => load(true),
     core: C,
   };
+  automation = window.FranchiseSettingsAutomation?.init({
+    page, $, core: C, getModel: () => model, load: () => load(true), notify, request,
+    change, render, show, isDirty: () => dirty || saving,
+  }) || null;
   viewerPreferences();
   page.addEventListener('pageshow', () => {
     if (!loaded) void attempt(load);

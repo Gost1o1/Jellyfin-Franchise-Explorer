@@ -33,6 +33,10 @@ await ImdbTransportTests.Run();
 await ArtworkTests.Run();
 await PlaybackSubtitleTests.Run();
 ImdbListConfigurationTests.Run();
+AutomationPlannerTests.Run();
+await AutomationRuntimeTests.Run();
+await MediaRecoveryTests.Run();
+await ConfigurationCommitTests.Run();
 
 if (args.Contains("--live"))
 {

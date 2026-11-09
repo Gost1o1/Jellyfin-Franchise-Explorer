@@ -11,3 +11,5 @@ This folder contains the source and test tools for [Jellyfin Franchise Explorer]
 The [settings editor development guide](docs/SETTINGS_EDITOR.md) describes the new franchise tree, nested groups, media popup, IMDb review and artwork picker, including how to generate the embedded page and validate changes.
 
 **Do not upload this folder as a Jellyfin plugin.** Use the catalog release linked in the top-level README.
+
+The [Auto Franchises and media recovery guide](docs/AUTOMATION_AND_RECOVERY.md) describes the opt-in midnight task, saved choices, and reconnecting media after a drive move.
