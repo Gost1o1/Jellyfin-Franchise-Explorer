@@ -79,7 +79,7 @@ jobs:
       - name: Install browser test dependencies
         run: |
           python -m pip install playwright
-          python -m playwright install --with-deps chromium
+          python -m playwright install --with-deps chromium firefox
       - name: Run native tile geometry tests
         working-directory: Jellyfin-Franchise-Explorer
         run: |
@@ -90,6 +90,7 @@ jobs:
           python3 scripts/test_episode_presentation_browser.py
           python3 scripts/test_viewer_preferences_browser.py
           python3 scripts/test_media_ordering_browser.py
+          python3 scripts/test_artwork_image_loading_browser.py
           python3 scripts/test_hierarchy_layout_browser.py
           python3 scripts/test_automation_recovery_browser.py
           python3 scripts/test_card_navigation_v081.py

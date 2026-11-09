@@ -198,3 +198,4 @@ Jellyfin-Franchise-Explorer/tests/AutoAdd.Tests/AutomationPlannerTests.cs
 Jellyfin-Franchise-Explorer/tests/AutoAdd.Tests/AutomationRuntimeTests.cs
 Jellyfin-Franchise-Explorer/tests/AutoAdd.Tests/ConfigurationCommitTests.cs
 Jellyfin-Franchise-Explorer/tests/AutoAdd.Tests/MediaRecoveryTests.cs
+Jellyfin-Franchise-Explorer/scripts/test_artwork_image_loading_browser.py

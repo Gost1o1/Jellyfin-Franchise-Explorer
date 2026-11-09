@@ -256,31 +256,64 @@
       );
     return itemCache.get(key);
   }
-  async function image(route) {
-    if (!route) return '';
+  function imageAddress(route) {
+    if (!route) throw Error('No artwork was selected.');
     C.artRef(route);
     const u = new URL(route, location.origin);
-    if (u.origin !== location.origin) return u.protocol === 'https:' ? u.href : '';
+    // Preserve remote HTTPS artwork without forwarding the Jellyfin token.
+    if (u.origin !== location.origin) {
+      if (u.protocol !== 'https:') throw Error('Artwork must use HTTPS.');
+      return { remote: u.href };
+    }
     const prefix = new URL(serverUrl('FranchiseExplorer/Browse'), location.origin).pathname.replace(
       /\/FranchiseExplorer\/Browse$/,
       '',
     );
     const stripped =
       prefix && u.pathname.startsWith(prefix + '/') ? u.pathname.slice(prefix.length) : u.pathname;
-    if (!/^\/(?:Items\/|FranchiseExplorer\/Artwork\/)/i.test(stripped)) return '';
-    const url = serverUrl(stripped + u.search);
-    if (!blobCache.has(url))
-      blobCache.set(
-        url,
-        fetch(url, { headers: headers() })
-          .then((r) => {
-            if (!r.ok) throw Error('Image unavailable');
-            return r.blob();
-          })
-          .then((blob) => (blob.type.startsWith('image/') ? URL.createObjectURL(blob) : ''))
-          .catch(() => ''),
-      );
+    if (!/^\/(?:Items\/|FranchiseExplorer\/Artwork\/)/i.test(stripped))
+      throw Error('This artwork path is not supported.');
+    if (/^\/Items\/[a-f\d-]+\/Images\//i.test(stripped)) {
+      for (const name of ['maxWidth', 'maxHeight']) {
+        const key = [...u.searchParams.keys()].find((entry) => entry.toLowerCase() === name.toLowerCase()) || name,
+          value = Number(u.searchParams.get(key));
+        if (!Number.isFinite(value) || value <= 0 || value > 1200) u.searchParams.set(key, '1200');
+      }
+    }
+    return { url: serverUrl(stripped + u.search) };
+  }
+  async function image(route) {
+    const address = imageAddress(route);
+    if (address.remote) return address.remote;
+    const url = address.url;
+    if (!blobCache.has(url)) {
+      const pending = fetch(url, { headers: headers(), signal: AbortSignal.timeout(45000) })
+        .then(async (response) => {
+          if (!response.ok) {
+            const advice = response.status === 401 || response.status === 403
+              ? ' Sign in again and check your library access.' : ' Select it again to retry.';
+            throw Error('Artwork could not be loaded (HTTP ' + response.status + ').' + advice);
+          }
+          const blob = await response.blob();
+          if (!blob.type.toLowerCase().startsWith('image/'))
+            throw Error('Jellyfin returned a non-image response for this artwork. Select it again to retry.');
+          return blob;
+        })
+        .catch((error) => {
+          if (blobCache.get(url) === pending) blobCache.delete(url);
+          throw error;
+        });
+      blobCache.set(url, pending);
+    }
     return blobCache.get(url);
+  }
+  async function forgetImage(route, source) {
+    if (!source) return;
+    try {
+      const { url } = imageAddress(route),
+        cached = url && blobCache.get(url);
+      if (cached && await cached === source && blobCache.get(url) === cached) blobCache.delete(url);
+    } catch (_) { /* No cached image exists for an invalid path. */ }
   }
   async function persist() {
     if (!loaded) throw Error('Wait for the plugin configuration to load.');
@@ -3176,6 +3209,7 @@
     item,
     request,
     image,
+    forgetImage,
     serverUrl,
     headers,
     notify,
