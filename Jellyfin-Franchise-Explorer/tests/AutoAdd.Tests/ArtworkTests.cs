@@ -59,7 +59,7 @@ internal static class ArtworkTests
             user.SetPermission(PermissionKind.EnableMediaPlayback, false);
             Check(controller.VideoPreview(ticket) is NotFoundResult, "Revoking user playback permission must revoke an already issued capability");
 
-            var png = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZQmcAAAAASUVORK5CYII=");
+            var png = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGM4Y5z2HwAFmQJlW9o7EQAAAABJRU5ErkJggg==");
             async Task<string> Upload(byte[] data)
             {
                 using var stream = new MemoryStream(data);

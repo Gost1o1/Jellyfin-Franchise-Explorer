@@ -6,7 +6,10 @@
       bindings = new Map();
     let picker = null,
       itemDraft = null,
-      generation = 0;
+      generation = 0,
+      previewWork = 0,
+      galleryPreviews = null;
+    const previewQueue = [];
     const esc = (value) =>
       String(value ?? '').replace(
         /[&<>"']/g,
@@ -59,15 +62,127 @@
       }
       return result;
     }
-    function previewImage(element, route) {
-      if (!route) return;
-      void host
-        .image(route)
-        .then((url) => {
-          if (!url || !element.isConnected) return;
-          element.src = url;
-        })
-        .catch(() => {});
+    function previewSurface(label) {
+      const surface = document.createElement('span');
+      surface.className = 'art-image-surface';
+      surface.dataset.label = label || 'Artwork preview';
+      return surface;
+    }
+    async function decodePhoto(blob) {
+      if (typeof global.createImageBitmap !== 'function')
+        throw Error('Image previews need a newer browser. Update your browser and try again.');
+      try {
+        const bitmap = await global.createImageBitmap(blob);
+        if (!bitmap.width || !bitmap.height || bitmap.width * bitmap.height > 40000000) {
+          bitmap.close();
+          throw Error('Choose a photo with no more than 40 million pixels.');
+        }
+        return bitmap;
+      } catch (error) {
+        if (/40 million/.test(error.message || '')) throw error;
+        throw Error('This photo could not be decoded. Choose a valid JPEG, PNG, WebP or GIF image.');
+      }
+    }
+    async function decodeExternal(image, source) {
+      image.src = source;
+      let timeout;
+      try {
+        await Promise.race([
+          image.decode(),
+          new Promise((_, reject) => {
+            timeout = setTimeout(() => reject(Error('Image loading timed out.')), 45000);
+          }),
+        ]);
+      } catch (_) {
+        image.removeAttribute('src');
+        throw Error('This external image could not be shown. Check the URL or upload a photo.');
+      } finally { clearTimeout(timeout); }
+    }
+    async function drawPreview(surface, source) {
+      if (typeof source === 'string') {
+        // External HTTPS artwork retains its direct-image behavior, without credentials.
+        const image = document.createElement('img');
+        image.alt = surface.dataset.label;
+        surface.replaceChildren(image);
+        await decodeExternal(image, source);
+        return;
+      }
+      const bitmap = await decodePhoto(source);
+      try {
+        if (!surface.isConnected) return;
+        const maximum = Number(surface.dataset.maxDimension) || 1200,
+          scale = Math.min(1, maximum / bitmap.width, maximum / bitmap.height),
+          canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+        canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+        canvas.setAttribute('role', 'img');
+        canvas.setAttribute('aria-label', surface.dataset.label);
+        canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        surface.replaceChildren(canvas);
+      } finally { bitmap.close(); }
+    }
+    function currentPreview(job) {
+      return job.surface.isConnected && (!job.group || job.group.active);
+    }
+    function drainPreviews() {
+      while (previewWork < 3 && previewQueue.length) {
+        const job = previewQueue.shift();
+        if (!currentPreview(job)) { job.resolve(); continue; }
+        previewWork++;
+        void (async () => {
+          try {
+            const source = await job.load();
+            if (currentPreview(job)) await drawPreview(job.surface, source);
+            job.resolve();
+          } catch (error) { job.reject(error); }
+          finally { previewWork--; drainPreviews(); }
+        })();
+      }
+    }
+    function queuePreview(surface, load, group = null) {
+      return new Promise((resolve, reject) => {
+        previewQueue.push({ surface, load, group, resolve, reject });
+        drainPreviews();
+      });
+    }
+    function paintPreview(surface, source) {
+      // A local upload must not wait behind stalled gallery network requests.
+      return drawPreview(surface, source);
+    }
+    function clearGalleryPreviews() {
+      if (galleryPreviews) {
+        galleryPreviews.active = false;
+        galleryPreviews.observer?.disconnect();
+        galleryPreviews = null;
+      }
+      for (let i = previewQueue.length - 1; i >= 0; i--) {
+        if (!currentPreview(previewQueue[i])) previewQueue.splice(i, 1)[0].resolve();
+      }
+    }
+    function previewImage(surface, route, source = null, group = null) {
+      if (!route && !source) return;
+      let loadedSource = source;
+      const work = source ? paintPreview(surface, source) :
+        queuePreview(surface, async () => loadedSource = await host.image(route), group);
+      void work
+        .catch((error) => {
+          if (route) void host.forgetImage?.(route, loadedSource);
+          if (!surface.isConnected || (group && !group.active)) return;
+          const message = document.createElement('span');
+          message.className = 'art-image-error';
+          message.setAttribute('role', 'status');
+          message.textContent = error.message || 'Artwork could not be loaded. Select it again to retry.';
+          surface.replaceChildren(message);
+        });
+    }
+    async function verifyImage(route) {
+      const source = await host.image(route);
+      if (typeof source === 'string') {
+        await decodeExternal(new Image(), source);
+      } else {
+        try { const bitmap = await decodePhoto(source); bitmap.close(); }
+        catch (error) { void host.forgetImage?.(route, source); throw error; }
+      }
     }
     async function videoUrl(id) {
       const body = await host.request(
@@ -111,10 +226,9 @@
       const key = slot === 'poster' ? 'PrimaryUrl' : 'BackdropUrl',
         route = art[key];
       if (route) {
-        const image = document.createElement('img');
-        image.alt = slot;
-        previewImage(image, route);
-        target.append(image);
+        const surface = previewSurface(slot);
+        target.append(surface);
+        previewImage(surface, route);
       }
       if (slot === 'backdrop' && C.validGuid(art.BackdropVideoItemId)) {
         const video = document.createElement('video');
@@ -247,11 +361,9 @@
         preview.append(video);
         playVideo(video, asset.videoId);
       } else {
-        const image = document.createElement('img');
-        image.alt = asset.label || asset.mediaTitle || 'Uploaded image';
-        if (asset.preview) image.src = asset.preview;
-        else previewImage(image, asset.path);
-        preview.append(image);
+        const surface = previewSurface(asset.label || asset.mediaTitle || 'Uploaded image');
+        preview.append(surface);
+        previewImage(surface, asset.path, asset.preview);
       }
       $('artwork-selection').textContent =
         (asset.mediaTitle || asset.label || '') +
@@ -274,6 +386,7 @@
             (a.mediaTitle + ' ' + a.label).toLowerCase().includes(query),
         );
       const gallery = $('artwork-gallery');
+      clearGalleryPreviews();
       gallery.innerHTML =
         entries
           .map(
@@ -286,7 +399,7 @@
               asset.mediaId +
               '" data-art-media-type="' +
               esc(asset.mediaType) +
-              '"><img alt="" loading="lazy"><span class="art-asset-name">' +
+              '"><span class="art-image-surface"></span><span class="art-asset-name">' +
               esc(asset.mediaTitle) +
               '</span><span class="art-asset-type">' +
               esc(asset.kind === 'video' ? 'Video · ' + asset.label : asset.label) +
@@ -298,9 +411,28 @@
             ? 'Reading associated Jellyfin artwork…'
             : 'No associated artwork. Add media to this category, or upload a photo.') +
           '</div>';
-      for (const button of gallery.querySelectorAll('[data-art-asset]')) {
-        const asset = picker.assets.find((a) => a.id === button.dataset.artAsset);
-        previewImage(button.querySelector('img'), asset.path);
+      if (!gallery.hidden) {
+        const group = galleryPreviews = { active: true, observer: null },
+          routes = new Map();
+        if (typeof global.IntersectionObserver === 'function') {
+          group.observer = new global.IntersectionObserver((observed) => {
+            if (!group.active) return;
+            for (const entry of observed) {
+              if (!entry.isIntersecting) continue;
+              group.observer.unobserve(entry.target);
+              previewImage(entry.target, routes.get(entry.target), null, group);
+            }
+          }, { root: gallery, rootMargin: '120px' });
+        }
+        for (const button of gallery.querySelectorAll('[data-art-asset]')) {
+          const asset = picker.assets.find((a) => a.id === button.dataset.artAsset),
+            surface = button.querySelector('.art-image-surface');
+          surface.dataset.label = asset.mediaTitle + ' · ' + asset.label;
+          surface.dataset.maxDimension = '320';
+          routes.set(surface, asset.path);
+          if (group.observer) group.observer.observe(surface);
+          else previewImage(surface, asset.path, null, group);
+        }
       }
       $('confirm-artwork').disabled = !picker.candidate || picker.busy;
       candidatePreview();
@@ -379,7 +511,7 @@
     $('artwork-search').oninput = renderPicker;
     $('artwork-gallery').onclick = (e) => {
       const button = e.target.closest('[data-art-asset]');
-      if (button && picker) {
+      if (button && picker && !picker.busy) {
         picker.candidate = picker.assets.find((a) => a.id === button.dataset.artAsset);
         $('art-upload-error').hidden = true;
         renderPicker();
@@ -394,24 +526,25 @@
       try {
         const art = C.clone(current.binding.art);
         if (current.slot === 'poster') {
-          if (asset.kind === 'video' && !(await host.image(asset.path)))
-            throw Error('This video has no image thumbnail. Choose an image or upload a photo.');
+          await verifyImage(asset.path);
           art.PrimaryUrl = asset.path;
         } else {
           if (asset.kind === 'video') {
             await videoUrl(asset.videoId);
             art.BackdropVideoItemId = asset.videoId;
-            art.BackdropUrl = (await host.image(asset.path)) ? asset.path : '';
+            try { await verifyImage(asset.path); art.BackdropUrl = asset.path; }
+            catch (_) { art.BackdropUrl = ''; }
           } else {
+            await verifyImage(asset.path);
             art.BackdropUrl = asset.path;
             art.BackdropVideoItemId = '';
           }
         }
-        if (picker !== current) return;
+        if (picker !== current || current.candidate !== asset) return;
         update(current.binding, art);
         $('artwork-dialog').close();
       } catch (error) {
-        if (picker === current) {
+        if (picker === current && current.candidate === asset) {
           current.busy = false;
           $('confirm-artwork').disabled = false;
           host.notify(error.message, true);
@@ -421,6 +554,7 @@
     $('artwork-dialog').addEventListener('close', () => {
       generation++;
       picker = null;
+      clearGalleryPreviews();
       $('artwork-preview').replaceChildren();
       $('artwork-gallery').replaceChildren();
       $('art-upload-preview').replaceChildren();
@@ -430,6 +564,7 @@
       const current = picker,
         file = $('art-upload').files[0];
       if (!file) return;
+      const serial = current.uploadSerial = (current.uploadSerial || 0) + 1;
       current.candidate = null;
       current.busy = true;
       $('art-upload-error').hidden = true;
@@ -440,24 +575,17 @@
           file.size > 8 * 1024 * 1024
         )
           throw Error('Choose a PNG, JPEG, WebP or GIF photo under 8 MB.');
-        const data = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = () => reject(Error('The photo could not be read.'));
-            reader.readAsDataURL(file);
-          }),
-          image = new Image();
-        image.src = data;
-        await image.decode();
-        if (image.naturalWidth * image.naturalHeight > 40000000)
-          throw Error('Choose a smaller photo.');
-        const scale = Math.min(1, 2000 / image.naturalWidth, 2000 / image.naturalHeight),
+        const bitmap = await decodePhoto(file),
           canvas = document.createElement('canvas');
-        canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-        canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-        canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+        try {
+          const scale = Math.min(1, 2000 / bitmap.width, 2000 / bitmap.height);
+          canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+          canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+          canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        } finally { bitmap.close(); }
         const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', 0.88));
         if (!blob || blob.size > 8 * 1024 * 1024) throw Error('Choose a smaller photo.');
+        if (picker !== current || current.uploadSerial !== serial) return;
         const form = new FormData();
         form.append('file', blob, 'artwork.webp');
         const result = await host.request('FranchiseExplorer/Artwork/Assets', {
@@ -467,18 +595,18 @@
           route = result.url || result.Url;
         if (!/^\/FranchiseExplorer\/Artwork\/Assets\/[a-f\d]{32}$/i.test(route || ''))
           throw Error('Invalid upload response.');
-        if (picker !== current) return;
-        const preview = canvas.toDataURL('image/webp', 0.88);
-        current.candidate = { id: C.guid(), kind: 'image', label: file.name, path: route, preview };
-        $('art-upload-preview').innerHTML = '<img alt="Uploaded photo preview">';
-        $('art-upload-preview').querySelector('img').src = preview;
+        if (picker !== current || current.uploadSerial !== serial) return;
+        current.candidate = { id: C.guid(), kind: 'image', label: file.name, path: route, preview: blob };
+        const surface = previewSurface('Uploaded photo preview');
+        $('art-upload-preview').replaceChildren(surface);
+        await paintPreview(surface, blob);
       } catch (error) {
-        if (picker === current) {
+        if (picker === current && current.uploadSerial === serial) {
           $('art-upload-error').textContent = error.message;
           $('art-upload-error').hidden = false;
         }
       } finally {
-        if (picker === current) {
+        if (picker === current && current.uploadSerial === serial) {
           current.busy = false;
           renderPicker();
         }

@@ -60,6 +60,10 @@ Selecting a video for a poster uses its thumbnail. A backdrop can use an associa
 
 Uploads accept PNG, JPEG, WebP or GIF photos under 8 MB. The browser decodes and normalizes them to a raster image before upload. Each upload creates an immutable plugin asset, so a cancelled draft cannot overwrite an existing image. Clearing an override removes the configuration reference; asset files are retained. Back up the plugin data directory along with configuration when migrating uploaded artwork between servers.
 
+Internal image previews use authenticated downloads decoded directly into a canvas. This works when the dashboard's image policy blocks `blob:` and `data:` image URLs; the editor does not relax that policy or put API tokens in image URLs. Remote HTTPS overrides retain their direct-image behavior and remain subject to the browser's policy for that host. Failed library image requests show an error and can be retried by selecting the image again.
+
+Firefox's “Invalid image request.” on older builds can occur before any upload reaches Jellyfin when an image URL is blocked. The regression check reproduces that condition with a restrictive policy; it does not establish which policy or extension a particular server uses. Check the browser Console and document's `Content-Security-Policy` header when diagnosing an affected installation.
+
 Saved artwork contains image references or a video item ID, without API tokens. Video playback uses a short-lived capability for one video, and checks viewer access again for each request. Existing logo, thumbnail and banner overrides remain stored even though the new editor shows the requested poster and backdrop slots.
 
 ## Source and validation
@@ -74,3 +78,5 @@ The embedded page is generated from:
 Run `python3 scripts/build_settings_page.py` after editing them. Commit the resulting `Configuration/configPage.html`; Jellyfin loads this self-contained embedded resource. CI checks that it is current.
 
 Validation includes model migration and source ownership tests, production-page Playwright tests against mocked Jellyfin APIs, real XML configuration round trips, artwork controller tests, and the existing browsing/playback regressions. A running Jellyfin server is still required to verify dashboard integration, real library permissions, actual IMDb retrieval and browser video codecs in the target installation. This branch does not publish a release or update the catalog.
+
+Artwork regression: install Playwright Chromium and Firefox, then run `python3 scripts/test_artwork_image_loading_browser.py`. It checks actual rendered pixels under permissive and restrictive image policies, uploads and retries, external image authentication boundaries, and stale upload responses.

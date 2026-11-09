@@ -371,6 +371,12 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
 #FranchiseExplorerConfigPage .art-search{margin-bottom:16px;font-size:12px}
 #FranchiseExplorerConfigPage .art-picker-layout{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:18px;align-items:start}
 #FranchiseExplorerConfigPage .artwork-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:12px;max-height:390px;overflow:auto;overscroll-behavior:contain;padding:3px}
+#FranchiseExplorerConfigPage .art-image-surface{display:block;width:100%;min-width:0;overflow:hidden}
+#FranchiseExplorerConfigPage .art-image-surface canvas{display:block;width:100%;height:100%;object-fit:cover}
+#FranchiseExplorerConfigPage .art-slot-preview .art-image-surface{height:100%}
+#FranchiseExplorerConfigPage .art-asset>.art-image-surface{aspect-ratio:4/3;border-radius:5px;margin-bottom:7px}
+#FranchiseExplorerConfigPage .art-asset>.art-image-surface img{display:block;width:100%;height:100%;object-fit:cover}
+#FranchiseExplorerConfigPage .art-image-error{display:grid;place-items:center;min-height:70px;padding:10px;color:#f3b7b7;font-size:12px;line-height:1.45;text-align:center;overflow-wrap:anywhere}
 #FranchiseExplorerConfigPage .art-asset{padding:6px;border-radius:9px;text-align:left;min-width:0;background:#14212c;font-weight:500}
 #FranchiseExplorerConfigPage .art-asset.selected{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
 #FranchiseExplorerConfigPage .art-asset>img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:5px;display:block;margin-bottom:7px}
@@ -388,6 +394,8 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
 #FranchiseExplorerConfigPage .art-upload-target input::file-selector-button{background:#294651;color:#ddf3f6;border:1px solid #476d79;border-radius:6px;padding:8px;margin-right:7px;cursor:pointer}
 #FranchiseExplorerConfigPage #art-upload-preview{margin-top:14px}
 #FranchiseExplorerConfigPage #art-upload-preview img{width:100%;max-height:250px;object-fit:contain;border-radius:8px}
+#FranchiseExplorerConfigPage #artwork-preview .art-image-surface canvas{height:auto;max-height:290px;object-fit:contain}
+#FranchiseExplorerConfigPage #art-upload-preview .art-image-surface canvas{height:auto;max-height:250px;object-fit:contain;border-radius:8px}
 #FranchiseExplorerConfigPage .art-source-label{margin-right:auto;color:var(--muted);font-size:11px}
 #FranchiseExplorerConfigPage .item-settings-dialog{max-width:620px}
 #FranchiseExplorerConfigPage .item-type-label{font-size:12px;color:#93b5c7;display:block;margin-bottom:16px}
@@ -399,6 +407,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
 #FranchiseExplorerConfigPage .artwork-gallery{grid-template-columns:repeat(2,minmax(0,1fr));max-height:300px}
 #FranchiseExplorerConfigPage .art-selection{padding:10px}
 #FranchiseExplorerConfigPage #artwork-preview img,#FranchiseExplorerConfigPage #artwork-preview video{max-height:180px}
+#FranchiseExplorerConfigPage #artwork-preview .art-image-surface canvas{max-height:180px}
 #FranchiseExplorerConfigPage .artwork-dialog .dialog-content{max-height:61dvh}
 #FranchiseExplorerConfigPage .artwork-dialog .dialog-head h2{font-size:17px}
 #FranchiseExplorerConfigPage .art-filters{gap:5px}

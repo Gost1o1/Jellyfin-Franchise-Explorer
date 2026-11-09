@@ -32,7 +32,7 @@ LIBRARY = [dict(Id=MOVIE1,Name='Captain America',Type='Movie',ProductionYear=201
  dict(Id=BOX,Name='Marvel Collection',Type='BoxSet',ProductionYear=2019,ProviderIds={},ImageTags={'Primary':'d'}),
  *[dict(Id=ident,Name=f'Episode {index}',Type='Episode',SeriesId=SHOW,ParentIndexNumber=1,IndexNumber=index,ProductionYear=2015,ProviderIds={'Imdb':f'tt{index+3}'}) for index,ident in enumerate([EP1,EP2,EP3],1)]]
 SOURCE = dict(entries=[dict(imdbId='tt1',title='Captain America',year=2011,type='Movie',position=1),dict(imdbId='tt2',title='Iron Man',year=2008,type='Movie',position=2),*[dict(imdbId=f'tt{i+3}',title=f'Episode {i}',year=2015,type='Episode',position=i+2) for i in range(1,4)],dict(imdbId='tt99',title='Missing movie',year=2025,type='Movie',position=6)],orderVerified=True)
-PNG=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZQmcAAAAASUVORK5CYII=')
+PNG=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGM4Y5z2HwAFmQJlW9o7EQAAAABJRU5ErkJggg==')
 BOOT='''window.__config=%s;window.__library=%s;window.__saved=null;window.__queries=[];
 localStorage.setItem('jellyfin_credentials',JSON.stringify({Servers:[{Id:'server',UserId:'viewer',LocalAddress:location.origin,AccessToken:'fixture-token'}]}));
 window.ApiClient={getCurrentUserId:()=> 'viewer', accessToken:()=> 'fixture-token',

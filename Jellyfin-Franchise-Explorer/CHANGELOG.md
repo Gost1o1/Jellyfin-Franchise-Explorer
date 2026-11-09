@@ -1,4 +1,11 @@
-## 0.8.9.26 (unreleased)
+## 0.8.9.27 (unreleased)
+
+- Fix settings artwork previews and photo uploads when browser image policies block blob/data image URLs, including Firefox's pre-upload “Invalid image request.” error.
+- Show image request failures and allow retry, retain authenticated library requests and credential-free saved references, and preserve external HTTPS artwork.
+- Load gallery previews near the viewport, bound thumbnail size and simultaneous requests, and preserve newer uploads during pending confirmations or older upload responses.
+- Add Chromium and Firefox regressions for image policies, JPEG/WebP uploads, large galleries, retries, external-image timeouts and upload races.
+
+## 0.8.9.26
 
 - Add opt-in server-side Auto Franchises for the eleven configured IMDb lists, running at midnight in the Jellyfin server's local timezone with restart catch-up and no overlapping runs.
 - Create TV Shows, Movies and Chronological Order rows; expand eligible series episodes at their source position, with bundles by default and individual-episode overrides.
