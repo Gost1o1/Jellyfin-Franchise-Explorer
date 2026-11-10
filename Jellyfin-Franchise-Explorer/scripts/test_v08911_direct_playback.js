@@ -13,7 +13,7 @@ assert(script.includes("sessionStorage.getItem('fe-quickplay-v1')"),'Home bridge
 const start=script.indexOf('  window.FranchiseExplorerNativePlayback={');
 const end=script.indexOf('  function startIfReady(){',start);
 assert(start>=0&&end>start);
-assert(script.includes("window.__franchiseAutoplayBridgeVersion==='0.8.9.27'"));
+assert(script.includes("window.__franchiseAutoplayBridgeVersion==='0.8.9.28'"));
 assert(script.includes('confirmLocalTimeline(id)'));
 assert(script.includes('enforceStartOver(id)'));
 assert(script.includes('button.dataset.positionticks=String(options.startOver?0:'));
@@ -22,7 +22,7 @@ assert(script.includes("wrapper.className='card itemAction fe-direct-playback-sh
 assert(script.includes('wrapper.dataset.serverid=serverId'));
 assert(script.includes("wrapper.dataset.mediatype='Video'"));
 assert(script.includes("wrapper.dataset.type=options.type==='Episode'?'Episode':'Movie'"));
-assert(script.includes(':not([data-fe-version="0.8.9.27"])'));
+assert(script.includes(':not([data-fe-version="0.8.9.28"])'));
 const id='11111111-1111-1111-1111-111111111111';
 let parent=null,clicks=0,verified=0,forced=0;
 let resolvePreferences,rejectPreferences;
@@ -52,7 +52,7 @@ const context={
 vm.runInNewContext(script.slice(start,end),context);
 const native=context.window.FranchiseExplorerNativePlayback;
 (async()=>{
-assert.equal(native.version,'0.8.9.27');
+assert.equal(native.version,'0.8.9.28');
 assert.equal(native.play(id,{startOver:true,positionTicks:999999}),false,'without a shortcuts host, fallback must remain available');
 parent=element();
 const initialTimers=timers.length;
@@ -93,5 +93,5 @@ assert.equal(parent.children[2].isConnected,false);
 assert.equal(preferenceErrors.at(-1),'Playback preparation failed',
   'An exception after successful enrollment must reach the visible error handler');
 assert.equal(clicks,1);
-console.log('v0.8.9.27 native home playback contract passed (offline DOM simulation; live Jellyfin still required).');
+console.log('v0.8.9.28 native home playback contract passed (offline DOM simulation; live Jellyfin still required).');
 })().catch(error=>{console.error(error);process.exitCode=1;});

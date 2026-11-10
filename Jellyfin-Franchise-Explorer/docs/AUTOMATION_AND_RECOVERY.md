@@ -22,8 +22,18 @@ Scheduled changes cannot overwrite an unsaved editor draft. If the server config
 
 ## Recover after moving media
 
-Bring all drives online and complete a Jellyfin library scan. **Media recovery → Check references** lists verified replacements, ambiguous versions and missing media. A unique match requires compatible media type and stable IMDb/TMDb/TVDb identity; episodes also require a verified parent show and episode coordinates. Automatic reconnection follows completed healthy library changes. Startup captures metadata passively.
+Bring all drives online and complete a Jellyfin library scan. **Media recovery → Check references** lists verified replacements, ambiguous versions and missing media. A unique match requires compatible media type and stable IMDb/TMDb/TVDb identity; episodes also require a verified parent show and episode coordinates. Automatic reconnection follows healthy library changes and also checks existing references on startup. A periodic catch-up check runs once a minute so missed events do not leave references permanently stale; incomplete snapshots retry after 15 seconds.
 
-Ambiguous versions require your selection. Legacy manual references without stored provider identity need an explicit library search and choice. No match is guessed from its display name. Recovery changes reference targets while preserving franchise/row order, selected ranges, artwork overrides and plugin reference IDs. Plugin-owned per-user timeline queues, ticks and completed keys are remapped transactionally. Jellyfin's own watched history cannot be reconstructed if it was lost during the move.
+Ambiguous versions require your selection. Older imports can use trustworthy saved IMDb ownership evidence even when the move preceded the first recovery snapshot. Legacy manual references without stored provider identity need an explicit library search and choice. No match is guessed from its display name. Recovery changes reference targets while preserving franchise/row order, selected ranges, artwork overrides and plugin reference IDs. Plugin-owned per-user timeline queues, ticks and completed keys are remapped transactionally. Jellyfin's own watched history cannot be reconstructed if it was lost during the move.
 
 Portable snapshots improve future moves; the first upgrade cannot recover identity that was never saved. Keep a backup of the plugin configuration and plugin data folder. Browser tests and server-component tests use fixtures; an installed Jellyfin server is still needed to validate a particular drive migration and native-client behavior.
+
+## Missing items that still appear in settings
+
+Saved labels and native Jellyfin IDs are separate. A move or rescan can change native IDs while the plugin still retains a title. Older direct franchise links now appear under **Franchise media** in the tree as well as the media popup; showing that section does not move or recreate anything.
+
+A notice above Settings reports unresolved references, unavailable scans and recovery API failures even when Settings and Advanced are closed. Choose **Review media references** or **Review reference** beside an unavailable title. The review keeps the saved name and pre-fills a library search; select the real replacement and use **Reconnect selected**. Reference IDs, membership, ranges, artwork and plugin progress remain in place.
+
+Automatic reconnection still requires a healthy snapshot and one verified identity. An unrelated offline file no longer blocks an explicit available replacement while the library is not scanning. Missing identity or conflicting versions remain a manual decision. If the server reconnects a title while the editor is open, the notice offers **Reload saved settings**; the draft is not silently replaced, and explicit reload keeps the previous draft in Undo.
+
+The viewer-facing browser counts only titles that resolve through that viewer's Jellyfin access. It uses a neutral unavailable message for deleted and inaccessible media instead of exposing saved administrator labels or reporting nonexistent playable titles.

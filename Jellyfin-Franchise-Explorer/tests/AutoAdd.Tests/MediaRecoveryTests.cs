@@ -55,6 +55,7 @@ internal static class MediaRecoveryTests
         Check(!MediaRecoveryPlanner.Verified(MediaRecoveryPlanner.Capture(oldEpisode), newEpisode), "An episode with a conflicting series cannot reconnect"); newEpisode.SeriesProviderIds["Imdb"] = "tt777";
         var legacy = new PluginConfiguration(); var range = Link(oldShow); range.Identity = null; range.RangeMode = "Episodes"; range.StartSeason = range.EndSeason = 1; range.StartEpisode = 2; range.EndEpisode = 3;
         legacy.MediaLinks.Add(range); var node = new FranchiseNode(); legacy.Nodes.Add(node); node.AutoAddRecords.Add(new() { ReferenceId = range.Id, ImdbIds = new() { "tt778" } });
+        node.AutoAddRecords[0].Signature = MediaRecoveryPlanner.LegacySignature(legacy, node.AutoAddRecords[0]);
         Check(MediaRecoveryPlanner.Review(legacy, Library(newShow, newEpisode)).Entries.Single().Status == "Verified", "Consistent legacy episode IDs may recover their exact show parent");
         node.AutoAddRecords[0].ImdbIds.Add("tt404");
         Check(MediaRecoveryPlanner.Review(legacy, Library(newShow, newEpisode)).Entries.Single().Status == "ManualReview", "Unresolved legacy evidence must not infer a show parent");

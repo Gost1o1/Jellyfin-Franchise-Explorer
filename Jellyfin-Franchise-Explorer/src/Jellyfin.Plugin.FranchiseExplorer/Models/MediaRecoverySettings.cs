@@ -1,6 +1,6 @@
 namespace Jellyfin.Plugin.FranchiseExplorer.Models;
 
-/// <summary>Passive snapshot capture is enabled on upgrade; repair requires a healthy library.</summary>
+/// <summary>Snapshot capture and verified automatic reconnection are enabled on upgrade; explicit repair can use available media.</summary>
 public sealed class MediaRecoverySettings
 {
     public bool Enabled { get; set; } = true;

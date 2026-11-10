@@ -200,6 +200,15 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
   const imageKeys = {Primary:'primaryUrl',Backdrop:'backdropUrl',Logo:'logoUrl',Thumb:'thumbUrl',Banner:'bannerUrl'};
   const text = (el, value) => {el.textContent = value == null ? '' : String(value);return el;};
   const safeGuid = v => /^[a-f\d]{32}$|^[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12}$/i.test(String(v || ''));
+  const nativeItemKey = id => String(id || '').replace(/-/g,'').toLowerCase();
+  let activeItemLoads=0;
+  const pendingItemLoads=[];
+  function loadViewerItem(load){
+    return new Promise(resolve=>{
+      const start=()=>{activeItemLoads++;Promise.resolve().then(load).then(resolve,()=>resolve(null)).finally(()=>{activeItemLoads--;pendingItemLoads.shift()?.();});};
+      if(activeItemLoads<6)start();else pendingItemLoads.push(start);
+    });
+  }
   let statusTimer=null;
   function logBrowseError(message){
     const detail=String(message||'Unknown error');
@@ -243,13 +252,13 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
   }
   async function getItem(id){
     if(!safeGuid(id))return null;
-    id=String(id).toLowerCase();
-    if(!itemCache.has(id)){
-      const promise=api('/Items/'+encodeURIComponent(id)+'?userId='+encodeURIComponent(userId))
-        .then(x=>(x&&safeGuid(x.Id))?x:null).catch(()=>null);
-      itemCache.set(id,promise);
+    const key=nativeItemKey(id);
+    if(!itemCache.has(key)){
+      const promise=loadViewerItem(()=>api('/Items/'+encodeURIComponent(id)+'?userId='+encodeURIComponent(userId))
+        .then(x=>(x&&safeGuid(x.Id))?x:null));
+      itemCache.set(key,promise);
     }
-    return await itemCache.get(id);
+    return await itemCache.get(key);
   }
   async function secureImage(path){
     if(!path)return '';
@@ -477,10 +486,10 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
     return tile;
   }
   async function showNode(n,grid,ticket){
-    const counts=mediaCounts(n.id);
-    const subtitle='TV Shows '+counts.tvShows+' · Movies '+counts.movies;
-    const tile=makeTile(n.name||'Unnamed group',subtitle,n.nodeType==='Franchise'?'':n.nodeType,()=>openGroup(n.id),'Group');
+    const name=n.name||'Unnamed group';
+    const tile=makeTile(name,'Checking available titles…',n.nodeType==='Franchise'?'':n.nodeType,()=>openGroup(n.id),'Group');
     grid.append(tile.button);shownCards.push(tile.button);
+    void mediaCounts(n.id).then(counts=>{if(ticket!==renderSerial)return;const subtitle=countText(counts);text(tile.button.querySelector('small'),subtitle);tile.button.setAttribute('aria-label',name+' — '+subtitle);});
     void nodeArtwork(n,'Primary').then(url=>{if(ticket===renderSerial)addImageToTile(tile,url);});
   }
   function drawBreadcrumbs(node){
@@ -494,23 +503,27 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
     while(changed){changed=false;for(const n of catalog.nodes){if(ids.has(n.parentId)&&!ids.has(n.id)){ids.add(n.id);changed=true;}}}
     return catalog.links.filter(l=>ids.has(l.nodeId));
   }
-  function mediaCounts(root){
+  async function mediaCounts(root){
     const ids=new Set([root]);let changed=true;
     while(changed){changed=false;for(const n of catalog.nodes){if(ids.has(n.parentId)&&!ids.has(n.id)){ids.add(n.id);changed=true;}}}
     const items=[...catalog.links.filter(l=>ids.has(l.nodeId)),
       ...(catalog.rows||[]).filter(r=>ids.has(r.parentNodeId)).flatMap(r=>r.items||[])];
     // One title may appear in several rows or episode ranges. Count the
     // distinct Jellyfin titles once, without counting collection containers.
-    const seen=new Set();let tvShows=0,movies=0;
-    for(const item of items){
-      const id=String(item.itemId||'').toLowerCase();
+    const seen=new Set(),lookups=[];let tvShows=0,movies=0,unavailable=0;
+    for(const reference of items){
+      const id=nativeItemKey(reference.itemId);
       if(!id||seen.has(id))continue;
-      const kind=String(item.itemType||'').toLowerCase();
-      if(kind==='series'||kind==='tv show'){tvShows++;seen.add(id);}
-      else if(kind==='movie'){movies++;seen.add(id);}
+      seen.add(id);lookups.push(getItem(reference.itemId));
     }
-    return {tvShows,movies};
+    for(const item of await Promise.all(lookups)){
+      if(!item){unavailable++;continue;}
+      if(item.Type==='Series')tvShows++;
+      else if(item.Type==='Movie')movies++;
+    }
+    return {tvShows,movies,unavailable};
   }
+  function countText(counts){return 'TV Shows '+counts.tvShows+' · Movies '+counts.movies+(counts.unavailable?' · Some titles unavailable':'');}
   function defaultRows(id, groups, directMedia){
     // Backward compatible: v0.7.2 franchises appear in rows without changing
     // their saved groups or requiring an admin migration.
@@ -586,6 +599,9 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
     const mediaRank=new Map(order.map((id,i)=>[id,i]));
     const orderedMedia=order.length?[...combined].sort((a,b)=>(mediaRank.get(a.id)??99999)-(mediaRank.get(b.id)??99999) || (combined.indexOf(a)-combined.indexOf(b))):combined;
     const rowMedia=await groupedPresentation(r,orderedMedia,ticket);
+    const resolvedMedia=await Promise.all(rowMedia.map(reference=>getItem(reference.itemId))),
+      unavailable=resolvedMedia.filter(item=>!item).length;
+    if(ticket!==renderSerial)return 0;
     const groupMatches=rowGroups.filter(n=>!filter||n.name.toLocaleLowerCase().includes(filter));
     const orderedGroups=$('sort').value==='alpha'?groupMatches.sort(compare):groupMatches;
     for(const n of orderedGroups)void showNode(n,frame.track,ticket);
@@ -598,7 +614,8 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
       // original row order, not network completion order (the back-button bug).
       for(const tile of batch){if(!tile)continue;frame.track.append(tile.button);shownCards.push(tile.button);seen++;}
     }
-    if(!seen){const p=document.createElement('div');p.className='shelf-empty';p.textContent=(r.rowType==='Timeline'?'No titles assigned to this viewing order yet.':'No matching items in this row.');frame.track.append(p);}
+    if(!seen){const p=document.createElement('div');p.className='shelf-empty';p.textContent=filter?'No titles match your search in this row.':unavailable?'Titles in this row are unavailable or cannot be accessed with your account.':(r.rowType==='Timeline'?'No titles assigned to this viewing order yet.':'No items assigned to this row yet.');frame.track.append(p);}
+    else if(unavailable&&!filter){const p=document.createElement('div');p.className='shelf-empty';p.textContent='Some titles are unavailable or cannot be accessed with your account.';frame.track.append(p);}
     frame.count.textContent=seen+' item'+(seen===1?'':'s');
     return seen;
   }
@@ -613,7 +630,7 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
     $('browse-back').disabled=!selected;$('browse-back').onclick=()=>openGroup(selected?selected.parentId:'');
     text($('hero-type'),selected?selected.nodeType:'Virtual library');text($('hero-title'),title);
     text($('hero-description'),selected?(selected.overview||'Browse the subgroups, movies, and TV shows linked to this virtual franchise.'):'Browse your franchise groups, eras, phases, and viewing references.');
-    if(selected){const counts=mediaCounts(selected.id);text($('hero-count'),'TV Shows '+counts.tvShows+' · Movies '+counts.movies);}
+    if(selected){text($('hero-count'),'Checking available titles…');void mediaCounts(selected.id).then(counts=>{if(ticket===renderSerial)text($('hero-count'),countText(counts));});}
     else text($('hero-count'),catalog.nodes.filter(x=>!x.parentId).length+' top-level franchises');
     $('hero-poster-wrap').classList.add('hidden');$('hero-backdrop').classList.add('hidden');$('hero-backdrop-video').classList.add('hidden');
     if(selected){
@@ -647,7 +664,8 @@ h1{font-size:clamp(1.65rem,3.6vw,3.6rem);line-height:1.13;margin:9px 0 8px;lette
       shown=visible.length;
     }
     if(ticket!==renderSerial)return;
-    $('empty').classList.toggle('hidden',shown>0);
+    text($('empty'),filter?'No titles or groups match your search.':'No available items to display in this group.');
+    $('empty').classList.toggle('hidden',shown>0||!!$('rows-container').children.length);
     status('');
     // On return from Jellyfin details/player, restore the same group and
     // scroll location after the media cards have actually been rendered.

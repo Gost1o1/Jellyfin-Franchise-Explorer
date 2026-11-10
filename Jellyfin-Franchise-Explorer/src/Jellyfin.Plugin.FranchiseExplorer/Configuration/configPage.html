@@ -280,6 +280,11 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
 #FranchiseExplorerConfigPage .media-entry{display:grid;grid-template-columns:16px minmax(0,1fr) auto;gap:7px;align-items:center;padding:8px;border:1px solid #344450;border-radius:7px;background:#1a2631}
 #FranchiseExplorerConfigPage .media-entry>.icon{width:15px;height:15px;color:#87acbe}
 #FranchiseExplorerConfigPage .media-title{font-size:12px;overflow-wrap:anywhere}
+#FranchiseExplorerConfigPage .media-availability{display:block;font-size:10px;color:var(--amber);margin-top:3px}
+#FranchiseExplorerConfigPage .media-availability[hidden]{display:none}
+#FranchiseExplorerConfigPage .recover-reference{font-size:10px;padding:4px;white-space:normal}
+#FranchiseExplorerConfigPage .recover-reference[hidden]{display:none}
+#FranchiseExplorerConfigPage .franchise-media>h4{font-size:11px;color:var(--muted);margin:10px 0 7px}
 #FranchiseExplorerConfigPage .media-entry .media-actions{display:flex;align-items:center;gap:3px}
 #FranchiseExplorerConfigPage .media-entry .icon-button{width:28px;min-height:30px;padding:4px}
 #FranchiseExplorerConfigPage .media-entry .edit-range{font-size:10px;padding:3px 5px;min-height:30px}
@@ -485,6 +490,11 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
 #FranchiseExplorerConfigPage .automation-change summary{cursor:pointer}
 #FranchiseExplorerConfigPage .automation-preview-row{border-top:1px solid var(--line);margin-top:10px;padding-top:9px;font-size:13px}
 #FranchiseExplorerConfigPage .automation-preview-row ul{padding-left:20px;margin:5px 0}
+#FranchiseExplorerConfigPage .recovery-focused{border-color:#2fc0cf;box-shadow:0 0 0 1px #2fc0cf}
+#FranchiseExplorerConfigPage .recovery-notice{flex-wrap:wrap}
+#FranchiseExplorerConfigPage #recovery-notice-count{flex:1 1 240px;min-width:0;overflow-wrap:anywhere}
+#FranchiseExplorerConfigPage .recovery-notice button{max-width:100%;white-space:normal}
+#FranchiseExplorerConfigPage #recovery-dialog-error{padding:10px;border:1px solid #90515c;background:#4c292e;color:#ffd1d1;border-radius:8px;overflow-wrap:anywhere}
 #FranchiseExplorerConfigPage .automation-recovery-search{display:flex;align-items:end;gap:8px;margin-top:13px}
 #FranchiseExplorerConfigPage .automation-recovery-search .field{flex:1;min-width:0}
 #FranchiseExplorerConfigPage .automation-candidate{padding-left:18px;color:var(--muted);font-size:11px}
@@ -525,15 +535,16 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
 <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
 </defs></svg>
 <main class="fx-wrap">
-<header class="top"><div><h1>Franchise Explorer<span class="version">v0.8.9.27</span></h1></div><div class="top-actions"><span id="save-state" class="save-state" role="status">Loading configuration…</span><button class="icon-button quiet" id="undo" aria-label="Undo" data-help="Undo the most recent unsaved edit or move." disabled><svg class="icon"><use href="#i-undo"/></svg></button><button class="icon-button quiet" id="reset" aria-label="Reload saved settings" data-help="Reload the saved plugin configuration. Unsaved changes can be restored with Undo."><svg class="icon"><use href="#i-reset"/></svg></button><button class="primary" id="save" data-help="Save these changes to the Jellyfin plugin configuration.">Save changes</button></div></header>
+<header class="top"><div><h1>Franchise Explorer<span class="version">v0.8.9.28</span></h1></div><div class="top-actions"><span id="save-state" class="save-state" role="status">Loading configuration…</span><button class="icon-button quiet" id="undo" aria-label="Undo" data-help="Undo the most recent unsaved edit or move." disabled><svg class="icon"><use href="#i-undo"/></svg></button><button class="icon-button quiet" id="reset" aria-label="Reload saved settings" data-help="Reload the saved plugin configuration. Unsaved changes can be restored with Undo."><svg class="icon"><use href="#i-reset"/></svg></button><button class="primary" id="save" data-help="Save these changes to the Jellyfin plugin configuration.">Save changes</button></div></header>
 <div id="automation-notice" class="automation-notice" role="status" hidden><span id="automation-notice-count"></span><button id="automation-notice-review">Review changes</button></div><p id="automation-error" role="alert" hidden></p>
+<div id="recovery-notice" class="automation-notice recovery-notice" role="status" hidden><span id="recovery-notice-count"></span><button id="recovery-notice-review">Review media references</button><button id="recovery-reload" data-automation-action data-help="Reload server references. The previous draft can be restored with Undo." hidden>Reload saved settings</button></div>
 <details class="panel" id="settings"><summary><svg class="icon label-icon"><use href="#i-settings"/></svg>Settings<span class="section-count"></span></summary><div class="panel-body settings-grid">
 <div class="setting" data-help="Enable subtitles for franchise playback in this browser."><label class="setting-label" id="subtitles-label" for="subtitles">Enable subtitles</label><button type="button" class="switch" role="switch" aria-checked="false" aria-labelledby="subtitles-label" id="subtitles"><span class="switch-label">Off</span><span class="switch-track"></span></button></div>
 <label class="setting" data-help="Choose the subtitle language to use when subtitles are enabled."><span class="setting-label">Subtitle language</span><select id="language" aria-label="Subtitle language"><option value="auto">Jellyfin preference</option><option value="en">English</option><option value="de">Deutsch</option><option value="es">Español</option><option value="fr">Français</option><option value="ja">日本語</option></select></label>
 <div class="setting" data-help="Hide titles managed by a franchise from the main menu's Continue Watching and Next Up rows. Their watched history is preserved."><label class="setting-label" id="hide-label" for="hide-native">Hide franchise Continue Watching and Next Up from main menu</label><button type="button" class="switch" role="switch" aria-checked="false" aria-labelledby="hide-label" id="hide-native"><span class="switch-label">Off</span><span class="switch-track"></span></button></div>
 <details class="panel" id="advanced"><summary><svg class="icon label-icon"><use href="#i-box"/></svg>Advanced settings<span class="section-count"></span></summary><div class="panel-body"><div class="button-row"><button id="export" data-help="Download a JSON backup of the plugin configuration.">Export backup</button><button id="import" data-help="Import a Franchise Explorer configuration backup for review before saving.">Import backup</button><input id="import-file" type="file" accept=".json,application/json" hidden></div><section class="imdb-library" aria-labelledby="imdb-library-heading"><h3 id="imdb-library-heading">IMDb lists</h3><div id="saved-imdb-lists"></div><button id="add-imdb-list" data-help="Save a named IMDb URL for use in Auto Add. Saving a list does not import titles. Use Save changes to persist the library.">＋ Add IMDb list</button></section>
 <section class="automation-section" aria-labelledby="auto-settings-heading"><h3 id="auto-settings-heading">Auto Franchises</h3><label class="setting"><span>Enable midnight updates</span><input id="auto-enabled" type="checkbox" data-automation-action></label><p id="auto-schedule">Daily · 12:00 AM · Jellyfin server local time</p><small id="auto-registry-count">Loading server registry…</small><div class="automation-toolbar"><button id="auto-manage" data-automation-action>Manage auto list</button><button id="auto-preview" data-automation-action>Preview build</button><button id="auto-run" data-automation-action>Run now</button><button id="auto-review">Pending review (0)</button><button id="auto-manage-choices">Saved choices (0)</button></div><p>Only enabled entries in this auto list are scheduled. Reusable IMDb lists remain separate. New franchises have TV Shows, Movies and Chronological Order rows.</p><p>New verified matches can be added. Saved skips, deleted rows, manual ranges, artwork and custom rows are protected. Removals and protected changes need review.</p><p id="auto-run-status" role="status">Last run: loading…</p></section>
-<section class="automation-section" aria-labelledby="recovery-settings-heading"><h3 id="recovery-settings-heading">Media recovery</h3><label class="setting"><span>Keep stable media identities for recovery</span><input id="recovery-enabled" type="checkbox" checked></label><label class="setting"><span>Reconnect verified matches after a healthy library scan</span><input id="recovery-auto" type="checkbox" checked></label><p>Save changes to store recovery preferences. Recovery preserves rows, artwork, ranges and plugin progress. Ambiguous or missing matches need review.</p><div class="automation-toolbar"><button id="recovery-check" data-automation-action>Check recovery</button><button id="recovery-review">Review recovery (0)</button></div><p id="recovery-status" role="status">Last check: loading…</p></section>
+<section class="automation-section" aria-labelledby="recovery-settings-heading"><h3 id="recovery-settings-heading">Media recovery</h3><label class="setting"><span>Keep stable media identities for recovery</span><input id="recovery-enabled" type="checkbox" checked></label><label class="setting"><span>Reconnect verified matches after library changes or restart</span><input id="recovery-auto" type="checkbox" checked></label><p>Save changes to store recovery preferences. Recovery preserves rows, artwork, ranges and plugin progress. Ambiguous or missing matches need review.</p><div class="automation-toolbar"><button id="recovery-check" data-automation-action>Check recovery</button><button id="recovery-review">Review recovery (0)</button></div><p id="recovery-status" role="status">Last check: loading…</p></section>
 </div></details>
 </div></details>
 <details class="panel" id="franchises"><summary><svg class="icon label-icon"><use href="#i-grid"/></svg>Franchises<span id="franchise-count" class="section-count"></span></summary><div class="panel-body"><div class="franchises-toolbar"><button id="add-franchise" data-help="Create a franchise, then use its settings icon for IMDb Auto Add and its + icon for rows or subcategories.">＋ Add franchise</button></div><div id="board" class="board"></div></div></details>
@@ -544,7 +555,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
 <dialog id="auto-preview-dialog" aria-labelledby="auto-preview-heading"><div class="dialog-head"><h2 id="auto-preview-heading">Auto Franchises · Build preview</h2><button class="icon-button quiet" data-close="auto-preview-dialog" aria-label="Close build preview">✕</button></div><div class="dialog-content"><p class="automation-dialog-note">Current server configuration and library matches. Apply only selected changes; midnight updates can stay off. Protected changes start unselected.</p><div id="auto-preview-results"></div></div><div class="dialog-footer"><span id="auto-preview-selected-count" class="selected-count"></span><button data-close="auto-preview-dialog">Close</button><button id="auto-preview-apply" class="primary" data-automation-action disabled>Apply selected</button></div></dialog>
 <dialog id="auto-inbox-dialog" aria-labelledby="auto-inbox-heading"><div class="dialog-head"><h2 id="auto-inbox-heading">Auto Franchises · Pending changes</h2><button class="icon-button quiet" data-close="auto-inbox-dialog" aria-label="Close pending changes">✕</button></div><div class="dialog-content"><p class="automation-dialog-note">Protected changes start unselected. Restore / Apply selected rechecks the current configuration and library. Keep my choices acknowledges selected changes, or all shown changes when none are selected.</p><div id="auto-inbox-list"></div></div><div class="dialog-footer"><button data-close="auto-inbox-dialog">Close</button><button id="auto-keep-choices" data-automation-action>Keep my choices</button><button id="auto-restore-selected" class="primary" data-automation-action disabled>Restore / Apply selected</button></div></dialog>
 <dialog id="auto-choices-dialog" aria-labelledby="auto-choices-heading"><div class="dialog-head"><h2 id="auto-choices-heading">Auto Franchises · Saved choices</h2><button class="icon-button quiet" data-close="auto-choices-dialog" aria-label="Close saved choices">✕</button></div><div class="dialog-content"><p class="automation-dialog-note">Only selected restrictions are restored. Other show, season and episode restrictions stay protected. The server verifies an available candidate before clearing a restriction; later builds can add verified media.</p><div id="auto-choices-list"></div></div><div class="dialog-footer"><button data-close="auto-choices-dialog">Close</button><button id="auto-restore-rules" class="primary" data-automation-action disabled>Restore selected choices</button></div></dialog>
-<dialog id="recovery-dialog" aria-labelledby="recovery-heading"><div class="dialog-head"><h2 id="recovery-heading">Media recovery · Review matches</h2><button class="icon-button quiet" data-close="recovery-dialog" aria-label="Close recovery review">✕</button></div><div class="dialog-content"><p class="automation-dialog-note">Verified identity matches, ambiguous candidates and missing media are shown separately. Choose the actual library item explicitly. Missing media stays in place until it becomes available.</p><div id="recovery-results"></div></div><div class="dialog-footer"><button data-close="recovery-dialog">Close</button><button id="recovery-apply" class="primary" data-automation-action disabled>Reconnect selected</button></div></dialog>
+<dialog id="recovery-dialog" aria-labelledby="recovery-heading"><div class="dialog-head"><h2 id="recovery-heading">Media recovery · Review matches</h2><button class="icon-button quiet" data-close="recovery-dialog" aria-label="Close recovery review">✕</button></div><div class="dialog-content"><p class="automation-dialog-note">Verified identity matches, ambiguous candidates and missing media are shown separately. Choose the actual library item explicitly. Missing media stays in place until it becomes available.</p><p id="recovery-dialog-status" role="status"></p><p id="recovery-dialog-error" role="alert" hidden></p><div id="recovery-results"></div></div><div class="dialog-footer"><button data-close="recovery-dialog">Close</button><button id="recovery-refresh" data-automation-action>Refresh report</button><button id="recovery-apply" class="primary" data-automation-action disabled>Reconnect selected</button></div></dialog>
 <dialog id="franchise-dialog" class="franchise-dialog" aria-labelledby="franchise-heading"><div class="dialog-head"><div><h2 id="franchise-heading"><svg class="icon"><use href="#i-gear"/></svg>Franchise settings</h2><div id="franchise-scope" class="scope-title"></div></div><button class="icon-button quiet" data-close="franchise-dialog" aria-label="Close franchise settings">✕</button></div><div class="dialog-content"><div class="franchise-fields"><section class="structure-tools"><h3>Groups and subgroups</h3><div id="franchise-structure-owner" class="structure-owner"></div><div class="button-row"><button id="franchise-add-row">＋ Add group / row</button><button id="franchise-add-subgroup">＋ Add subgroup</button></div><div id="franchise-pending-structure" class="pending-structure"></div></section>
 <label class="field" data-help="Rename this franchise or subgroup. Changes are staged until you save or apply selected changes."><span>Title</span><input id="detail-title" maxlength="120" required></label>
 <label class="field" data-help="Edit the description for this franchise or subgroup."><span>Description</span><textarea id="detail-description" maxlength="1500"></textarea></label>
@@ -2626,8 +2637,11 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
   function init(context) {
     const { page, $, getModel, load, notify, request, change } = context;
     if (!$('auto-manage')) return null;
-    let status = null, recovery = null, preview = null, busy = false, generation = 0, editingId = '';
+    let status = null, recovery = null, preview = null, busy = false, generation = 0, editingId = '',
+      recoveryError = '', recoveryLoading = false, recoveryFocus = '', lastStatusError = '';
     const selected = new Set(), selectedRules = new Set(), previewSelected = new Set(), recoveryChoices = new Map();
+    const recoveryQueries = new Map();
+    const referenceKey = (value) => String(value || '').replace(/-/g, '').toLowerCase();
     const settings = () => camel((context.isDirty?.() && getModel().AutoFranchises) || status?.settings || getModel().AutoFranchises || {});
     const registrations = () => list(settings().registry);
     const pending = () => list(settings().pendingChanges).filter((entry) => entry.status === 'Pending');
@@ -2642,6 +2656,58 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       $('automation-error').hidden = !message;
       if (message) notify(message, true);
     }
+    function recoveryProblem(message) {
+      recoveryError = message;
+      if (message) notify(message, true);
+    }
+    const canSearchRecovery = () => !recoveryError && !!recovery &&
+      (recovery.canSearch ?? recovery.libraryHealthy) === true;
+    const unresolved = () => list(recovery?.entries).filter((entry) => entry.status !== 'Healthy');
+    function savedReferenceCount() {
+      const model = getModel();
+      return list(model.MediaLinks).length + list(model.Rows).reduce((count, row) => count + list(row.Items).length, 0) +
+        list(model.Nodes).filter((node) => node.CollectionId).length;
+    }
+    function changedServerReferences() {
+      const model = getModel(),
+        local = new Map([...list(model.MediaLinks), ...list(model.Rows).flatMap((row) => list(row.Items))]
+          .map((entry) => [referenceKey(entry.Id), referenceKey(entry.JellyfinItemId)]));
+      for (const node of list(model.Nodes)) if (node.CollectionId)
+        local.set(referenceKey('collection:' + node.Id), referenceKey(node.CollectionId));
+      return list(recovery?.entries).filter((entry) => local.has(referenceKey(entry.referenceId)) &&
+        local.get(referenceKey(entry.referenceId)) !== referenceKey(entry.oldItemId)).length;
+    }
+    function recoverySummary() {
+      if (recoveryError) return 'Media recovery could not be checked. ' + recoveryError;
+      if (!recovery) return recoveryLoading ? 'Checking saved media references…' : 'Recovery has not checked your saved references yet.';
+      const checked = recovery.referenceCount ?? list(recovery.entries).length,
+        attention = recovery.attentionCount ?? unresolved().length,
+        healthy = recovery.healthyCount ?? Math.max(0, checked - attention);
+      return checked + ' saved references checked · ' + healthy + ' available · ' + attention + ' need attention. ' +
+        (recovery.message || '') + (recovery.enabled === false ? ' Recovery is disabled.' : '') +
+        (recovery.libraryHealthy === false
+          ? canSearchRecovery() ? ' Automatic reconnection is paused; available replacements can be chosen explicitly.'
+            : ' Reconnection is paused until the library can be checked.'
+          : '');
+    }
+    function renderRecoveryNotice() {
+      const checked = recovery?.referenceCount ?? list(recovery?.entries).length,
+        attention = recovery?.attentionCount ?? unresolved().length,
+        localCount = savedReferenceCount(),
+        unreported = !!recovery && checked === 0 && localCount > 0,
+        paused = !!recovery && recovery.libraryHealthy === false && localCount > 0,
+        changed = changedServerReferences();
+      $('recovery-notice').hidden = !recoveryError && !attention && !paused && !unreported && !changed &&
+        !(!recovery && localCount > 0);
+      $('recovery-notice-count').textContent = changed && !recoveryError
+        ? changed + ' media references changed on the server. Reload saved settings to show the reconnected items.' +
+          (modelDirty() ? ' Your current draft is kept until you choose to reload.' : '')
+        : unreported && !recoveryError
+        ? localCount + ' saved references are not in the latest recovery report. Save or reload your settings, then check recovery.'
+        : recoverySummary();
+      $('recovery-notice-review').textContent = recoveryError ? 'Review recovery error' : 'Review media references';
+      $('recovery-reload').hidden = !changed;
+    }
     function syncBusy() {
       for (const element of page.querySelectorAll('[data-automation-action]')) element.disabled = busy;
       $('auto-restore-selected').disabled = busy || !selected.size;
@@ -2649,18 +2715,21 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       $('auto-preview-apply').disabled = busy || !previewSelected.size;
       $('auto-preview-selected-count').textContent = previewSelected.size + ' selected';
       $('auto-keep-choices').disabled = busy || !pending().length;
-      $('recovery-apply').disabled = busy || !recoveryChoices.size || recovery?.libraryHealthy === false;
+      $('recovery-apply').disabled = busy || modelDirty() || !recoveryChoices.size ||
+        !canSearchRecovery() || recovery?.enabled === false;
+      for (const element of $('recovery-results').querySelectorAll('[data-recovery-search]'))
+        element.disabled = busy || !canSearchRecovery();
       $('auto-run').disabled = busy || !!status?.running;
     }
-    async function act(action, { write = false, reload = write } = {}) {
+    async function act(action, { write = false, reload = write, recoveryAction = false } = {}) {
       if (busy) return null;
       if (write && modelDirty()) {
-        problem('Save or reload your unsaved configuration changes before changing server automation or recovery.');
+        (recoveryAction ? recoveryProblem : problem)('Save or reload your unsaved configuration changes before changing server automation or recovery.');
         render();
         return null;
       }
       if (write) generation++;
-      busy = true; syncBusy(); problem('');
+      busy = true; syncBusy(); (recoveryAction ? recoveryProblem : problem)('');
       try {
         const result = await action();
         if (reload) {
@@ -2669,7 +2738,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         }
         return result;
       } catch (error) {
-        problem(error.message || 'The server operation failed. Your current choices were kept.');
+        (recoveryAction ? recoveryProblem : problem)(error.message || 'The server operation failed. Your current choices were kept.');
         return null;
       } finally {
         busy = false; render();
@@ -2677,18 +2746,29 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     }
     async function refresh() {
       const current = ++generation;
+      recoveryLoading = true;
+      render();
       const results = await Promise.allSettled([
         request('FranchiseExplorer/Automation/Status'), request('FranchiseExplorer/Recovery/Status'),
       ]);
       if (current !== generation) return;
       if (results[0].status === 'fulfilled') status = camel(results[0].value);
-      if (results[1].status === 'fulfilled') recovery = camel(results[1].value);
-      const failures = results.filter((result) => result.status === 'rejected');
-      if (failures.length) {
-        $('automation-error').textContent = failures.map((result) => result.reason?.message || 'Status could not be loaded.').join(' ');
+      recoveryLoading = false;
+      if (results[1].status === 'fulfilled') {
+        recovery = camel(results[1].value);
+        recoveryError = '';
+      } else recoveryError = results[1].reason?.message || 'The recovery report could not be loaded.';
+      if (results[0].status === 'rejected') {
+        lastStatusError = results[0].reason?.message || 'Automation status could not be loaded.';
+        $('automation-error').textContent = lastStatusError;
         $('automation-error').hidden = false;
+      } else if ($('automation-error').textContent === lastStatusError) {
+        $('automation-error').textContent = '';
+        $('automation-error').hidden = true;
+        lastStatusError = '';
       }
       render();
+      context.refreshMediaAvailability?.();
     }
     function render() {
       const config = settings(), queued = pending(), protectedRules = rules();
@@ -2723,11 +2803,9 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       const recoveryConfig = getModel().MediaRecovery || {};
       $('recovery-enabled').checked = get(recoveryConfig, 'enabled', true) !== false;
       $('recovery-auto').checked = get(recoveryConfig, 'autoReconnect', true) !== false;
-      $('recovery-status').textContent = recovery
-        ? 'Last check: ' + when(recovery.checkedUtc) + ' · ' + (recovery.message || 'Ready') +
-          (recovery.libraryHealthy === false ? ' · Library unavailable; reconnection is paused.' : '')
-        : 'Recovery status is loading.';
+      $('recovery-status').textContent = recoverySummary() + (recovery ? ' Last check: ' + when(recovery.checkedUtc) : '');
       $('recovery-review').textContent = 'Review recovery (' + list(recovery?.entries).filter((entry) => entry.status !== 'Healthy').length + ')';
+      renderRecoveryNotice();
       if ($('recovery-dialog').open) renderRecovery();
       syncBusy();
     }
@@ -2807,17 +2885,52 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       syncBusy();
     }
     function renderRecovery() {
-      const entries = list(recovery?.entries).filter((entry) => entry.status !== 'Healthy');
-      for (const id of recoveryChoices.keys()) if (!entries.some((entry) => entry.referenceId === id)) recoveryChoices.delete(id);
-      $('recovery-results').innerHTML = entries.map((entry) => '<article class="automation-change"><h3>' + esc(entry.title) + '</h3><p><strong>' + esc(entry.status) + '</strong> · ' + esc(entry.itemType) + ' · ' + esc(entry.reason) + '</p>' +
-        '<p>' + esc(list(getModel().Nodes).find((node) => node.Id === entry.nodeId)?.Name || 'Saved franchise') + ' / ' + esc(list(getModel().Rows).find((row) => row.Id === entry.rowId)?.Name || 'Direct reference') + '</p>' +
-        '<label class="field"><span>Choose the actual library item</span><select data-recovery-choice="' + esc(entry.referenceId) + '"' + (recovery?.libraryHealthy === false ? ' disabled' : '') + '><option value="">Keep current reference</option>' +
-        list(entry.candidates).map((candidate) => '<option value="' + esc(candidate.itemId) + '"' + (recoveryChoices.get(entry.referenceId) === candidate.itemId ? ' selected' : '') + '>' +
-          esc(candidate.title + (candidate.year ? ' (' + candidate.year + ')' : '') + ' · ' + candidate.itemType + ' · ' + candidate.itemId + (candidate.verified ? ' · Verified identity' : ' · Manual choice')) + '</option>').join('') +
-        '</select></label><div class="automation-recovery-search"><label class="field"><span>Find a library candidate</span><input data-recovery-query="' + esc(entry.referenceId) + '" type="search" maxlength="120" placeholder="Title in your Jellyfin library"></label>' +
-        '<button data-recovery-search="' + esc(entry.referenceId) + '" data-automation-action>Find candidate</button></div>' +
-        (list(entry.candidates).length ? '<ul class="automation-candidate">' + entry.candidates.map((candidate) => '<li>' + esc(candidate.title + ' · ' + candidate.itemId + ' · ' + list(candidate.providerIds).map((provider) => provider.name + ': ' + provider.value).join(', ')) + '</li>').join('') + '</ul>' : '<p>No matching candidates. Keep this reference until its media is available.</p>') + '</article>').join('') || '<p>No unresolved media references.</p>';
+      const pendingEntries = unresolved(),
+        entries = list(recovery?.entries).filter((entry) => entry.status !== 'Healthy' ||
+          referenceKey(entry.referenceId) === referenceKey(recoveryFocus)),
+        searchable = canSearchRecovery(),
+        labels = { Verified: 'Ready to reconnect', Ambiguous: 'Choose a version', Missing: 'Media missing',
+          ManualReview: 'Choose a replacement', Healthy: 'Available in the library' };
+      for (const [id, selectedId] of recoveryChoices)
+        if (!entries.some((entry) => entry.referenceId === id && list(entry.candidates).some((candidate) => candidate.itemId === selectedId))) recoveryChoices.delete(id);
+      $('recovery-dialog-status').textContent = recoverySummary() +
+        (modelDirty() ? ' Save or reload your draft before reconnecting media.' : '');
+      $('recovery-dialog-error').textContent = recoveryError;
+      $('recovery-dialog-error').hidden = !recoveryError;
+      $('recovery-results').innerHTML = entries.map((entry) => '<article class="automation-change' +
+        (referenceKey(entry.referenceId) === referenceKey(recoveryFocus) ? ' recovery-focused' : '') +
+        '" data-recovery-entry="' + esc(entry.referenceId) + '"><h3>' + esc(entry.title) + '</h3><p><strong>' +
+        esc(labels[entry.status] || entry.status) + '</strong> · ' + esc(entry.itemType) + ' · ' + esc(entry.reason) + '</p>' +
+        '<p>' + esc(list(getModel().Nodes).find((node) => node.Id === entry.nodeId)?.Name || 'Saved franchise') + ' / ' +
+        esc(list(getModel().Rows).find((row) => row.Id === entry.rowId)?.Name || 'Franchise media') + '</p>' +
+        (entry.status === 'Healthy' ? '<p>This saved reference resolves on the server. If it cannot be opened here, check Jellyfin access and refresh the page.</p>' :
+        '<label class="field"><span>Choose the actual library item</span><select data-recovery-choice="' + esc(entry.referenceId) + '"' +
+        (!searchable || busy ? ' disabled' : '') + '><option value="">Keep current reference</option>' +
+        list(entry.candidates).map((candidate) => '<option value="' + esc(candidate.itemId) + '"' +
+          (recoveryChoices.get(entry.referenceId) === candidate.itemId ? ' selected' : '') + '>' +
+          esc(candidate.title + (candidate.year ? ' (' + candidate.year + ')' : '') + ' · ' + candidate.itemType + ' · ' + candidate.itemId +
+            (candidate.verified ? ' · Verified identity' : ' · Manual choice')) + '</option>').join('') +
+        '</select></label><div class="automation-recovery-search"><label class="field"><span>Find a library candidate</span><input data-recovery-query="' +
+        esc(entry.referenceId) + '" type="search" maxlength="120" value="' +
+        esc(recoveryQueries.get(entry.referenceId) ?? entry.title ?? '') + '" placeholder="Title in your Jellyfin library"' +
+        (!searchable ? ' disabled' : '') + '></label><button data-recovery-search="' + esc(entry.referenceId) +
+        '" data-automation-action>Find candidate</button></div>' +
+        (list(entry.candidates).length ? '<ul class="automation-candidate">' + entry.candidates.map((candidate) => '<li>' +
+          esc(candidate.title + ' · ' + candidate.itemId + ' · ' + list(candidate.providerIds).map((provider) => provider.name + ': ' + provider.value).join(', ')) +
+          '</li>').join('') + '</ul>' : '<p>No verified replacement is selected. Search for the matching library title; the saved reference is kept.</p>')) + '</article>').join('') ||
+        (recoveryError ? '<p>The recovery report is unavailable. Refresh the report to try again.</p>' :
+          !recovery ? '<p>The recovery report is loading.</p>' :
+          savedReferenceCount() > 0 && !(recovery.referenceCount ?? list(recovery.entries).length)
+            ? '<p>Your settings contain saved media, but this report did not check it. Save or reload your settings, then check recovery.</p>'
+            : '<p>All ' + (recovery.referenceCount ?? list(recovery.entries).length) + ' checked references resolve in the current library.</p>');
       syncBusy();
+    }
+    function openRecovery(referenceId = '') {
+      recoveryFocus = referenceId || '';
+      recoveryChoices.clear();
+      show('recovery-dialog');
+      renderRecovery();
+      void refresh();
     }
     $('auto-manage').onclick = () => { render(); show('auto-registry-dialog'); };
     $('auto-add-entry').onclick = () => openEntry();
@@ -2896,10 +3009,23 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     for (const id of ['recovery-enabled', 'recovery-auto']) $(id).onchange = () => change(() => {
       getModel().MediaRecovery = { ...(getModel().MediaRecovery || {}), Enabled: $('recovery-enabled').checked, AutoReconnect: $('recovery-auto').checked };
     });
-    $('recovery-check').onclick = () => act(async () => {
-      recovery = camel(await post('Recovery/Check', {})); recoveryChoices.clear(); show('recovery-dialog');
-    }, { write: true });
-    $('recovery-review').onclick = () => { recoveryChoices.clear(); show('recovery-dialog'); renderRecovery(); };
+    $('recovery-check').onclick = () => {
+      show('recovery-dialog'); renderRecovery();
+      return act(async () => {
+        recovery = camel(await post('Recovery/Check', {})); recoveryChoices.clear();
+        context.refreshMediaAvailability?.();
+      }, { write: true, recoveryAction: true });
+    };
+    $('recovery-review').onclick = () => openRecovery();
+    $('recovery-notice-review').onclick = () => openRecovery();
+    $('recovery-refresh').onclick = () => void refresh();
+    $('recovery-reload').onclick = () => act(async () => {
+      await load();
+    }, { recoveryAction: true });
+    $('recovery-results').addEventListener('input', (event) => {
+      const target = event.target.closest('[data-recovery-query]');
+      if (target) recoveryQueries.set(target.dataset.recoveryQuery, target.value);
+    });
     $('recovery-results').addEventListener('change', (event) => {
       const target = event.target.closest('[data-recovery-choice]');
       if (target) { if (target.value) recoveryChoices.set(target.dataset.recoveryChoice, target.value); else recoveryChoices.delete(target.dataset.recoveryChoice); syncBusy(); }
@@ -2914,13 +3040,13 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         const candidates = camel(await request('FranchiseExplorer/Recovery/Candidates?' + new URLSearchParams({ referenceId, query, revision: recovery.revision, libraryRevision: recovery.libraryRevision })));
         const entry = recovery.entries.find((item) => item.referenceId === referenceId);
         if (entry) { entry.candidates = candidates; recoveryChoices.delete(referenceId); }
-      });
+      }, { recoveryAction: true });
     });
     $('recovery-apply').onclick = () => act(async () => {
       recovery = camel(await post('Recovery/Apply', { revision: recovery.revision, libraryRevision: recovery.libraryRevision,
         choices: [...recoveryChoices].map(([referenceId, itemId]) => ({ referenceId, itemId })) }));
-      recoveryChoices.clear(); notify('Selected media references reconnected.');
-    }, { write: true });
+      recoveryChoices.clear(); context.refreshMediaAvailability?.(); notify('Selected media references reconnected.');
+    }, { write: true, recoveryAction: true });
     // These hooks run inside the main controller's local configuration transaction.
     // They never POST independently and therefore participate in Save, Undo and backup export.
     function recordManualChoice(choice) {
@@ -2962,7 +3088,8 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       if (!config.Exclusions.some((entry) => entry.Enabled !== false && signature(entry) === signature(rule))) config.Exclusions.push(rule);
     }
     render();
-    return { afterLoad: refresh, render, isBusy: () => busy,
+    return { afterLoad: refresh, render, isBusy: () => busy, openRecovery,
+      referenceStatus: (id) => list(recovery?.entries).find((entry) => referenceKey(entry.referenceId) === referenceKey(id))?.status || null,
       getProtectedSettings: () => ({ AutoFranchises: clone(getModel().AutoFranchises || {}), MediaRecovery: clone(getModel().MediaRecovery || {}) }),
       recordManualChoice, excludeUncheckedReview: (choices) => choices.forEach(recordManualChoice) };
   }
@@ -3091,6 +3218,15 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     const ranks = new Map((row.MediaOrder || []).map((id, i) => [id, i]));
     return entries.sort((a, b) => (ranks.get(a.Id) ?? Infinity) - (ranks.get(b.Id) ?? Infinity));
   }
+  function franchiseMedia(nodeId) {
+    const assigned = new Set(model.Rows.flatMap((row) => row.MediaLinkIds)),
+      links = model.MediaLinks.filter((link) => link.NodeId === nodeId && !assigned.has(link.Id))
+        .sort((a, b) => a.Position - b.Position);
+    return {
+      Id: 'node:' + nodeId, Name: 'Franchise media', Items: [],
+      MediaLinkIds: links.map((link) => link.Id), MediaOrder: links.map((link) => link.Id),
+    };
+  }
   function reference(rowId, id) {
     if (rowId.startsWith('node:')) {
       const node = getNode(rowId.slice(5)),
@@ -3215,16 +3351,18 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
   async function item(id) {
     if (!C.validGuid(id)) return null;
     const key = id.replace(/-/g, '').toLowerCase();
-    if (!itemCache.has(key))
-      itemCache.set(
-        key,
-        (ApiClient.getItem
+    if (!itemCache.has(key)) {
+      const pending = Promise.resolve().then(() => ApiClient.getItem
           ? ApiClient.getItem(ApiClient.getCurrentUserId?.(), id)
           : request(
               'Items/' + id + '?userId=' + encodeURIComponent(ApiClient.getCurrentUserId?.() || ''),
             )
-        ).catch(() => null),
-      );
+        ).catch(() => null).then((media) => {
+          if (!media && itemCache.get(key) === pending) itemCache.delete(key);
+          return media;
+        });
+      itemCache.set(key, pending);
+    }
     return itemCache.get(key);
   }
   function imageAddress(route) {
@@ -3316,6 +3454,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       next = C.normalize(raw);
     if (reload && loaded) remember();
     model = next;
+    itemCache.clear();
     baseline = fingerprint(next);
     loaded = true;
     dirty = false;
@@ -3412,9 +3551,12 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
                 ) +
                 '<span class="media-title">' +
                 esc(refName(ref)) +
+                '<span class="media-availability" data-media-native-id="' +
+                esc(ref.JellyfinItemId) + '" data-media-reference-id="' + ref.Id + '" hidden></span>' +
                 '</span>' +
                 (manage
-                  ? '<div class="media-actions">' +
+                  ? '<div class="media-actions"><button class="quiet recover-reference" data-recover-reference="' +
+                    ref.Id + '" hidden>Review reference</button>' +
                     '<button class="icon-button quiet" data-settings-item="' +
                     ref.Id +
                     '" data-item-row="' +
@@ -3446,6 +3588,25 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
             .join('') +
           '</div>'
       : '<div class="empty-media">No media added</div>';
+  }
+  function resolveMediaAvailability(scope) {
+    for (const label of scope.querySelectorAll('[data-media-native-id]')) {
+      void item(label.dataset.mediaNativeId).then((media) => {
+        if (!label.isConnected) return;
+        const status = automation?.referenceStatus?.(label.dataset.mediaReferenceId),
+          needsReview = !media || !!status && status !== 'Healthy';
+        label.hidden = !needsReview;
+        label.textContent = !media ? 'Unavailable in Jellyfin' : needsReview ? 'Reference needs review' : '';
+        label.title = needsReview ? 'This saved reference is retained. Check Media Recovery before removing it.' : '';
+        const action = label.closest('.media-entry')?.querySelector('[data-recover-reference]');
+        if (action) action.hidden = !needsReview;
+        scheduleBoardLayout();
+      });
+    }
+  }
+  function refreshMediaAvailability() {
+    resolveMediaAvailability($('board'));
+    if ($('media-dialog').open) resolveMediaAvailability($('media-current'));
   }
   const collapsedRows = new Set();
   function rowGroups(row) {
@@ -3502,6 +3663,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     if (ancestors.has(node.Id)) return '<div class="empty-media">Group already shown in this path</div>';
     const branch = new Set(ancestors).add(node.Id),
       ownedRows = rows(node.Id),
+      unassignedMedia = franchiseMedia(node.Id),
       assigned = new Set(ownedRows.flatMap((row) => row.NodeIds));
     const open = expanded.has(node.Id),
       tag = root ? 'article' : 'div';
@@ -3542,6 +3704,10 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
           (root ? 'node-body' : 'subgroup-body') +
           '">' +
           ownedRows.map((row) => rowView(row, branch)).join('') +
+          (unassignedMedia.MediaLinkIds.length
+            ? '<section class="franchise-media" data-node-media="' + node.Id +
+              '"><h4>Franchise media · ' + unassignedMedia.MediaLinkIds.length + '</h4>' +
+              mediaList(unassignedMedia, true) + '</section>' : '') +
           children(node.Id)
             .filter((child) => !assigned.has(child.Id))
             .map((child) => nodeView(child, false, branch))
@@ -3600,6 +3766,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     boardResize?.disconnect();
     boardResize?.observe($('board'));
     $('board').querySelectorAll(':scope > .node-card').forEach((card) => boardResize?.observe(card));
+    resolveMediaAvailability($('board'));
     scheduleBoardLayout();
     if (focused) [...$('board').querySelectorAll('button')].find((button) =>
       (button.closest('[data-group-row]')?.dataset.groupRow || '') === focused.row &&
@@ -4468,22 +4635,11 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
           '</section>',
       )
       .join('');
-    const unassigned = model.MediaLinks.filter(
-      (l) => l.NodeId === owner.Id && !model.Rows.some((r) => r.MediaLinkIds.includes(l.Id)),
-    ).sort((a, b) => a.Position - b.Position);
-    if (unassigned.length)
+    const unassigned = franchiseMedia(owner.Id);
+    if (unassigned.MediaLinkIds.length)
       content +=
         '<section class="media-current-group"><h4>Franchise media</h4>' +
-        mediaList(
-          {
-            Id: 'node:' + owner.Id,
-            Name: 'Franchise media',
-            Items: [],
-            MediaLinkIds: unassigned.map((l) => l.Id),
-            MediaOrder: unassigned.map((l) => l.Id),
-          },
-          true,
-        ) +
+        mediaList(unassigned, true) +
         '</section>';
     $('media-current').innerHTML =
       content || '<div class="empty-media">No media added in this category</div>';
@@ -4508,6 +4664,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     $('media-convert-row').hidden = !row;
     $('media-library').innerHTML = libraryMarkup(activeSearch());
     currentMedia();
+    resolveMediaAvailability($('media-current'));
     updateSelection();
     $('media-undo').disabled = !history.length;
     if (preserve) {
@@ -6211,6 +6368,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     else if (data.deleteNode) openDelete('node', data.deleteNode);
     else if (data.deleteRow) openDelete('row', data.deleteRow);
     else if (data.removeItem) openDelete('item', data.removeItem, data.itemRow);
+    else if (data.recoverReference) automation?.openRecovery?.(data.recoverReference);
     else if (data.editLibraryItem)
       void attempt(() => editRange(data.itemRow, data.editLibraryItem));
     else if (data.settingsItem) artwork.openItem(data.itemRow, data.settingsItem);
@@ -6242,7 +6400,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
   };
   automation = window.FranchiseSettingsAutomation?.init({
     page, $, core: C, getModel: () => model, load: () => load(true), notify, request,
-    change, render, show, isDirty: () => dirty || saving,
+    change, render, show, refreshMediaAvailability, isDirty: () => dirty || saving,
   }) || null;
   viewerPreferences();
   page.addEventListener('pageshow', () => {

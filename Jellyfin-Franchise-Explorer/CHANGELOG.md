@@ -1,3 +1,12 @@
+## 0.8.9.28 (unreleased)
+
+- Show older unassigned franchise links in the settings tree without changing their row membership or requiring deletion/recreation.
+- Show persistent recovery attention and error notices, prefilled replacement searches and explicit reload notices when background recovery changes a reference.
+- Reconnect unique verified replacements on startup and periodic catch-up checks, retry incomplete snapshots, and recover supported pre-snapshot imports from trustworthy saved provider evidence.
+- Allow explicit selection of available replacements while unrelated library files are offline; automatic reconnection still waits for a healthy snapshot and never guesses from titles.
+- Count viewer-accessible media in the franchise browser and explain unavailable references without exposing administrator-only labels.
+- Add regressions for moved media, legacy direct links, partial libraries, retries, stale editors and reconnecting without deleting references.
+
 ## 0.8.9.27 (unreleased)
 
 - Fix settings artwork previews and photo uploads when browser image policies block blob/data image URLs, including Firefox's pre-upload “Invalid image request.” error.
