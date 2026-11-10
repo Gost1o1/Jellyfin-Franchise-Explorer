@@ -29,8 +29,10 @@ public sealed class FranchiseSubtitlePlaybackService(
             || !session.SupportedCommands.Contains(GeneralCommandType.SetSubtitleStreamIndex)) return;
         var saved = preferences.Get(user);
         leases.TryGet(user, device, item, out var policy);
-        if (policy is null && saved.HasPreference && timelines.TryQueue(user, device, item, sessions, out var queue))
-            policy = leases.Set(user, device, queue, saved.SubtitleEnabled, saved.SubtitleLanguage);
+        // Only explicit enrollment grants a device lease. Timeline fallback
+        // must be checked again after a pause or a different session activates.
+        if (policy is null && saved.HasPreference && timelines.TryQueue(user, device, item, sessions, out _))
+            policy = new PlaybackSubtitlePolicy(saved.SubtitleEnabled, saved.SubtitleLanguage, DateTimeOffset.UtcNow.AddMinutes(2));
         if (policy is null) return;
         if (saved.HasPreference) policy = policy with { Enabled = saved.SubtitleEnabled, Language = saved.SubtitleLanguage };
         var account = users.GetUserById(user);

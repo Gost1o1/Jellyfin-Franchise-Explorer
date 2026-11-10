@@ -4,7 +4,7 @@
 - Add Auto remap for an immediate complete pass and keep clear automatic matches out of the per-record review list. Preserve reference IDs, membership, ranges, artwork and progress.
 - Persist franchise subtitle preferences per Jellyfin account, apply the latest preference to native playback negotiation, and correct restored tracks only within the enrolled franchise session.
 - Clear remembered secondary/custom Web subtitle renderers through Jellyfin's player commands on real playback starts and queue transitions, including delayed starts beyond the previous short timer window.
-- Add regression coverage for 127 automatic remaps, account preference persistence, actual MVC negotiation, native session correction, delayed Web playback and unrelated-title isolation.
+- Add regression coverage for 127 automatic remaps, account preference persistence, actual MVC negotiation, native session correction, competing-device prefetches, delayed Web playback and unrelated-title isolation.
 
 ## 0.8.9.28
 

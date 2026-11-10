@@ -162,7 +162,7 @@ internal static class SubtitleOffRegressionTests
 
         var state = new FranchiseTimelineController.TimelineProgress
         {
-            RowId = row.ToString("N"), PlaybackMode = "playing", SessionId = "native-session", Index = 0,
+            RowId = row.ToString("N"), PlaybackMode = "armed", ArmedUtc = DateTimeOffset.UtcNow, Index = 0,
             QueueKeys = new() { "episode:" + item.ToString("N"), "episode:" + next.ToString("N") }, UpdatedUtc = DateTimeOffset.UtcNow
         };
         var folder = Path.Combine(root, "timeline-progress", user.Id.ToString("N"));
@@ -170,6 +170,19 @@ internal static class SubtitleOffRegressionTests
         var statePath = Path.Combine(folder, row.ToString("N") + ".json");
         void WriteState() => File.WriteAllText(statePath, JsonSerializer.Serialize(state, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
         WriteState();
+        CheckOff(await Json("POST", path, new { subtitleStreamIndex = 7 }, "other-device"));
+        // Device B may prefetch the armed first item before actual playback on
+        // A binds the timeline. That probe must not grant B the remaining queue.
+        state.PlaybackMode = "playing"; state.SessionId = "native-session"; state.ArmedUtc = null; WriteState();
+        foreach (var requestedItem in new[] { item, next })
+        {
+            var unrelated = await Json("POST", "/Items/" + requestedItem.ToString("N") + "/PlaybackInfo", new { subtitleStreamIndex = 7 }, "other-device");
+            Check(probe.LastSubtitleIndex == 7
+                && unrelated.GetProperty("MediaSources")[0].GetProperty("DefaultSubtitleStreamIndex").GetInt32() == 7,
+                "An armed prefetch must not keep applying subtitles after a different device activates the timeline");
+            Check(!leases.TryGet(user.Id, "other-device", requestedItem, out _),
+                "Timeline fallback must not create a persistent playback preference lease");
+        }
         CheckOff(await Json("POST", path, new { subtitleStreamIndex = 7 }, "native-device"));
         await Json("POST", path, new { subtitleStreamIndex = 7 }, "other-device");
         Check(probe.LastSubtitleIndex == 7, "A different same-user device cannot adopt another session's playing timeline");
@@ -184,9 +197,23 @@ internal static class SubtitleOffRegressionTests
         state.PlaybackMode = "playing"; state.SessionId = "native-session"; WriteState();
         active[1].PlayState.SubtitleStreamIndex = 7;
         active[1].NowPlayingItem = new BaseItemDto { Id = item };
-        var playbackService = new FranchiseSubtitlePlaybackService(sessions, users, sources, leases, preferences, timelines);
+        var nativeLeases = new PlaybackSubtitlePolicyStore();
+        var playbackService = new FranchiseSubtitlePlaybackService(sessions, users, sources, nativeLeases, preferences, timelines);
         await playbackService.EnforceAsync(new PlaybackProgressEventArgs { Session = active[1], Item = new VisibleVideo { Id = item } });
         Check(commands.Count == 1 && commands[0] == ("native-session", -1), "Native ASS/forced restored subtitles require the real player SetSubtitleStreamIndex command");
+        state.PlaybackMode = "paused"; WriteState();
+        // Fresh service instances prevent the command throttle from hiding a
+        // stale lease that could otherwise outlive either timeline transition.
+        await new FranchiseSubtitlePlaybackService(sessions, users, sources, nativeLeases, preferences, timelines)
+            .EnforceAsync(new PlaybackProgressEventArgs { Session = active[1], Item = new VisibleVideo { Id = item } });
+        Check(commands.Count == 1, "Native fallback must stop correcting the player when its timeline is paused");
+        state.PlaybackMode = "playing"; state.SessionId = "unrelated-session"; WriteState();
+        await new FranchiseSubtitlePlaybackService(sessions, users, sources, nativeLeases, preferences, timelines)
+            .EnforceAsync(new PlaybackProgressEventArgs { Session = active[1], Item = new VisibleVideo { Id = item } });
+        Check(commands.Count == 1, "Native fallback must stop correcting the old device after its timeline transfers to another session");
+        Check(!nativeLeases.TryGet(user.Id, "native-device", item, out _)
+            && !nativeLeases.TryGet(user.Id, "native-device", next, out _),
+            "Native timeline fallback must not create a persistent playback preference lease");
         active[1].NowPlayingItem = new BaseItemDto { Id = ordinary };
         await playbackService.EnforceAsync(new PlaybackProgressEventArgs { Session = active[1], Item = new VisibleVideo { Id = ordinary } });
         Check(commands.Count == 1, "No player command may alter ordinary out-of-scope native playback");

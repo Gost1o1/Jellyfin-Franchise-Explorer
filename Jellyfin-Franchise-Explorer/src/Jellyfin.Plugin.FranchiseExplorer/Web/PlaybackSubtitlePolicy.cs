@@ -125,9 +125,11 @@ public sealed class PlaybackSubtitlePolicyFilter(
         var enrolled = store.TryGet(user, device, item, out var policy);
         // Native applications can use a different device ID from their embedded Web view.
         // Inherit account preferences only for an explicitly active franchise queue.
+        // Keep fallback local to this request so a tentative arm cannot grant a
+        // device a lease that survives activation on another session.
         if (!enrolled && saved?.HasPreference == true && timelines is not null
-            && timelines.TryQueue(user, device, item, sessions, out var queue))
-            policy = store.Set(user, device, queue, saved.SubtitleEnabled, saved.SubtitleLanguage);
+            && timelines.TryQueue(user, device, item, sessions, out _))
+            policy = new PlaybackSubtitlePolicy(saved.SubtitleEnabled, saved.SubtitleLanguage, DateTimeOffset.UtcNow.AddMinutes(2));
         if (policy is null)
         {
             await next().ConfigureAwait(false);
