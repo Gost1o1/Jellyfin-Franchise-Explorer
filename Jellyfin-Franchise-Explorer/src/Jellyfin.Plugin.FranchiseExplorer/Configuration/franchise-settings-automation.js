@@ -21,8 +21,11 @@
   function init(context) {
     const { page, $, getModel, load, notify, request, change } = context;
     if (!$('auto-manage')) return null;
-    let status = null, recovery = null, preview = null, busy = false, generation = 0, editingId = '';
+    let status = null, recovery = null, preview = null, busy = false, generation = 0, editingId = '',
+      recoveryError = '', recoveryLoading = false, recoveryFocus = '', lastStatusError = '';
     const selected = new Set(), selectedRules = new Set(), previewSelected = new Set(), recoveryChoices = new Map();
+    const recoveryQueries = new Map();
+    const referenceKey = (value) => String(value || '').replace(/-/g, '').toLowerCase();
     const settings = () => camel((context.isDirty?.() && getModel().AutoFranchises) || status?.settings || getModel().AutoFranchises || {});
     const registrations = () => list(settings().registry);
     const pending = () => list(settings().pendingChanges).filter((entry) => entry.status === 'Pending');
@@ -37,6 +40,58 @@
       $('automation-error').hidden = !message;
       if (message) notify(message, true);
     }
+    function recoveryProblem(message) {
+      recoveryError = message;
+      if (message) notify(message, true);
+    }
+    const canSearchRecovery = () => !recoveryError && !!recovery &&
+      (recovery.canSearch ?? recovery.libraryHealthy) === true;
+    const unresolved = () => list(recovery?.entries).filter((entry) => entry.status !== 'Healthy');
+    function savedReferenceCount() {
+      const model = getModel();
+      return list(model.MediaLinks).length + list(model.Rows).reduce((count, row) => count + list(row.Items).length, 0) +
+        list(model.Nodes).filter((node) => node.CollectionId).length;
+    }
+    function changedServerReferences() {
+      const model = getModel(),
+        local = new Map([...list(model.MediaLinks), ...list(model.Rows).flatMap((row) => list(row.Items))]
+          .map((entry) => [referenceKey(entry.Id), referenceKey(entry.JellyfinItemId)]));
+      for (const node of list(model.Nodes)) if (node.CollectionId)
+        local.set(referenceKey('collection:' + node.Id), referenceKey(node.CollectionId));
+      return list(recovery?.entries).filter((entry) => local.has(referenceKey(entry.referenceId)) &&
+        local.get(referenceKey(entry.referenceId)) !== referenceKey(entry.oldItemId)).length;
+    }
+    function recoverySummary() {
+      if (recoveryError) return 'Media recovery could not be checked. ' + recoveryError;
+      if (!recovery) return recoveryLoading ? 'Checking saved media references…' : 'Recovery has not checked your saved references yet.';
+      const checked = recovery.referenceCount ?? list(recovery.entries).length,
+        attention = recovery.attentionCount ?? unresolved().length,
+        healthy = recovery.healthyCount ?? Math.max(0, checked - attention);
+      return checked + ' saved references checked · ' + healthy + ' available · ' + attention + ' need attention. ' +
+        (recovery.message || '') + (recovery.enabled === false ? ' Recovery is disabled.' : '') +
+        (recovery.libraryHealthy === false
+          ? canSearchRecovery() ? ' Automatic reconnection is paused; available replacements can be chosen explicitly.'
+            : ' Reconnection is paused until the library can be checked.'
+          : '');
+    }
+    function renderRecoveryNotice() {
+      const checked = recovery?.referenceCount ?? list(recovery?.entries).length,
+        attention = recovery?.attentionCount ?? unresolved().length,
+        localCount = savedReferenceCount(),
+        unreported = !!recovery && checked === 0 && localCount > 0,
+        paused = !!recovery && recovery.libraryHealthy === false && localCount > 0,
+        changed = changedServerReferences();
+      $('recovery-notice').hidden = !recoveryError && !attention && !paused && !unreported && !changed &&
+        !(!recovery && localCount > 0);
+      $('recovery-notice-count').textContent = changed && !recoveryError
+        ? changed + ' media references changed on the server. Reload saved settings to show the reconnected items.' +
+          (modelDirty() ? ' Your current draft is kept until you choose to reload.' : '')
+        : unreported && !recoveryError
+        ? localCount + ' saved references are not in the latest recovery report. Save or reload your settings, then check recovery.'
+        : recoverySummary();
+      $('recovery-notice-review').textContent = recoveryError ? 'Review recovery error' : 'Review media references';
+      $('recovery-reload').hidden = !changed;
+    }
     function syncBusy() {
       for (const element of page.querySelectorAll('[data-automation-action]')) element.disabled = busy;
       $('auto-restore-selected').disabled = busy || !selected.size;
@@ -44,18 +99,21 @@
       $('auto-preview-apply').disabled = busy || !previewSelected.size;
       $('auto-preview-selected-count').textContent = previewSelected.size + ' selected';
       $('auto-keep-choices').disabled = busy || !pending().length;
-      $('recovery-apply').disabled = busy || !recoveryChoices.size || recovery?.libraryHealthy === false;
+      $('recovery-apply').disabled = busy || modelDirty() || !recoveryChoices.size ||
+        !canSearchRecovery() || recovery?.enabled === false;
+      for (const element of $('recovery-results').querySelectorAll('[data-recovery-search]'))
+        element.disabled = busy || !canSearchRecovery();
       $('auto-run').disabled = busy || !!status?.running;
     }
-    async function act(action, { write = false, reload = write } = {}) {
+    async function act(action, { write = false, reload = write, recoveryAction = false } = {}) {
       if (busy) return null;
       if (write && modelDirty()) {
-        problem('Save or reload your unsaved configuration changes before changing server automation or recovery.');
+        (recoveryAction ? recoveryProblem : problem)('Save or reload your unsaved configuration changes before changing server automation or recovery.');
         render();
         return null;
       }
       if (write) generation++;
-      busy = true; syncBusy(); problem('');
+      busy = true; syncBusy(); (recoveryAction ? recoveryProblem : problem)('');
       try {
         const result = await action();
         if (reload) {
@@ -64,7 +122,7 @@
         }
         return result;
       } catch (error) {
-        problem(error.message || 'The server operation failed. Your current choices were kept.');
+        (recoveryAction ? recoveryProblem : problem)(error.message || 'The server operation failed. Your current choices were kept.');
         return null;
       } finally {
         busy = false; render();
@@ -72,18 +130,29 @@
     }
     async function refresh() {
       const current = ++generation;
+      recoveryLoading = true;
+      render();
       const results = await Promise.allSettled([
         request('FranchiseExplorer/Automation/Status'), request('FranchiseExplorer/Recovery/Status'),
       ]);
       if (current !== generation) return;
       if (results[0].status === 'fulfilled') status = camel(results[0].value);
-      if (results[1].status === 'fulfilled') recovery = camel(results[1].value);
-      const failures = results.filter((result) => result.status === 'rejected');
-      if (failures.length) {
-        $('automation-error').textContent = failures.map((result) => result.reason?.message || 'Status could not be loaded.').join(' ');
+      recoveryLoading = false;
+      if (results[1].status === 'fulfilled') {
+        recovery = camel(results[1].value);
+        recoveryError = '';
+      } else recoveryError = results[1].reason?.message || 'The recovery report could not be loaded.';
+      if (results[0].status === 'rejected') {
+        lastStatusError = results[0].reason?.message || 'Automation status could not be loaded.';
+        $('automation-error').textContent = lastStatusError;
         $('automation-error').hidden = false;
+      } else if ($('automation-error').textContent === lastStatusError) {
+        $('automation-error').textContent = '';
+        $('automation-error').hidden = true;
+        lastStatusError = '';
       }
       render();
+      context.refreshMediaAvailability?.();
     }
     function render() {
       const config = settings(), queued = pending(), protectedRules = rules();
@@ -118,11 +187,9 @@
       const recoveryConfig = getModel().MediaRecovery || {};
       $('recovery-enabled').checked = get(recoveryConfig, 'enabled', true) !== false;
       $('recovery-auto').checked = get(recoveryConfig, 'autoReconnect', true) !== false;
-      $('recovery-status').textContent = recovery
-        ? 'Last check: ' + when(recovery.checkedUtc) + ' · ' + (recovery.message || 'Ready') +
-          (recovery.libraryHealthy === false ? ' · Library unavailable; reconnection is paused.' : '')
-        : 'Recovery status is loading.';
+      $('recovery-status').textContent = recoverySummary() + (recovery ? ' Last check: ' + when(recovery.checkedUtc) : '');
       $('recovery-review').textContent = 'Review recovery (' + list(recovery?.entries).filter((entry) => entry.status !== 'Healthy').length + ')';
+      renderRecoveryNotice();
       if ($('recovery-dialog').open) renderRecovery();
       syncBusy();
     }
@@ -202,17 +269,52 @@
       syncBusy();
     }
     function renderRecovery() {
-      const entries = list(recovery?.entries).filter((entry) => entry.status !== 'Healthy');
-      for (const id of recoveryChoices.keys()) if (!entries.some((entry) => entry.referenceId === id)) recoveryChoices.delete(id);
-      $('recovery-results').innerHTML = entries.map((entry) => '<article class="automation-change"><h3>' + esc(entry.title) + '</h3><p><strong>' + esc(entry.status) + '</strong> · ' + esc(entry.itemType) + ' · ' + esc(entry.reason) + '</p>' +
-        '<p>' + esc(list(getModel().Nodes).find((node) => node.Id === entry.nodeId)?.Name || 'Saved franchise') + ' / ' + esc(list(getModel().Rows).find((row) => row.Id === entry.rowId)?.Name || 'Direct reference') + '</p>' +
-        '<label class="field"><span>Choose the actual library item</span><select data-recovery-choice="' + esc(entry.referenceId) + '"' + (recovery?.libraryHealthy === false ? ' disabled' : '') + '><option value="">Keep current reference</option>' +
-        list(entry.candidates).map((candidate) => '<option value="' + esc(candidate.itemId) + '"' + (recoveryChoices.get(entry.referenceId) === candidate.itemId ? ' selected' : '') + '>' +
-          esc(candidate.title + (candidate.year ? ' (' + candidate.year + ')' : '') + ' · ' + candidate.itemType + ' · ' + candidate.itemId + (candidate.verified ? ' · Verified identity' : ' · Manual choice')) + '</option>').join('') +
-        '</select></label><div class="automation-recovery-search"><label class="field"><span>Find a library candidate</span><input data-recovery-query="' + esc(entry.referenceId) + '" type="search" maxlength="120" placeholder="Title in your Jellyfin library"></label>' +
-        '<button data-recovery-search="' + esc(entry.referenceId) + '" data-automation-action>Find candidate</button></div>' +
-        (list(entry.candidates).length ? '<ul class="automation-candidate">' + entry.candidates.map((candidate) => '<li>' + esc(candidate.title + ' · ' + candidate.itemId + ' · ' + list(candidate.providerIds).map((provider) => provider.name + ': ' + provider.value).join(', ')) + '</li>').join('') + '</ul>' : '<p>No matching candidates. Keep this reference until its media is available.</p>') + '</article>').join('') || '<p>No unresolved media references.</p>';
+      const pendingEntries = unresolved(),
+        entries = list(recovery?.entries).filter((entry) => entry.status !== 'Healthy' ||
+          referenceKey(entry.referenceId) === referenceKey(recoveryFocus)),
+        searchable = canSearchRecovery(),
+        labels = { Verified: 'Ready to reconnect', Ambiguous: 'Choose a version', Missing: 'Media missing',
+          ManualReview: 'Choose a replacement', Healthy: 'Available in the library' };
+      for (const [id, selectedId] of recoveryChoices)
+        if (!entries.some((entry) => entry.referenceId === id && list(entry.candidates).some((candidate) => candidate.itemId === selectedId))) recoveryChoices.delete(id);
+      $('recovery-dialog-status').textContent = recoverySummary() +
+        (modelDirty() ? ' Save or reload your draft before reconnecting media.' : '');
+      $('recovery-dialog-error').textContent = recoveryError;
+      $('recovery-dialog-error').hidden = !recoveryError;
+      $('recovery-results').innerHTML = entries.map((entry) => '<article class="automation-change' +
+        (referenceKey(entry.referenceId) === referenceKey(recoveryFocus) ? ' recovery-focused' : '') +
+        '" data-recovery-entry="' + esc(entry.referenceId) + '"><h3>' + esc(entry.title) + '</h3><p><strong>' +
+        esc(labels[entry.status] || entry.status) + '</strong> · ' + esc(entry.itemType) + ' · ' + esc(entry.reason) + '</p>' +
+        '<p>' + esc(list(getModel().Nodes).find((node) => node.Id === entry.nodeId)?.Name || 'Saved franchise') + ' / ' +
+        esc(list(getModel().Rows).find((row) => row.Id === entry.rowId)?.Name || 'Franchise media') + '</p>' +
+        (entry.status === 'Healthy' ? '<p>This saved reference resolves on the server. If it cannot be opened here, check Jellyfin access and refresh the page.</p>' :
+        '<label class="field"><span>Choose the actual library item</span><select data-recovery-choice="' + esc(entry.referenceId) + '"' +
+        (!searchable || busy ? ' disabled' : '') + '><option value="">Keep current reference</option>' +
+        list(entry.candidates).map((candidate) => '<option value="' + esc(candidate.itemId) + '"' +
+          (recoveryChoices.get(entry.referenceId) === candidate.itemId ? ' selected' : '') + '>' +
+          esc(candidate.title + (candidate.year ? ' (' + candidate.year + ')' : '') + ' · ' + candidate.itemType + ' · ' + candidate.itemId +
+            (candidate.verified ? ' · Verified identity' : ' · Manual choice')) + '</option>').join('') +
+        '</select></label><div class="automation-recovery-search"><label class="field"><span>Find a library candidate</span><input data-recovery-query="' +
+        esc(entry.referenceId) + '" type="search" maxlength="120" value="' +
+        esc(recoveryQueries.get(entry.referenceId) ?? entry.title ?? '') + '" placeholder="Title in your Jellyfin library"' +
+        (!searchable ? ' disabled' : '') + '></label><button data-recovery-search="' + esc(entry.referenceId) +
+        '" data-automation-action>Find candidate</button></div>' +
+        (list(entry.candidates).length ? '<ul class="automation-candidate">' + entry.candidates.map((candidate) => '<li>' +
+          esc(candidate.title + ' · ' + candidate.itemId + ' · ' + list(candidate.providerIds).map((provider) => provider.name + ': ' + provider.value).join(', ')) +
+          '</li>').join('') + '</ul>' : '<p>No verified replacement is selected. Search for the matching library title; the saved reference is kept.</p>')) + '</article>').join('') ||
+        (recoveryError ? '<p>The recovery report is unavailable. Refresh the report to try again.</p>' :
+          !recovery ? '<p>The recovery report is loading.</p>' :
+          savedReferenceCount() > 0 && !(recovery.referenceCount ?? list(recovery.entries).length)
+            ? '<p>Your settings contain saved media, but this report did not check it. Save or reload your settings, then check recovery.</p>'
+            : '<p>All ' + (recovery.referenceCount ?? list(recovery.entries).length) + ' checked references resolve in the current library.</p>');
       syncBusy();
+    }
+    function openRecovery(referenceId = '') {
+      recoveryFocus = referenceId || '';
+      recoveryChoices.clear();
+      show('recovery-dialog');
+      renderRecovery();
+      void refresh();
     }
     $('auto-manage').onclick = () => { render(); show('auto-registry-dialog'); };
     $('auto-add-entry').onclick = () => openEntry();
@@ -291,10 +393,23 @@
     for (const id of ['recovery-enabled', 'recovery-auto']) $(id).onchange = () => change(() => {
       getModel().MediaRecovery = { ...(getModel().MediaRecovery || {}), Enabled: $('recovery-enabled').checked, AutoReconnect: $('recovery-auto').checked };
     });
-    $('recovery-check').onclick = () => act(async () => {
-      recovery = camel(await post('Recovery/Check', {})); recoveryChoices.clear(); show('recovery-dialog');
-    }, { write: true });
-    $('recovery-review').onclick = () => { recoveryChoices.clear(); show('recovery-dialog'); renderRecovery(); };
+    $('recovery-check').onclick = () => {
+      show('recovery-dialog'); renderRecovery();
+      return act(async () => {
+        recovery = camel(await post('Recovery/Check', {})); recoveryChoices.clear();
+        context.refreshMediaAvailability?.();
+      }, { write: true, recoveryAction: true });
+    };
+    $('recovery-review').onclick = () => openRecovery();
+    $('recovery-notice-review').onclick = () => openRecovery();
+    $('recovery-refresh').onclick = () => void refresh();
+    $('recovery-reload').onclick = () => act(async () => {
+      await load();
+    }, { recoveryAction: true });
+    $('recovery-results').addEventListener('input', (event) => {
+      const target = event.target.closest('[data-recovery-query]');
+      if (target) recoveryQueries.set(target.dataset.recoveryQuery, target.value);
+    });
     $('recovery-results').addEventListener('change', (event) => {
       const target = event.target.closest('[data-recovery-choice]');
       if (target) { if (target.value) recoveryChoices.set(target.dataset.recoveryChoice, target.value); else recoveryChoices.delete(target.dataset.recoveryChoice); syncBusy(); }
@@ -309,13 +424,13 @@
         const candidates = camel(await request('FranchiseExplorer/Recovery/Candidates?' + new URLSearchParams({ referenceId, query, revision: recovery.revision, libraryRevision: recovery.libraryRevision })));
         const entry = recovery.entries.find((item) => item.referenceId === referenceId);
         if (entry) { entry.candidates = candidates; recoveryChoices.delete(referenceId); }
-      });
+      }, { recoveryAction: true });
     });
     $('recovery-apply').onclick = () => act(async () => {
       recovery = camel(await post('Recovery/Apply', { revision: recovery.revision, libraryRevision: recovery.libraryRevision,
         choices: [...recoveryChoices].map(([referenceId, itemId]) => ({ referenceId, itemId })) }));
-      recoveryChoices.clear(); notify('Selected media references reconnected.');
-    }, { write: true });
+      recoveryChoices.clear(); context.refreshMediaAvailability?.(); notify('Selected media references reconnected.');
+    }, { write: true, recoveryAction: true });
     // These hooks run inside the main controller's local configuration transaction.
     // They never POST independently and therefore participate in Save, Undo and backup export.
     function recordManualChoice(choice) {
@@ -357,7 +472,8 @@
       if (!config.Exclusions.some((entry) => entry.Enabled !== false && signature(entry) === signature(rule))) config.Exclusions.push(rule);
     }
     render();
-    return { afterLoad: refresh, render, isBusy: () => busy,
+    return { afterLoad: refresh, render, isBusy: () => busy, openRecovery,
+      referenceStatus: (id) => list(recovery?.entries).find((entry) => referenceKey(entry.referenceId) === referenceKey(id))?.status || null,
       getProtectedSettings: () => ({ AutoFranchises: clone(getModel().AutoFranchises || {}), MediaRecovery: clone(getModel().MediaRecovery || {}) }),
       recordManualChoice, excludeUncheckedReview: (choices) => choices.forEach(recordManualChoice) };
   }

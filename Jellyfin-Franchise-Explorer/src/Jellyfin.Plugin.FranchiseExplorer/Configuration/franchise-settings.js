@@ -120,6 +120,15 @@
     const ranks = new Map((row.MediaOrder || []).map((id, i) => [id, i]));
     return entries.sort((a, b) => (ranks.get(a.Id) ?? Infinity) - (ranks.get(b.Id) ?? Infinity));
   }
+  function franchiseMedia(nodeId) {
+    const assigned = new Set(model.Rows.flatMap((row) => row.MediaLinkIds)),
+      links = model.MediaLinks.filter((link) => link.NodeId === nodeId && !assigned.has(link.Id))
+        .sort((a, b) => a.Position - b.Position);
+    return {
+      Id: 'node:' + nodeId, Name: 'Franchise media', Items: [],
+      MediaLinkIds: links.map((link) => link.Id), MediaOrder: links.map((link) => link.Id),
+    };
+  }
   function reference(rowId, id) {
     if (rowId.startsWith('node:')) {
       const node = getNode(rowId.slice(5)),
@@ -244,16 +253,18 @@
   async function item(id) {
     if (!C.validGuid(id)) return null;
     const key = id.replace(/-/g, '').toLowerCase();
-    if (!itemCache.has(key))
-      itemCache.set(
-        key,
-        (ApiClient.getItem
+    if (!itemCache.has(key)) {
+      const pending = Promise.resolve().then(() => ApiClient.getItem
           ? ApiClient.getItem(ApiClient.getCurrentUserId?.(), id)
           : request(
               'Items/' + id + '?userId=' + encodeURIComponent(ApiClient.getCurrentUserId?.() || ''),
             )
-        ).catch(() => null),
-      );
+        ).catch(() => null).then((media) => {
+          if (!media && itemCache.get(key) === pending) itemCache.delete(key);
+          return media;
+        });
+      itemCache.set(key, pending);
+    }
     return itemCache.get(key);
   }
   function imageAddress(route) {
@@ -345,6 +356,7 @@
       next = C.normalize(raw);
     if (reload && loaded) remember();
     model = next;
+    itemCache.clear();
     baseline = fingerprint(next);
     loaded = true;
     dirty = false;
@@ -441,9 +453,12 @@
                 ) +
                 '<span class="media-title">' +
                 esc(refName(ref)) +
+                '<span class="media-availability" data-media-native-id="' +
+                esc(ref.JellyfinItemId) + '" data-media-reference-id="' + ref.Id + '" hidden></span>' +
                 '</span>' +
                 (manage
-                  ? '<div class="media-actions">' +
+                  ? '<div class="media-actions"><button class="quiet recover-reference" data-recover-reference="' +
+                    ref.Id + '" hidden>Review reference</button>' +
                     '<button class="icon-button quiet" data-settings-item="' +
                     ref.Id +
                     '" data-item-row="' +
@@ -475,6 +490,25 @@
             .join('') +
           '</div>'
       : '<div class="empty-media">No media added</div>';
+  }
+  function resolveMediaAvailability(scope) {
+    for (const label of scope.querySelectorAll('[data-media-native-id]')) {
+      void item(label.dataset.mediaNativeId).then((media) => {
+        if (!label.isConnected) return;
+        const status = automation?.referenceStatus?.(label.dataset.mediaReferenceId),
+          needsReview = !media || !!status && status !== 'Healthy';
+        label.hidden = !needsReview;
+        label.textContent = !media ? 'Unavailable in Jellyfin' : needsReview ? 'Reference needs review' : '';
+        label.title = needsReview ? 'This saved reference is retained. Check Media Recovery before removing it.' : '';
+        const action = label.closest('.media-entry')?.querySelector('[data-recover-reference]');
+        if (action) action.hidden = !needsReview;
+        scheduleBoardLayout();
+      });
+    }
+  }
+  function refreshMediaAvailability() {
+    resolveMediaAvailability($('board'));
+    if ($('media-dialog').open) resolveMediaAvailability($('media-current'));
   }
   const collapsedRows = new Set();
   function rowGroups(row) {
@@ -531,6 +565,7 @@
     if (ancestors.has(node.Id)) return '<div class="empty-media">Group already shown in this path</div>';
     const branch = new Set(ancestors).add(node.Id),
       ownedRows = rows(node.Id),
+      unassignedMedia = franchiseMedia(node.Id),
       assigned = new Set(ownedRows.flatMap((row) => row.NodeIds));
     const open = expanded.has(node.Id),
       tag = root ? 'article' : 'div';
@@ -571,6 +606,10 @@
           (root ? 'node-body' : 'subgroup-body') +
           '">' +
           ownedRows.map((row) => rowView(row, branch)).join('') +
+          (unassignedMedia.MediaLinkIds.length
+            ? '<section class="franchise-media" data-node-media="' + node.Id +
+              '"><h4>Franchise media · ' + unassignedMedia.MediaLinkIds.length + '</h4>' +
+              mediaList(unassignedMedia, true) + '</section>' : '') +
           children(node.Id)
             .filter((child) => !assigned.has(child.Id))
             .map((child) => nodeView(child, false, branch))
@@ -629,6 +668,7 @@
     boardResize?.disconnect();
     boardResize?.observe($('board'));
     $('board').querySelectorAll(':scope > .node-card').forEach((card) => boardResize?.observe(card));
+    resolveMediaAvailability($('board'));
     scheduleBoardLayout();
     if (focused) [...$('board').querySelectorAll('button')].find((button) =>
       (button.closest('[data-group-row]')?.dataset.groupRow || '') === focused.row &&
@@ -1497,22 +1537,11 @@
           '</section>',
       )
       .join('');
-    const unassigned = model.MediaLinks.filter(
-      (l) => l.NodeId === owner.Id && !model.Rows.some((r) => r.MediaLinkIds.includes(l.Id)),
-    ).sort((a, b) => a.Position - b.Position);
-    if (unassigned.length)
+    const unassigned = franchiseMedia(owner.Id);
+    if (unassigned.MediaLinkIds.length)
       content +=
         '<section class="media-current-group"><h4>Franchise media</h4>' +
-        mediaList(
-          {
-            Id: 'node:' + owner.Id,
-            Name: 'Franchise media',
-            Items: [],
-            MediaLinkIds: unassigned.map((l) => l.Id),
-            MediaOrder: unassigned.map((l) => l.Id),
-          },
-          true,
-        ) +
+        mediaList(unassigned, true) +
         '</section>';
     $('media-current').innerHTML =
       content || '<div class="empty-media">No media added in this category</div>';
@@ -1537,6 +1566,7 @@
     $('media-convert-row').hidden = !row;
     $('media-library').innerHTML = libraryMarkup(activeSearch());
     currentMedia();
+    resolveMediaAvailability($('media-current'));
     updateSelection();
     $('media-undo').disabled = !history.length;
     if (preserve) {
@@ -3240,6 +3270,7 @@
     else if (data.deleteNode) openDelete('node', data.deleteNode);
     else if (data.deleteRow) openDelete('row', data.deleteRow);
     else if (data.removeItem) openDelete('item', data.removeItem, data.itemRow);
+    else if (data.recoverReference) automation?.openRecovery?.(data.recoverReference);
     else if (data.editLibraryItem)
       void attempt(() => editRange(data.itemRow, data.editLibraryItem));
     else if (data.settingsItem) artwork.openItem(data.itemRow, data.settingsItem);
@@ -3271,7 +3302,7 @@
   };
   automation = window.FranchiseSettingsAutomation?.init({
     page, $, core: C, getModel: () => model, load: () => load(true), notify, request,
-    change, render, show, isDirty: () => dirty || saving,
+    change, render, show, refreshMediaAvailability, isDirty: () => dirty || saving,
   }) || null;
   viewerPreferences();
   page.addEventListener('pageshow', () => {

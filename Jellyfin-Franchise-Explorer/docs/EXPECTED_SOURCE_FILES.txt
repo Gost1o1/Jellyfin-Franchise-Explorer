@@ -199,3 +199,6 @@ Jellyfin-Franchise-Explorer/tests/AutoAdd.Tests/AutomationRuntimeTests.cs
 Jellyfin-Franchise-Explorer/tests/AutoAdd.Tests/ConfigurationCommitTests.cs
 Jellyfin-Franchise-Explorer/tests/AutoAdd.Tests/MediaRecoveryTests.cs
 Jellyfin-Franchise-Explorer/scripts/test_artwork_image_loading_browser.py
+Jellyfin-Franchise-Explorer/scripts/test_missing_media_display_browser.py
+Jellyfin-Franchise-Explorer/scripts/test_recovery_attention_browser.py
+Jellyfin-Franchise-Explorer/tests/AutoAdd.Tests/RecoveryFailureRegressionTests.cs

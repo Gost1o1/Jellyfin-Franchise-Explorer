@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.FranchiseExplorer.Services;
 
-/// <summary>Captures portable identities and reconnects verified references after a completed library change.</summary>
+/// <summary>Captures portable identities and reconnects verified references from complete library snapshots.</summary>
 public sealed class MediaRecoveryService(ILibraryManager library, FranchiseLibrarySnapshotService snapshots, ILogger<MediaRecoveryService> logger) : BackgroundService
 {
     private readonly object _events = new();
@@ -15,6 +15,8 @@ public sealed class MediaRecoveryService(ILibraryManager library, FranchiseLibra
     private bool _libraryChanged;
     private bool _wasScanning;
     private long _lastConfigurationRevision = -1;
+    private DateTimeOffset _nextCheckUtc = DateTimeOffset.MinValue;
+    private readonly SemaphoreSlim _pending = new(1, 1);
 
     private void LibraryChanged(object? sender, ItemChangeEventArgs args)
     {
@@ -29,7 +31,7 @@ public sealed class MediaRecoveryService(ILibraryManager library, FranchiseLibra
         library.ItemRemoved += LibraryChanged;
         try
         {
-            // Startup captures identities passively. Automatic repair begins only after a library event or scan.
+            // A move may have completed before this service started, or without a delivered library event.
             while (!stoppingToken.IsCancellationRequested)
             {
                 try
@@ -48,18 +50,10 @@ public sealed class MediaRecoveryService(ILibraryManager library, FranchiseLibra
                         DateTimeOffset changedUtc;
                         lock (_events) { changed = _libraryChanged; changedUtc = _changedUtc; }
                         var revision = plugin.Configuration.ConfigurationRevision;
-                        if ((!changed || changedUtc <= DateTimeOffset.UtcNow.AddSeconds(-15)) && (changed || _lastConfigurationRevision != revision))
+                        if ((!changed || changedUtc <= DateTimeOffset.UtcNow.AddSeconds(-15))
+                            && (changed || _lastConfigurationRevision != revision || DateTimeOffset.UtcNow >= _nextCheckUtc))
                         {
-                            var status = await CheckAsync(changed, stoppingToken).ConfigureAwait(false);
-                            if (changed && status.Enabled && status.AutoReconnect && status.LibraryHealthy)
-                            {
-                                var choices = status.Entries.Where(e => e.Status == "Verified" && e.Candidates.Count == 1)
-                                    .Select(e => new MediaRecoveryChoice { ReferenceId = e.ReferenceId, ItemId = e.Candidates[0].ItemId }).ToList();
-                                if (choices.Count > 0)
-                                    await ApplyAsync(new() { Revision = status.Revision, LibraryRevision = status.LibraryRevision, Choices = choices }, true, stoppingToken).ConfigureAwait(false);
-                            }
-                            lock (_events) if (_changedUtc == changedUtc) _libraryChanged = false;
-                            _lastConfigurationRevision = plugin.Configuration.ConfigurationRevision;
+                            await ProcessPendingAsync(stoppingToken).ConfigureAwait(false);
                         }
                     }
                 }
@@ -74,6 +68,31 @@ public sealed class MediaRecoveryService(ILibraryManager library, FranchiseLibra
             library.ItemUpdated -= LibraryChanged;
             library.ItemRemoved -= LibraryChanged;
         }
+    }
+
+    /// <summary>Runs one catch-up pass. The background loop schedules retries and lets library events settle first.</summary>
+    public async Task ProcessPendingAsync(CancellationToken cancellationToken = default)
+    {
+        await _pending.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (library.IsScanRunning || Plugin.Instance is null) return;
+            DateTimeOffset changedUtc;
+            lock (_events) changedUtc = _changedUtc;
+            var status = await CheckAsync(true, cancellationToken).ConfigureAwait(false);
+            if (status.Enabled && status.AutoReconnect && status.LibraryHealthy)
+            {
+                var choices = status.Entries.Where(e => e.Status == "Verified" && e.Candidates.Count == 1)
+                    .Select(e => new MediaRecoveryChoice { ReferenceId = e.ReferenceId, ItemId = e.Candidates[0].ItemId }).ToList();
+                if (choices.Count > 0)
+                    await ApplyAsync(new() { Revision = status.Revision, LibraryRevision = status.LibraryRevision, Choices = choices }, true, cancellationToken).ConfigureAwait(false);
+            }
+            lock (_events) if (_changedUtc == changedUtc) _libraryChanged = false;
+            _lastConfigurationRevision = Plugin.Instance.Configuration.ConfigurationRevision;
+            // Retry incomplete snapshots even when no later event or configuration edit arrives.
+            _nextCheckUtc = DateTimeOffset.UtcNow.AddSeconds(status.LibraryHealthy ? 60 : 15);
+        }
+        finally { _pending.Release(); }
     }
 
     public Task<MediaRecoveryStatus> StatusAsync(CancellationToken cancellationToken = default) => CheckCoreAsync(false, false, cancellationToken);
@@ -121,9 +140,9 @@ public sealed class MediaRecoveryService(ILibraryManager library, FranchiseLibra
         finally { FranchiseConfigurationGate.Gate.Release(); }
     }
 
-    private void ValidateRevision(PluginConfiguration config, FranchiseLibrarySnapshot snapshot, string revision, string libraryRevision)
+    private void ValidateRevision(PluginConfiguration config, FranchiseLibrarySnapshot snapshot, string revision, string libraryRevision, bool automatic = false)
     {
-        if (!snapshot.Healthy) throw new InvalidOperationException(snapshot.Message);
+        if (automatic ? !snapshot.Healthy : !snapshot.CanSearch) throw new InvalidOperationException(snapshot.Message);
         if (MediaRecoveryPlanner.Revision(config) != revision || snapshot.Revision != libraryRevision || !snapshots.IsCurrent(libraryRevision))
             throw new InvalidOperationException("Configuration or library changed. Check media links again before applying a choice.");
     }
@@ -138,7 +157,7 @@ public sealed class MediaRecoveryService(ILibraryManager library, FranchiseLibra
         {
             var plugin = Plugin.Instance ?? throw new InvalidOperationException("Plugin configuration unavailable.");
             var previous = plugin.Configuration;
-            ValidateRevision(previous, snapshot, request.Revision, request.LibraryRevision);
+            ValidateRevision(previous, snapshot, request.Revision, request.LibraryRevision, automatic);
             if (!previous.MediaRecovery.Enabled || automatic && !previous.MediaRecovery.AutoReconnect) throw new InvalidOperationException("Media recovery is disabled.");
             var references = MediaRecoveryPlanner.References(previous).ToList();
             var currentItems = snapshot.Items.GroupBy(i => MediaRecoveryPlanner.Id(i.Id)).ToDictionary(g => g.Key, g => g.First());

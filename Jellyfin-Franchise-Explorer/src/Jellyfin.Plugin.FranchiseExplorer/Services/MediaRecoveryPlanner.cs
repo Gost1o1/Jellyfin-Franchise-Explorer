@@ -36,11 +36,15 @@ public sealed class MediaRecoveryStatus
     public string Revision { get; set; } = string.Empty;
     public string LibraryRevision { get; set; } = string.Empty;
     public bool LibraryHealthy { get; set; }
+    public bool CanSearch { get; set; }
     public bool Enabled { get; set; }
     public bool AutoReconnect { get; set; }
     public DateTimeOffset CheckedUtc { get; set; }
     public string Message { get; set; } = string.Empty;
     public List<MediaRecoveryEntry> Entries { get; set; } = new();
+    public int ReferenceCount => Entries.Count;
+    public int HealthyCount => Entries.Count(e => e.Status == "Healthy");
+    public int AttentionCount => ReferenceCount - HealthyCount;
 }
 
 public sealed class MediaRecoveryChoice
@@ -135,22 +139,89 @@ public static class MediaRecoveryPlanner
         if (Stable(reference.Identity)) return reference.Identity;
         var saved = config.MediaRecovery.KnownItems.FirstOrDefault(s => Id(s.ItemId) == Id(reference.ItemId))?.Identity;
         if (Stable(saved)) return saved;
-        // A legacy series range may have recorded IMDb episode IDs rather than its show ID.
-        // Every recorded ID must resolve consistently to the same parent; partial evidence is held.
-        if (reference.ItemType != "Series") return reference.Identity;
-        var records = config.Nodes.SelectMany(n => n.AutoAddRecords).Where(r => r.ReferenceId == reference.ReferenceId && r.RowId == reference.RowId).ToList();
-        var ids = records.SelectMany(r => r.ImdbIds).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-        if (ids.Count == 0) return reference.Identity;
-        var parentIds = new HashSet<string>(StringComparer.Ordinal);
+        var evidence = new List<MediaIdentity>();
+        foreach (var record in config.Nodes.SelectMany(n => n.AutoAddRecords)
+            .Where(r => r.ReferenceId == reference.ReferenceId && r.RowId == reference.RowId && LegacyReferenceMatches(r, reference)))
+        {
+            var identity = LegacyIdentity(reference.ItemType, record.ImdbIds, items);
+            if (!Stable(identity)) return reference.Identity; // Partial or conflicting historical evidence needs review.
+            evidence.Add(identity!);
+        }
+        foreach (var owner in config.AutoFranchises.Ownership.Where(o => o.ReferenceId == reference.ReferenceId
+            && Id(o.ItemId) == Id(reference.ItemId) && o.ItemType == reference.ItemType
+            && (reference.RowId.Length > 0 ? o.RowId == reference.RowId : config.Rows.Any(r => r.Id == o.RowId && r.MediaLinkIds.Contains(reference.ReferenceId)))))
+        {
+            var identity = LegacyIdentity(reference.ItemType, new[] { owner.ProviderId }, items);
+            if (!Stable(identity)) return reference.Identity;
+            if (reference.ItemType == "Series" && owner.SeriesProviderId.Length > 0
+                && !identity!.ProviderIds.Any(p => p.Name == "Imdb" && p.Value.Equals(owner.SeriesProviderId, StringComparison.OrdinalIgnoreCase))) return reference.Identity;
+            if (reference.ItemType == "Episode" && (owner.SeriesProviderId.Length > 0
+                    && !identity!.SeriesProviderIds.Any(p => p.Name == "Imdb" && p.Value.Equals(owner.SeriesProviderId, StringComparison.OrdinalIgnoreCase))
+                || owner.StartEpisode > 0 && (identity!.SeasonNumber != owner.StartSeason || identity.EpisodeNumber != owner.StartEpisode
+                    || owner.EndSeason != owner.StartSeason || identity.EpisodeEnd != owner.EndEpisode))) return reference.Identity;
+            evidence.Add(identity!);
+        }
+        if (evidence.Count == 0) return reference.Identity;
+        var merged = evidence[0];
+        foreach (var identity in evidence.Skip(1))
+        {
+            if (merged.ItemType != identity.ItemType || merged.SeasonNumber != identity.SeasonNumber || merged.EpisodeNumber != identity.EpisodeNumber || merged.EpisodeEnd != identity.EpisodeEnd
+                || !MergeProviders(merged.ProviderIds, identity.ProviderIds) || !MergeProviders(merged.SeriesProviderIds, identity.SeriesProviderIds)) return reference.Identity;
+        }
+        return merged;
+    }
+
+    // Native Auto-Add signatures are canonical JSON with a nested `ref`. Only the original
+    // item/type establish provenance; later title, artwork, membership and range edits are retained.
+    private static bool LegacyReferenceMatches(FranchiseAutoAddRecord record, Reference reference)
+    {
+        try
+        {
+            var prior = JsonNode.Parse(record.Signature)?["ref"];
+            return prior is JsonObject && Id(prior["Id"]?.GetValue<string>()) == Id(reference.ReferenceId)
+                && Id(prior["JellyfinItemId"]?.GetValue<string>()) == Id(reference.ItemId)
+                && prior["ItemType"]?.GetValue<string>() == reference.ItemType;
+        }
+        catch (JsonException) { return false; }
+        catch (InvalidOperationException) { return false; }
+    }
+
+    private static bool MergeProviders(List<MediaProviderIdentity> target, List<MediaProviderIdentity> source)
+    {
+        foreach (var provider in source)
+        {
+            var existing = target.FirstOrDefault(p => p.Name == provider.Name);
+            if (existing is not null && existing.Value != provider.Value) return false;
+            if (existing is null) target.Add(new() { Name = provider.Name, Value = provider.Value });
+        }
+        target.Sort((left, right) => StringComparer.Ordinal.Compare(left.Name, right.Name));
+        return true;
+    }
+
+    private static MediaIdentity? LegacyIdentity(string type, IEnumerable<string> values, IReadOnlyList<AutomationLibraryItem> items)
+    {
+        var ids = values.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        if (ids.Length == 0 || ids.Any(id => !Regex.IsMatch(id ?? "", "^tt[0-9]{1,18}$", RegexOptions.IgnoreCase))) return null;
+        if (type == "Movie") return ids.Length == 1 ? new() { ItemType = type, ProviderIds = new() { new() { Name = "Imdb", Value = ids[0].ToLowerInvariant() } } } : null;
+        if (type is not ("Series" or "Episode") || type == "Episode" && ids.Length != 1) return null;
+        MediaIdentity? identity = null;
         foreach (var imdb in ids)
         {
-            var matches = items.Where(i => i.IsAvailable && i.ProviderIds.Any(p => p.Key.Equals("Imdb", StringComparison.OrdinalIgnoreCase) && p.Value.Equals(imdb, StringComparison.OrdinalIgnoreCase))).ToList();
-            if (matches.Count != 1 || matches[0].ItemType is not ("Episode" or "Series")) return reference.Identity;
-            parentIds.Add(Id(matches[0].ItemType == "Series" ? matches[0].Id : matches[0].SeriesId));
+            var matches = items.Where(i => i.IsAvailable && i.ProviderIds.Any(p => p.Key.Equals("Imdb", StringComparison.OrdinalIgnoreCase) && p.Value.Equals(imdb, StringComparison.OrdinalIgnoreCase))).ToArray();
+            if (matches.Length == 0) return null;
+            foreach (var match in matches)
+            {
+                var item = type == "Series" && match.ItemType == "Episode" ? items.FirstOrDefault(i => i.IsAvailable && i.ItemType == "Series" && Id(i.Id) == Id(match.SeriesId)) : match;
+                if (item?.ItemType != type) return null;
+                var next = Capture(item); next.Year = null;
+                if (!Stable(next)) return null;
+                if (identity is null) identity = next;
+                else if (identity.SeasonNumber != next.SeasonNumber || identity.EpisodeNumber != next.EpisodeNumber || identity.EpisodeEnd != next.EpisodeEnd
+                    || !ExactProviders(identity.ProviderIds, next.ProviderIds) || !ExactProviders(next.ProviderIds, identity.ProviderIds)
+                    || type == "Episode" && (!ExactProviders(identity.SeriesProviderIds, next.SeriesProviderIds) || !ExactProviders(next.SeriesProviderIds, identity.SeriesProviderIds))) return null;
+            }
         }
-        if (parentIds.Count != 1) return reference.Identity;
-        var parent = items.SingleOrDefault(i => i.ItemType == "Series" && Id(i.Id) == parentIds.Single());
-        return parent is null ? reference.Identity : Capture(parent);
+        return identity;
     }
 
     public static MediaRecoveryCandidate Candidate(AutomationLibraryItem item, MediaIdentity? identity) => new()
@@ -158,7 +229,7 @@ public static class MediaRecoveryPlanner
 
     public static MediaRecoveryStatus Review(PluginConfiguration config, FranchiseLibrarySnapshot library)
     {
-        var result = new MediaRecoveryStatus { Revision = Revision(config), LibraryRevision = library.Revision, LibraryHealthy = library.Healthy,
+        var result = new MediaRecoveryStatus { Revision = Revision(config), LibraryRevision = library.Revision, LibraryHealthy = library.Healthy, CanSearch = library.CanSearch,
             Enabled = config.MediaRecovery.Enabled, AutoReconnect = config.MediaRecovery.AutoReconnect, CheckedUtc = DateTimeOffset.UtcNow, Message = library.Message };
         var byId = library.Items.GroupBy(i => Id(i.Id)).ToDictionary(g => g.Key, g => g.First());
         CandidateLookup? lookup = null;
@@ -167,11 +238,13 @@ public static class MediaRecoveryPlanner
             var current = byId.GetValueOrDefault(Id(reference.ItemId));
             var identity = IdentityFor(config, reference, library.Items);
             var currentHealthy = current is { IsAvailable: true } && current.ItemType == reference.ItemType && (!Stable(identity) || Verified(identity, current));
-            var candidates = currentHealthy || !Stable(identity) ? new List<MediaRecoveryCandidate>() : (lookup ??= new(library.Items)).Find(identity).Where(i => Id(i.Id) != Id(reference.ItemId)).Select(i => Candidate(i, identity)).ToList();
+            var candidates = currentHealthy || !Stable(identity) ? new List<MediaRecoveryCandidate>() : (lookup ??= new(library.Items)).Find(identity).Where(i => i.ItemType == reference.ItemType && Id(i.Id) != Id(reference.ItemId)).Select(i => Candidate(i, identity)).ToList();
             var status = currentHealthy ? "Healthy" : current is { IsAvailable: true } ? "ManualReview" : !Stable(identity) ? "ManualReview" : candidates.Count == 1 ? "Verified" : candidates.Count > 1 ? "Ambiguous" : "Missing";
             result.Entries.Add(new() { ReferenceId = reference.ReferenceId, RowId = reference.RowId, NodeId = reference.NodeId, OldItemId = reference.ItemId,
                 Title = reference.Title, ItemType = reference.ItemType, Status = status, Candidates = status == "Healthy" ? new() : candidates,
-                Reason = status switch { "Healthy" => "The saved Jellyfin item is available.", "Verified" => "One exact provider and media identity matches.", "Ambiguous" => "Several library versions share this identity. Choose a version.", "Missing" => "No verified replacement is available; the saved reference is retained.", _ => "No durable identity is available. Search and choose a replacement explicitly." } });
+                Reason = status switch { "Healthy" => "The saved Jellyfin item is available.", "Verified" => "One exact provider and media identity matches.", "Ambiguous" => "Several library versions share this identity. Choose a version.", "Missing" => "No verified replacement is available; the saved reference is retained.",
+                    _ when current is { IsAvailable: true } => "The saved Jellyfin item conflicts with its recorded media identity. Review the replacement explicitly.",
+                    _ => "The saved Jellyfin ID is unavailable and no trustworthy pre-move identity was recorded. Search and choose a replacement explicitly; titles are never matched automatically." } });
         }
         return result;
     }
@@ -180,11 +253,19 @@ public static class MediaRecoveryPlanner
     {
         var before = Revision(config);
         var byId = items.Where(i => i.IsAvailable).GroupBy(i => Id(i.Id)).ToDictionary(g => g.Key, g => g.First());
+        // A reused native ID must not overwrite the provider evidence saved by a legacy import.
+        var conflicts = new HashSet<string>();
+        foreach (var reference in References(config))
+            if (byId.TryGetValue(Id(reference.ItemId), out var current))
+            {
+                var identity = IdentityFor(config, reference, items);
+                if (Stable(identity) && !Verified(identity, current)) conflicts.Add(Id(reference.ItemId));
+            }
         var cleanLegacy = config.Nodes.SelectMany(n => n.AutoAddRecords).Where(r => LegacySignatureMatches(config, r)).ToList();
         foreach (var link in config.MediaLinks)
-            if (byId.TryGetValue(Id(link.JellyfinItemId), out var item) && item.ItemType == link.ItemType && (!Stable(link.Identity) || Verified(link.Identity, item))) link.Identity = Capture(item);
+            if (!conflicts.Contains(Id(link.JellyfinItemId)) && byId.TryGetValue(Id(link.JellyfinItemId), out var item) && item.ItemType == link.ItemType && (!Stable(link.Identity) || Verified(link.Identity, item))) link.Identity = Capture(item);
         foreach (var entry in config.Rows.SelectMany(r => r.Items))
-            if (byId.TryGetValue(Id(entry.JellyfinItemId), out var item) && item.ItemType == entry.ItemType && (!Stable(entry.Identity) || Verified(entry.Identity, item))) entry.Identity = Capture(item);
+            if (!conflicts.Contains(Id(entry.JellyfinItemId)) && byId.TryGetValue(Id(entry.JellyfinItemId), out var item) && item.ItemType == entry.ItemType && (!Stable(entry.Identity) || Verified(entry.Identity, item))) entry.Identity = Capture(item);
         var needed = References(config).Select(r => Id(r.ItemId)).ToHashSet();
         foreach (var id in progressIds ?? []) needed.Add(Id(id));
         foreach (var item in items.Where(i => i.ItemType == "Episode" && needed.Contains(Id(i.SeriesId))).ToList()) needed.Add(Id(item.Id));
@@ -196,7 +277,7 @@ public static class MediaRecoveryPlanner
         }
         var known = config.MediaRecovery.KnownItems.GroupBy(s => Id(s.ItemId)).ToDictionary(g => g.Key, g => g.First());
         foreach (var id in needed)
-            if (byId.TryGetValue(id, out var item) && (!known.TryGetValue(id, out var prior) || !Stable(prior.Identity) || Verified(prior.Identity, item)))
+            if (!conflicts.Contains(id) && byId.TryGetValue(id, out var item) && (!known.TryGetValue(id, out var prior) || !Stable(prior.Identity) || Verified(prior.Identity, item)))
                 known[id] = new() { ItemId = item.Id, SeriesItemId = item.SeriesId, Identity = Capture(item) };
         config.MediaRecovery.KnownItems = known.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Value).ToList();
         foreach (var record in cleanLegacy) record.Signature = LegacySignature(config, record);

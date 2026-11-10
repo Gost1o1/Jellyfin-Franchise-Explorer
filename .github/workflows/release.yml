@@ -5,7 +5,7 @@ on:
       version:
         description: 'Release version; must equal csproj Version'
         required: true
-        default: '0.8.9.27'
+        default: '0.8.9.28'
         type: string
       confirm:
         description: 'Type RELEASE_EXPERIMENTAL to publish'
@@ -43,6 +43,8 @@ jobs:
           python3 scripts/test_artwork_image_loading_browser.py
           python3 scripts/test_hierarchy_layout_browser.py
           python3 scripts/test_automation_recovery_browser.py
+          python3 scripts/test_missing_media_display_browser.py
+          python3 scripts/test_recovery_attention_browser.py
           python3 scripts/test_specific_episode_browser.py
           python3 scripts/test_imdb_lists_episode_ui_browser.py
           python3 scripts/test_episode_presentation_browser.py

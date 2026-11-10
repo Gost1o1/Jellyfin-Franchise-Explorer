@@ -33,10 +33,10 @@ assert(timeline.includes('Watch only · No franchise tracking') && timeline.incl
 assert(timeline.includes('this.playHere(row,queue,index,0,false,true)'), 'One-off local playback must bypass timeline tracking');
 assert(timeline.includes('this.replay(row,queue,index,select.value,false)'), 'One-off remote playback must bypass timeline tracking');
 
-const begin = browse.indexOf('  function mediaCounts(root){');
+const begin = browse.indexOf('  async function mediaCounts(root){');
 const end = browse.indexOf('  function defaultRows(', begin);
 assert(begin >= 0 && end > begin, 'Media count function is missing');
-const getCounts = new Function('catalog', browse.slice(begin, end) + '\nreturn mediaCounts;');
+const getCounts = new Function('catalog', 'getItem', 'nativeItemKey', browse.slice(begin, end) + '\nreturn mediaCounts;');
 const cat = {
   nodes: [
     {id:'root',parentId:''},{id:'phase',parentId:'root'},
@@ -46,7 +46,8 @@ const cat = {
     {nodeId:'phase',itemId:'show-a',itemType:'Series'},
     {nodeId:'phase',itemId:'movie-b',itemType:'Movie'},
     {nodeId:'root',itemId:'collection',itemType:'BoxSet'},
-    {nodeId:'other',itemId:'unrelated',itemType:'Movie'}
+    {nodeId:'other',itemId:'unrelated',itemType:'Movie'},
+    {nodeId:'root',itemId:'missing',itemType:'Movie'}
   ],
   rows: [
     {parentNodeId:'root',items:[
@@ -56,9 +57,12 @@ const cat = {
     {parentNodeId:'other',items:[{itemId:'unrelated-2',itemType:'Movie'}]}
   ]
 };
-assert.deepEqual(getCounts(cat)('root'),{tvShows:1,movies:2});
-assert.deepEqual(getCounts(cat)('phase'),{tvShows:1,movies:1});
-assert.deepEqual(getCounts(cat)('other'),{tvShows:0,movies:2});
+const visibleItems = new Map([
+  ['show-a',{Type:'Series'}], ['movie-b',{Type:'Movie'}], ['movie-c',{Type:'Movie'}],
+  ['collection',{Type:'BoxSet'}], ['unrelated',{Type:'Movie'}], ['unrelated-2',{Type:'Movie'}]
+]);
+const counts = getCounts(cat, async id => visibleItems.get(id) || null, id => id);
+
 const store = new Map();
 let lastNavigation = '';
 const environment = {
@@ -82,6 +86,9 @@ const previous={rowId:row.id,parentNodeId:row.parentNodeId,name:row.name,index:1
 manager.states.set(row.id,previous);
 manager.save=async state=>{manager.states.set(state.rowId,state);return state;};
 (async()=>{
+  assert.deepEqual(await counts('root'),{tvShows:1,movies:2,unavailable:1},'Unavailable saved references must not inflate playable counts');
+  assert.deepEqual(await counts('phase'),{tvShows:1,movies:1,unavailable:0});
+  assert.deepEqual(await counts('other'),{tvShows:0,movies:2,unavailable:0});
   // A full history reset must clear only franchise progress, not Jellyfin's watched flags.
   const reset=await manager.resetHistory(row,queue);
   assert.equal(reset.index,0);

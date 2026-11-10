@@ -36,6 +36,7 @@ ImdbListConfigurationTests.Run();
 AutomationPlannerTests.Run();
 await AutomationRuntimeTests.Run();
 await MediaRecoveryTests.Run();
+await RecoveryFailureRegressionTests.Run();
 await ConfigurationCommitTests.Run();
 
 if (args.Contains("--live"))
