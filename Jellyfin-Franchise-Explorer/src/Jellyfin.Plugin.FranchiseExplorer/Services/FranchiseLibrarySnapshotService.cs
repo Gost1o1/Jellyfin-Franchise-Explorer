@@ -7,7 +7,7 @@ namespace Jellyfin.Plugin.FranchiseExplorer.Services;
 
 public sealed record FranchiseLibrarySnapshot(IReadOnlyList<AutomationLibraryItem> Items, string Revision, bool Healthy, string Message)
 {
-    // A complete snapshot can support an explicit repair even when an unrelated file is offline.
+    // A complete snapshot can recover removed IDs even when unrelated files are offline.
     public bool CanSearch { get; init; } = Healthy || Items.Any(i => i.IsAvailable);
 }
 
@@ -36,7 +36,7 @@ public sealed class FranchiseLibrarySnapshotService(ILibraryManager library)
                 var available = items.Count(i => i.IsAvailable);
                 return _snapshot = new(items, revision, healthy, healthy ? "Library metadata is available."
                     : items.Count == 0 ? "No library media was returned. Complete a Jellyfin scan; saved references are retained."
-                    : $"{items.Count - available} library items are unavailable. Automatic reconnection is paused; available replacements can be chosen explicitly.") { CanSearch = available > 0 };
+                    : $"{items.Count - available} library items are unavailable. Removed IDs can reconnect to clear available matches; references to offline items are retained.") { CanSearch = available > 0 };
             }
             catch (InvalidOperationException ex) { return new([], "unavailable:" + _generation, false, ex.Message) { CanSearch = false }; }
         }

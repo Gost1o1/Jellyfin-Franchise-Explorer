@@ -3029,12 +3029,15 @@
   page.addEventListener('input', hideHelp);
   function viewerPreferences() {
     let profileUserId = '', profileToken = '', profileRequest = 0;
+    let preferenceRequest = 0, savingPreference = false, loadingAccount = '', preferenceSaves = Promise.resolve();
+    const serverPreferences = new Map();
     const identity = (value) => {
       const text = String(value || '').toLowerCase();
       return /^[a-f\d]{32}$|^[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12}$/.test(text)
         ? text.replace(/-/g, '') : text;
     };
     const same = (left, right) => !!left && !!right && identity(left) === identity(right);
+    const account = (keys) => keys ? identity(keys.serverId) + ':' + identity(keys.userId) : '';
     const apiValue = (name) => {
       try {
         const value = ApiClient[name];
@@ -3116,6 +3119,23 @@
         throw error;
       }
     }
+    function saveServerPreference(state) {
+      const url = serverUrl('FranchiseExplorer/ViewerPreferences'), auth = headers(),
+        body = JSON.stringify({ subtitleEnabled: state.enabled, subtitleLanguage: state.language });
+      // A migration already in flight must finish before a newer explicit switch.
+      const pending = preferenceSaves.catch(() => {}).then(async () => {
+        const response = await fetch(url, { method: 'PUT', cache: 'no-store',
+          headers: { ...auth, 'Content-Type': 'application/json' }, body,
+          signal: AbortSignal.timeout(45000) });
+        if (!response.ok) throw Error('Jellyfin returned HTTP ' + response.status);
+        const result = await response.json();
+        if (!result?.hasPreference || typeof result.subtitleEnabled !== 'boolean')
+          throw Error('Jellyfin did not confirm the saved subtitle preference.');
+        return { enabled: result.subtitleEnabled, language: result.subtitleLanguage || '' };
+      });
+      preferenceSaves = pending;
+      return pending;
+    }
     const codes =
         'ar bg ca cs da de el en es et fa fi fr he hi hr hu id is it ja ko lt lv ms nb nl pl pt ro ru sk sl sr sv th tr uk ur vi zh'.split(
           ' ',
@@ -3135,20 +3155,21 @@
         ['subtitles', enabled],
         ['hide-native', hide],
       ]) {
-        $(id).disabled = !keys;
+        $(id).disabled = !keys || (id === 'subtitles' && savingPreference);
         $(id).setAttribute('aria-checked', String(value));
         $(id).querySelector('.switch-label').textContent = value ? 'On' : 'Off';
       }
-      $('language').disabled = !keys || !enabled;
+      $('language').disabled = !keys || !enabled || savingPreference;
       $('language').value = language;
     };
     let lastState = { keys: null, enabled: false, hide: false, language: '' };
     const sync = () => {
       const keys = preferenceKeys();
       try {
-        lastState = { keys, enabled: !!keys && readPreference(keys, 'subtitles') === '1',
+        const saved = serverPreferences.get(account(keys));
+        lastState = { keys, enabled: saved ? saved.enabled : !!keys && readPreference(keys, 'subtitles') === '1',
           hide: !!keys && readPreference(keys, 'native') === '0',
-          language: keys ? readPreference(keys, 'language') || '' : '' };
+          language: saved ? saved.language : keys ? readPreference(keys, 'language') || '' : '' };
         show(lastState);
         return lastState;
       } catch (_) {
@@ -3165,17 +3186,33 @@
           }),
         );
     };
-    const changePreference = (kind, value) => {
+    const changePreference = async (kind, value) => {
+      if (kind !== 'native' && savingPreference) return;
       const before = sync();
       if (!before?.keys) return;
+      const previous = matchingKeys(before.keys, kind).map((key) => [key, localStorage.getItem(key)]);
       try {
         const next = typeof value === 'function' ? value(before) : value;
         savePreference(before.keys, kind, next);
+        if (kind !== 'native') {
+          ++preferenceRequest; loadingAccount = ''; savingPreference = true;
+          const desired = { ...before, [kind === 'subtitles' ? 'enabled' : 'language']:
+            kind === 'subtitles' ? next === '1' : next };
+          show(desired);
+          const saved = await saveServerPreference(desired);
+          serverPreferences.set(account(before.keys), saved);
+        }
+        savingPreference = false;
         const after = sync();
-        if (after && kind !== 'native') subtitlesChanged(after.keys);
+        if (after && kind !== 'native') subtitlesChanged(before.keys);
       } catch (_) {
-        show(before);
-        notify('Could not save viewer preferences. Allow browser storage and try again.', true);
+        savingPreference = false;
+        for (const [key, value] of previous) {
+          try { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); }
+          catch (_) { /* Keep the confirmed account preference visible if browser storage is unavailable. */ }
+        }
+        sync();
+        notify('Could not save viewer preferences. Check the server connection and browser storage, then try again.', true);
       }
     };
     $('subtitles').onclick = () => {
@@ -3188,7 +3225,38 @@
       changePreference('language', $('language').value);
     };
     sync();
+    function loadViewerPreferences() {
+      const keys = preferenceKeys(), key = account(keys);
+      if (!key || loadingAccount === key || savingPreference) return;
+      loadingAccount = key;
+      const serial = ++preferenceRequest, token = apiValue('accessToken') || '';
+      void request('FranchiseExplorer/ViewerPreferences', { cache: 'no-store' })
+        .then(async (result) => {
+          if (serial !== preferenceRequest || token !== (apiValue('accessToken') || '') ||
+              account(preferenceKeys()) !== key) return;
+          let saved;
+          if (result?.hasPreference && typeof result.subtitleEnabled === 'boolean')
+            saved = { enabled: result.subtitleEnabled, language: result.subtitleLanguage || '' };
+          else if (readPreference(keys, 'subtitles') !== null || readPreference(keys, 'language') !== null)
+            saved = await saveServerPreference({ enabled: readPreference(keys, 'subtitles') === '1',
+              language: readPreference(keys, 'language') || '' });
+          else saved = { enabled: false, language: '' };
+          if (serial !== preferenceRequest || account(preferenceKeys()) !== key) return;
+          serverPreferences.set(key, saved);
+          try {
+            savePreference(keys, 'subtitles', saved.enabled ? '1' : '0');
+            savePreference(keys, 'language', saved.language);
+          } catch (_) { /* Saving on the server also works with a restricted browser store. */ }
+          sync();
+        })
+        .catch(() => {
+          if (serial === preferenceRequest)
+            notify('Could not load subtitle preferences from Jellyfin. Check the server connection and reopen settings.', true);
+        })
+        .finally(() => { if (serial === preferenceRequest) loadingAccount = ''; });
+    }
     function loadProfile() {
+      loadViewerPreferences();
       if (!ApiClient.getCurrentUser) return;
       const serial = ++profileRequest, token = apiValue('accessToken') || '';
       void Promise.resolve().then(() => ApiClient.getCurrentUser())
@@ -3199,6 +3267,7 @@
           profileUserId = profileId || '';
           profileToken = token;
           sync();
+          loadViewerPreferences();
           const preferred =
             user.Configuration?.SubtitleLanguagePreference ||
             user.configuration?.subtitleLanguagePreference;

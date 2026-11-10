@@ -32,11 +32,13 @@ Console.WriteLine("PASS IMDb parser, URL safety, XML migration and persistence")
 await ImdbTransportTests.Run();
 await ArtworkTests.Run();
 await PlaybackSubtitleTests.Run();
+await SubtitleOffRegressionTests.Run();
 ImdbListConfigurationTests.Run();
 AutomationPlannerTests.Run();
 await AutomationRuntimeTests.Run();
 await MediaRecoveryTests.Run();
 await RecoveryFailureRegressionTests.Run();
+await AutoRecoveryTests.Run();
 await ConfigurationCommitTests.Run();
 
 if (args.Contains("--live"))

@@ -1,4 +1,12 @@
-## 0.8.9.28 (unreleased)
+## 0.8.9.29 (unreleased)
+
+- Automatically remap older movie, show and collection references with one exact title/type match when trustworthy provider identity was never saved; retain conflicting identities, duplicate versions and insufficient episode context for review.
+- Add Auto remap for an immediate complete pass and keep clear automatic matches out of the per-record review list. Preserve reference IDs, membership, ranges, artwork and progress.
+- Persist franchise subtitle preferences per Jellyfin account, apply the latest preference to native playback negotiation, and correct restored tracks only within the enrolled franchise session.
+- Clear remembered secondary/custom Web subtitle renderers through Jellyfin's player commands on real playback starts and queue transitions, including delayed starts beyond the previous short timer window.
+- Add regression coverage for 127 automatic remaps, account preference persistence, actual MVC negotiation, native session correction, delayed Web playback and unrelated-title isolation.
+
+## 0.8.9.28
 
 - Show older unassigned franchise links in the settings tree without changing their row membership or requiring deletion/recreation.
 - Show persistent recovery attention and error notices, prefilled replacement searches and explicit reload notices when background recovery changes a reference.

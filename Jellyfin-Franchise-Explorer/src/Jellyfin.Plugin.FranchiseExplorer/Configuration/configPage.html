@@ -490,6 +490,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
 #FranchiseExplorerConfigPage .automation-change summary{cursor:pointer}
 #FranchiseExplorerConfigPage .automation-preview-row{border-top:1px solid var(--line);margin-top:10px;padding-top:9px;font-size:13px}
 #FranchiseExplorerConfigPage .automation-preview-row ul{padding-left:20px;margin:5px 0}
+#FranchiseExplorerConfigPage #recovery-dialog .dialog-footer{flex-wrap:wrap}
 #FranchiseExplorerConfigPage .recovery-focused{border-color:#2fc0cf;box-shadow:0 0 0 1px #2fc0cf}
 #FranchiseExplorerConfigPage .recovery-notice{flex-wrap:wrap}
 #FranchiseExplorerConfigPage #recovery-notice-count{flex:1 1 240px;min-width:0;overflow-wrap:anywhere}
@@ -535,16 +536,16 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
 <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
 </defs></svg>
 <main class="fx-wrap">
-<header class="top"><div><h1>Franchise Explorer<span class="version">v0.8.9.28</span></h1></div><div class="top-actions"><span id="save-state" class="save-state" role="status">Loading configuration…</span><button class="icon-button quiet" id="undo" aria-label="Undo" data-help="Undo the most recent unsaved edit or move." disabled><svg class="icon"><use href="#i-undo"/></svg></button><button class="icon-button quiet" id="reset" aria-label="Reload saved settings" data-help="Reload the saved plugin configuration. Unsaved changes can be restored with Undo."><svg class="icon"><use href="#i-reset"/></svg></button><button class="primary" id="save" data-help="Save these changes to the Jellyfin plugin configuration.">Save changes</button></div></header>
+<header class="top"><div><h1>Franchise Explorer<span class="version">v0.8.9.29</span></h1></div><div class="top-actions"><span id="save-state" class="save-state" role="status">Loading configuration…</span><button class="icon-button quiet" id="undo" aria-label="Undo" data-help="Undo the most recent unsaved edit or move." disabled><svg class="icon"><use href="#i-undo"/></svg></button><button class="icon-button quiet" id="reset" aria-label="Reload saved settings" data-help="Reload the saved plugin configuration. Unsaved changes can be restored with Undo."><svg class="icon"><use href="#i-reset"/></svg></button><button class="primary" id="save" data-help="Save these changes to the Jellyfin plugin configuration.">Save changes</button></div></header>
 <div id="automation-notice" class="automation-notice" role="status" hidden><span id="automation-notice-count"></span><button id="automation-notice-review">Review changes</button></div><p id="automation-error" role="alert" hidden></p>
 <div id="recovery-notice" class="automation-notice recovery-notice" role="status" hidden><span id="recovery-notice-count"></span><button id="recovery-notice-review">Review media references</button><button id="recovery-reload" data-automation-action data-help="Reload server references. The previous draft can be restored with Undo." hidden>Reload saved settings</button></div>
 <details class="panel" id="settings"><summary><svg class="icon label-icon"><use href="#i-settings"/></svg>Settings<span class="section-count"></span></summary><div class="panel-body settings-grid">
-<div class="setting" data-help="Enable subtitles for franchise playback in this browser."><label class="setting-label" id="subtitles-label" for="subtitles">Enable subtitles</label><button type="button" class="switch" role="switch" aria-checked="false" aria-labelledby="subtitles-label" id="subtitles"><span class="switch-label">Off</span><span class="switch-track"></span></button></div>
+<div class="setting" data-help="Save subtitle preferences for franchise playback on this Jellyfin account across devices."><label class="setting-label" id="subtitles-label" for="subtitles">Enable subtitles</label><button type="button" class="switch" role="switch" aria-checked="false" aria-labelledby="subtitles-label" id="subtitles"><span class="switch-label">Off</span><span class="switch-track"></span></button></div>
 <label class="setting" data-help="Choose the subtitle language to use when subtitles are enabled."><span class="setting-label">Subtitle language</span><select id="language" aria-label="Subtitle language"><option value="auto">Jellyfin preference</option><option value="en">English</option><option value="de">Deutsch</option><option value="es">Español</option><option value="fr">Français</option><option value="ja">日本語</option></select></label>
 <div class="setting" data-help="Hide titles managed by a franchise from the main menu's Continue Watching and Next Up rows. Their watched history is preserved."><label class="setting-label" id="hide-label" for="hide-native">Hide franchise Continue Watching and Next Up from main menu</label><button type="button" class="switch" role="switch" aria-checked="false" aria-labelledby="hide-label" id="hide-native"><span class="switch-label">Off</span><span class="switch-track"></span></button></div>
 <details class="panel" id="advanced"><summary><svg class="icon label-icon"><use href="#i-box"/></svg>Advanced settings<span class="section-count"></span></summary><div class="panel-body"><div class="button-row"><button id="export" data-help="Download a JSON backup of the plugin configuration.">Export backup</button><button id="import" data-help="Import a Franchise Explorer configuration backup for review before saving.">Import backup</button><input id="import-file" type="file" accept=".json,application/json" hidden></div><section class="imdb-library" aria-labelledby="imdb-library-heading"><h3 id="imdb-library-heading">IMDb lists</h3><div id="saved-imdb-lists"></div><button id="add-imdb-list" data-help="Save a named IMDb URL for use in Auto Add. Saving a list does not import titles. Use Save changes to persist the library.">＋ Add IMDb list</button></section>
 <section class="automation-section" aria-labelledby="auto-settings-heading"><h3 id="auto-settings-heading">Auto Franchises</h3><label class="setting"><span>Enable midnight updates</span><input id="auto-enabled" type="checkbox" data-automation-action></label><p id="auto-schedule">Daily · 12:00 AM · Jellyfin server local time</p><small id="auto-registry-count">Loading server registry…</small><div class="automation-toolbar"><button id="auto-manage" data-automation-action>Manage auto list</button><button id="auto-preview" data-automation-action>Preview build</button><button id="auto-run" data-automation-action>Run now</button><button id="auto-review">Pending review (0)</button><button id="auto-manage-choices">Saved choices (0)</button></div><p>Only enabled entries in this auto list are scheduled. Reusable IMDb lists remain separate. New franchises have TV Shows, Movies and Chronological Order rows.</p><p>New verified matches can be added. Saved skips, deleted rows, manual ranges, artwork and custom rows are protected. Removals and protected changes need review.</p><p id="auto-run-status" role="status">Last run: loading…</p></section>
-<section class="automation-section" aria-labelledby="recovery-settings-heading"><h3 id="recovery-settings-heading">Media recovery</h3><label class="setting"><span>Keep stable media identities for recovery</span><input id="recovery-enabled" type="checkbox" checked></label><label class="setting"><span>Reconnect verified matches after library changes or restart</span><input id="recovery-auto" type="checkbox" checked></label><p>Save changes to store recovery preferences. Recovery preserves rows, artwork, ranges and plugin progress. Ambiguous or missing matches need review.</p><div class="automation-toolbar"><button id="recovery-check" data-automation-action>Check recovery</button><button id="recovery-review">Review recovery (0)</button></div><p id="recovery-status" role="status">Last check: loading…</p></section>
+<section class="automation-section" aria-labelledby="recovery-settings-heading"><h3 id="recovery-settings-heading">Media recovery</h3><label class="setting"><span>Keep stable media identities for recovery</span><input id="recovery-enabled" type="checkbox" checked></label><label class="setting"><span>Automatically reconnect clear matches after library changes or restart</span><input id="recovery-auto" type="checkbox" checked></label><p>Save changes to store recovery preferences. Recovery preserves rows, artwork, ranges and plugin progress. Ambiguous or missing matches need review.</p><div class="automation-toolbar"><button id="recovery-check" data-automation-action>Check recovery</button><button id="recovery-review">Review recovery (0)</button></div><p id="recovery-status" role="status">Last check: loading…</p></section>
 </div></details>
 </div></details>
 <details class="panel" id="franchises"><summary><svg class="icon label-icon"><use href="#i-grid"/></svg>Franchises<span id="franchise-count" class="section-count"></span></summary><div class="panel-body"><div class="franchises-toolbar"><button id="add-franchise" data-help="Create a franchise, then use its settings icon for IMDb Auto Add and its + icon for rows or subcategories.">＋ Add franchise</button></div><div id="board" class="board"></div></div></details>
@@ -555,7 +556,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
 <dialog id="auto-preview-dialog" aria-labelledby="auto-preview-heading"><div class="dialog-head"><h2 id="auto-preview-heading">Auto Franchises · Build preview</h2><button class="icon-button quiet" data-close="auto-preview-dialog" aria-label="Close build preview">✕</button></div><div class="dialog-content"><p class="automation-dialog-note">Current server configuration and library matches. Apply only selected changes; midnight updates can stay off. Protected changes start unselected.</p><div id="auto-preview-results"></div></div><div class="dialog-footer"><span id="auto-preview-selected-count" class="selected-count"></span><button data-close="auto-preview-dialog">Close</button><button id="auto-preview-apply" class="primary" data-automation-action disabled>Apply selected</button></div></dialog>
 <dialog id="auto-inbox-dialog" aria-labelledby="auto-inbox-heading"><div class="dialog-head"><h2 id="auto-inbox-heading">Auto Franchises · Pending changes</h2><button class="icon-button quiet" data-close="auto-inbox-dialog" aria-label="Close pending changes">✕</button></div><div class="dialog-content"><p class="automation-dialog-note">Protected changes start unselected. Restore / Apply selected rechecks the current configuration and library. Keep my choices acknowledges selected changes, or all shown changes when none are selected.</p><div id="auto-inbox-list"></div></div><div class="dialog-footer"><button data-close="auto-inbox-dialog">Close</button><button id="auto-keep-choices" data-automation-action>Keep my choices</button><button id="auto-restore-selected" class="primary" data-automation-action disabled>Restore / Apply selected</button></div></dialog>
 <dialog id="auto-choices-dialog" aria-labelledby="auto-choices-heading"><div class="dialog-head"><h2 id="auto-choices-heading">Auto Franchises · Saved choices</h2><button class="icon-button quiet" data-close="auto-choices-dialog" aria-label="Close saved choices">✕</button></div><div class="dialog-content"><p class="automation-dialog-note">Only selected restrictions are restored. Other show, season and episode restrictions stay protected. The server verifies an available candidate before clearing a restriction; later builds can add verified media.</p><div id="auto-choices-list"></div></div><div class="dialog-footer"><button data-close="auto-choices-dialog">Close</button><button id="auto-restore-rules" class="primary" data-automation-action disabled>Restore selected choices</button></div></dialog>
-<dialog id="recovery-dialog" aria-labelledby="recovery-heading"><div class="dialog-head"><h2 id="recovery-heading">Media recovery · Review matches</h2><button class="icon-button quiet" data-close="recovery-dialog" aria-label="Close recovery review">✕</button></div><div class="dialog-content"><p class="automation-dialog-note">Verified identity matches, ambiguous candidates and missing media are shown separately. Choose the actual library item explicitly. Missing media stays in place until it becomes available.</p><p id="recovery-dialog-status" role="status"></p><p id="recovery-dialog-error" role="alert" hidden></p><div id="recovery-results"></div></div><div class="dialog-footer"><button data-close="recovery-dialog">Close</button><button id="recovery-refresh" data-automation-action>Refresh report</button><button id="recovery-apply" class="primary" data-automation-action disabled>Reconnect selected</button></div></dialog>
+<dialog id="recovery-dialog" aria-labelledby="recovery-heading"><div class="dialog-head"><h2 id="recovery-heading">Media recovery · Review matches</h2><button class="icon-button quiet" data-close="recovery-dialog" aria-label="Close recovery review">✕</button></div><div class="dialog-content"><p class="automation-dialog-note">Clear matches reconnect automatically. Only missing references or matches that need your choice remain here. Auto remap runs an immediate pass; unresolved media stays in place.</p><p id="recovery-dialog-status" role="status"></p><p id="recovery-dialog-error" role="alert" hidden></p><div id="recovery-results"></div></div><div class="dialog-footer"><button data-close="recovery-dialog">Close</button><button id="recovery-refresh" data-automation-action>Refresh report</button><button id="recovery-auto-remap" class="primary" data-automation-action>Auto remap</button><button id="recovery-apply" class="primary" data-automation-action disabled>Reconnect selected</button></div></dialog>
 <dialog id="franchise-dialog" class="franchise-dialog" aria-labelledby="franchise-heading"><div class="dialog-head"><div><h2 id="franchise-heading"><svg class="icon"><use href="#i-gear"/></svg>Franchise settings</h2><div id="franchise-scope" class="scope-title"></div></div><button class="icon-button quiet" data-close="franchise-dialog" aria-label="Close franchise settings">✕</button></div><div class="dialog-content"><div class="franchise-fields"><section class="structure-tools"><h3>Groups and subgroups</h3><div id="franchise-structure-owner" class="structure-owner"></div><div class="button-row"><button id="franchise-add-row">＋ Add group / row</button><button id="franchise-add-subgroup">＋ Add subgroup</button></div><div id="franchise-pending-structure" class="pending-structure"></div></section>
 <label class="field" data-help="Rename this franchise or subgroup. Changes are staged until you save or apply selected changes."><span>Title</span><input id="detail-title" maxlength="120" required></label>
 <label class="field" data-help="Edit the description for this franchise or subgroup."><span>Description</span><textarea id="detail-description" maxlength="1500"></textarea></label>
@@ -2638,7 +2639,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     const { page, $, getModel, load, notify, request, change } = context;
     if (!$('auto-manage')) return null;
     let status = null, recovery = null, preview = null, busy = false, generation = 0, editingId = '',
-      recoveryError = '', recoveryLoading = false, recoveryFocus = '', lastStatusError = '';
+      recoveryError = '', recoveryLoading = false, recoveryFocus = '', lastStatusError = '', lastAutoRemapped = null;
     const selected = new Set(), selectedRules = new Set(), previewSelected = new Set(), recoveryChoices = new Map();
     const recoveryQueries = new Map();
     const referenceKey = (value) => String(value || '').replace(/-/g, '').toLowerCase();
@@ -2663,6 +2664,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
     const canSearchRecovery = () => !recoveryError && !!recovery &&
       (recovery.canSearch ?? recovery.libraryHealthy) === true;
     const unresolved = () => list(recovery?.entries).filter((entry) => entry.status !== 'Healthy');
+    const automaticMatches = () => unresolved().filter((entry) => entry.canAutoRemap === true);
     function savedReferenceCount() {
       const model = getModel();
       return list(model.MediaLinks).length + list(model.Rows).reduce((count, row) => count + list(row.Items).length, 0) +
@@ -2682,11 +2684,14 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       if (!recovery) return recoveryLoading ? 'Checking saved media references…' : 'Recovery has not checked your saved references yet.';
       const checked = recovery.referenceCount ?? list(recovery.entries).length,
         attention = recovery.attentionCount ?? unresolved().length,
-        healthy = recovery.healthyCount ?? Math.max(0, checked - attention);
+        healthy = recovery.healthyCount ?? Math.max(0, checked - attention),
+        ready = automaticMatches().length;
       return checked + ' saved references checked · ' + healthy + ' available · ' + attention + ' need attention. ' +
+        (ready ? ready + ' can remap automatically; ' + Math.max(0, attention - ready) + ' need manual review. ' : '') +
+        (lastAutoRemapped !== null ? 'Last auto remap: ' + lastAutoRemapped + ' references reconnected. ' : '') +
         (recovery.message || '') + (recovery.enabled === false ? ' Recovery is disabled.' : '') +
         (recovery.libraryHealthy === false
-          ? canSearchRecovery() ? ' Automatic reconnection is paused; available replacements can be chosen explicitly.'
+          ? canSearchRecovery() ? ' Original offline items stay protected; clear replacements for removed IDs can be remapped.'
             : ' Reconnection is paused until the library can be checked.'
           : '');
     }
@@ -2717,6 +2722,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       $('auto-keep-choices').disabled = busy || !pending().length;
       $('recovery-apply').disabled = busy || modelDirty() || !recoveryChoices.size ||
         !canSearchRecovery() || recovery?.enabled === false;
+      $('recovery-auto-remap').disabled = busy || modelDirty() || !canSearchRecovery() || recovery?.enabled === false;
       for (const element of $('recovery-results').querySelectorAll('[data-recovery-search]'))
         element.disabled = busy || !canSearchRecovery();
       $('auto-run').disabled = busy || !!status?.running;
@@ -2885,9 +2891,9 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       syncBusy();
     }
     function renderRecovery() {
-      const pendingEntries = unresolved(),
-        entries = list(recovery?.entries).filter((entry) => entry.status !== 'Healthy' ||
-          referenceKey(entry.referenceId) === referenceKey(recoveryFocus)),
+      const ready = automaticMatches().length,
+        entries = list(recovery?.entries).filter((entry) => entry.canAutoRemap !== true &&
+          (entry.status !== 'Healthy' || referenceKey(entry.referenceId) === referenceKey(recoveryFocus))),
         searchable = canSearchRecovery(),
         labels = { Verified: 'Ready to reconnect', Ambiguous: 'Choose a version', Missing: 'Media missing',
           ManualReview: 'Choose a replacement', Healthy: 'Available in the library' };
@@ -2922,6 +2928,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
           !recovery ? '<p>The recovery report is loading.</p>' :
           savedReferenceCount() > 0 && !(recovery.referenceCount ?? list(recovery.entries).length)
             ? '<p>Your settings contain saved media, but this report did not check it. Save or reload your settings, then check recovery.</p>'
+            : ready ? '<p>No references need an individual selection. Auto remap can reconnect ' + ready + ' clear matches now.</p>'
             : '<p>All ' + (recovery.referenceCount ?? list(recovery.entries).length) + ' checked references resolve in the current library.</p>');
       syncBusy();
     }
@@ -3016,6 +3023,16 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         context.refreshMediaAvailability?.();
       }, { write: true, recoveryAction: true });
     };
+    $('recovery-auto-remap').onclick = () => act(async () => {
+      const result = camel(await post('Recovery/Auto', {}));
+      recovery = result.status;
+      lastAutoRemapped = Number(result.remappedCount) || 0;
+      recoveryFocus = '';
+      recoveryChoices.clear();
+      context.refreshMediaAvailability?.();
+      notify('Auto remap reconnected ' + lastAutoRemapped + ' references. ' +
+        unresolved().filter((entry) => entry.canAutoRemap !== true).length + ' remain for review.');
+    }, { write: true, recoveryAction: true });
     $('recovery-review').onclick = () => openRecovery();
     $('recovery-notice-review').onclick = () => openRecovery();
     $('recovery-refresh').onclick = () => void refresh();
@@ -6127,12 +6144,15 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
   page.addEventListener('input', hideHelp);
   function viewerPreferences() {
     let profileUserId = '', profileToken = '', profileRequest = 0;
+    let preferenceRequest = 0, savingPreference = false, loadingAccount = '', preferenceSaves = Promise.resolve();
+    const serverPreferences = new Map();
     const identity = (value) => {
       const text = String(value || '').toLowerCase();
       return /^[a-f\d]{32}$|^[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12}$/.test(text)
         ? text.replace(/-/g, '') : text;
     };
     const same = (left, right) => !!left && !!right && identity(left) === identity(right);
+    const account = (keys) => keys ? identity(keys.serverId) + ':' + identity(keys.userId) : '';
     const apiValue = (name) => {
       try {
         const value = ApiClient[name];
@@ -6214,6 +6234,23 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         throw error;
       }
     }
+    function saveServerPreference(state) {
+      const url = serverUrl('FranchiseExplorer/ViewerPreferences'), auth = headers(),
+        body = JSON.stringify({ subtitleEnabled: state.enabled, subtitleLanguage: state.language });
+      // A migration already in flight must finish before a newer explicit switch.
+      const pending = preferenceSaves.catch(() => {}).then(async () => {
+        const response = await fetch(url, { method: 'PUT', cache: 'no-store',
+          headers: { ...auth, 'Content-Type': 'application/json' }, body,
+          signal: AbortSignal.timeout(45000) });
+        if (!response.ok) throw Error('Jellyfin returned HTTP ' + response.status);
+        const result = await response.json();
+        if (!result?.hasPreference || typeof result.subtitleEnabled !== 'boolean')
+          throw Error('Jellyfin did not confirm the saved subtitle preference.');
+        return { enabled: result.subtitleEnabled, language: result.subtitleLanguage || '' };
+      });
+      preferenceSaves = pending;
+      return pending;
+    }
     const codes =
         'ar bg ca cs da de el en es et fa fi fr he hi hr hu id is it ja ko lt lv ms nb nl pl pt ro ru sk sl sr sv th tr uk ur vi zh'.split(
           ' ',
@@ -6233,20 +6270,21 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         ['subtitles', enabled],
         ['hide-native', hide],
       ]) {
-        $(id).disabled = !keys;
+        $(id).disabled = !keys || (id === 'subtitles' && savingPreference);
         $(id).setAttribute('aria-checked', String(value));
         $(id).querySelector('.switch-label').textContent = value ? 'On' : 'Off';
       }
-      $('language').disabled = !keys || !enabled;
+      $('language').disabled = !keys || !enabled || savingPreference;
       $('language').value = language;
     };
     let lastState = { keys: null, enabled: false, hide: false, language: '' };
     const sync = () => {
       const keys = preferenceKeys();
       try {
-        lastState = { keys, enabled: !!keys && readPreference(keys, 'subtitles') === '1',
+        const saved = serverPreferences.get(account(keys));
+        lastState = { keys, enabled: saved ? saved.enabled : !!keys && readPreference(keys, 'subtitles') === '1',
           hide: !!keys && readPreference(keys, 'native') === '0',
-          language: keys ? readPreference(keys, 'language') || '' : '' };
+          language: saved ? saved.language : keys ? readPreference(keys, 'language') || '' : '' };
         show(lastState);
         return lastState;
       } catch (_) {
@@ -6263,17 +6301,33 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
           }),
         );
     };
-    const changePreference = (kind, value) => {
+    const changePreference = async (kind, value) => {
+      if (kind !== 'native' && savingPreference) return;
       const before = sync();
       if (!before?.keys) return;
+      const previous = matchingKeys(before.keys, kind).map((key) => [key, localStorage.getItem(key)]);
       try {
         const next = typeof value === 'function' ? value(before) : value;
         savePreference(before.keys, kind, next);
+        if (kind !== 'native') {
+          ++preferenceRequest; loadingAccount = ''; savingPreference = true;
+          const desired = { ...before, [kind === 'subtitles' ? 'enabled' : 'language']:
+            kind === 'subtitles' ? next === '1' : next };
+          show(desired);
+          const saved = await saveServerPreference(desired);
+          serverPreferences.set(account(before.keys), saved);
+        }
+        savingPreference = false;
         const after = sync();
-        if (after && kind !== 'native') subtitlesChanged(after.keys);
+        if (after && kind !== 'native') subtitlesChanged(before.keys);
       } catch (_) {
-        show(before);
-        notify('Could not save viewer preferences. Allow browser storage and try again.', true);
+        savingPreference = false;
+        for (const [key, value] of previous) {
+          try { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); }
+          catch (_) { /* Keep the confirmed account preference visible if browser storage is unavailable. */ }
+        }
+        sync();
+        notify('Could not save viewer preferences. Check the server connection and browser storage, then try again.', true);
       }
     };
     $('subtitles').onclick = () => {
@@ -6286,7 +6340,38 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       changePreference('language', $('language').value);
     };
     sync();
+    function loadViewerPreferences() {
+      const keys = preferenceKeys(), key = account(keys);
+      if (!key || loadingAccount === key || savingPreference) return;
+      loadingAccount = key;
+      const serial = ++preferenceRequest, token = apiValue('accessToken') || '';
+      void request('FranchiseExplorer/ViewerPreferences', { cache: 'no-store' })
+        .then(async (result) => {
+          if (serial !== preferenceRequest || token !== (apiValue('accessToken') || '') ||
+              account(preferenceKeys()) !== key) return;
+          let saved;
+          if (result?.hasPreference && typeof result.subtitleEnabled === 'boolean')
+            saved = { enabled: result.subtitleEnabled, language: result.subtitleLanguage || '' };
+          else if (readPreference(keys, 'subtitles') !== null || readPreference(keys, 'language') !== null)
+            saved = await saveServerPreference({ enabled: readPreference(keys, 'subtitles') === '1',
+              language: readPreference(keys, 'language') || '' });
+          else saved = { enabled: false, language: '' };
+          if (serial !== preferenceRequest || account(preferenceKeys()) !== key) return;
+          serverPreferences.set(key, saved);
+          try {
+            savePreference(keys, 'subtitles', saved.enabled ? '1' : '0');
+            savePreference(keys, 'language', saved.language);
+          } catch (_) { /* Saving on the server also works with a restricted browser store. */ }
+          sync();
+        })
+        .catch(() => {
+          if (serial === preferenceRequest)
+            notify('Could not load subtitle preferences from Jellyfin. Check the server connection and reopen settings.', true);
+        })
+        .finally(() => { if (serial === preferenceRequest) loadingAccount = ''; });
+    }
     function loadProfile() {
+      loadViewerPreferences();
       if (!ApiClient.getCurrentUser) return;
       const serial = ++profileRequest, token = apiValue('accessToken') || '';
       void Promise.resolve().then(() => ApiClient.getCurrentUser())
@@ -6297,6 +6382,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
           profileUserId = profileId || '';
           profileToken = token;
           sync();
+          loadViewerPreferences();
           const preferred =
             user.Configuration?.SubtitleLanguagePreference ||
             user.configuration?.subtitleLanguagePreference;

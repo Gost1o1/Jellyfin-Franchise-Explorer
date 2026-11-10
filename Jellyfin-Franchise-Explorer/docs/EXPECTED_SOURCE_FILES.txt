@@ -202,3 +202,12 @@ Jellyfin-Franchise-Explorer/scripts/test_artwork_image_loading_browser.py
 Jellyfin-Franchise-Explorer/scripts/test_missing_media_display_browser.py
 Jellyfin-Franchise-Explorer/scripts/test_recovery_attention_browser.py
 Jellyfin-Franchise-Explorer/tests/AutoAdd.Tests/RecoveryFailureRegressionTests.cs
+Jellyfin-Franchise-Explorer/scripts/test_auto_remap_browser.py
+Jellyfin-Franchise-Explorer/scripts/test_subtitle_lifecycle_browser.py
+Jellyfin-Franchise-Explorer/scripts/fixtures/jellyfin-web-subtitle-contract.js
+Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Api/FranchiseViewerPreferencesController.cs
+Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Web/FranchiseSubtitlePlaybackService.cs
+Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Web/FranchiseSubtitleTimelineScope.cs
+Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Web/FranchiseViewerPreferenceStore.cs
+Jellyfin-Franchise-Explorer/tests/AutoAdd.Tests/AutoRecoveryTests.cs
+Jellyfin-Franchise-Explorer/tests/AutoAdd.Tests/SubtitleOffRegressionTests.cs

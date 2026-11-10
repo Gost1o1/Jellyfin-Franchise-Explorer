@@ -21,6 +21,7 @@ let state=null,posted=[],enrollments=[],nowPlayingId=null,remoteSupported=true,s
 const jsonify=x=>({ok:true,status:200,json:async()=>x});
 const mockFetch=async (url,options={})=>{
  const path=String(url);
+ if(path.endsWith('/FranchiseExplorer/ViewerPreferences'))return jsonify({hasPreference:false,subtitleEnabled:false,subtitleLanguage:''});
  if(path.includes('/Shows/'+seriesId+'/Episodes'))return jsonify({Items:episodes,TotalRecordCount:episodes.length});
  if(path.includes('/Sessions?'))return jsonify([
    {Id:sessionId,UserId:uuid(9),DeviceId:'remote-web',DeviceName:'Test Web',SupportsMediaControl:remoteSupported,SupportsRemoteControl:remoteSupported,NowPlayingItem:nowPlayingId?{Id:nowPlayingId}:null},

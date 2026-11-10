@@ -41,7 +41,7 @@ internal static class MediaRecoveryTests
         replacement.IsAvailable = false;
         Check(!MediaRecoveryPlanner.Verified(link.Identity, replacement), "An offline replacement cannot reconnect a reference"); replacement.IsAvailable = true;
         link.Identity = null;
-        Check(MediaRecoveryPlanner.Review(config, Library(replacement)).Entries.Single().Status == "ManualReview", "Legacy manual media without identity must not be guessed from title"); link.Identity = MediaRecoveryPlanner.Capture(old);
+        Check(MediaRecoveryPlanner.Review(config, Library(replacement)).Entries.Single() is { Status: "Verified", CanAutoRemap: true, MatchMethod: "Exact title and type" }, "A legacy manual reference can reconnect to one unique exact title and type when no historical provider evidence exists"); link.Identity = MediaRecoveryPlanner.Capture(old);
         var polluted = Item(); polluted.ProviderIds["Path"] = "/private/library"; polluted.ProviderIds["Tmdb"] = "token=secret";
         Check(MediaRecoveryPlanner.Capture(polluted).ProviderIds.Count == 1, "Snapshots store validated provider identity without paths or tokens");
 

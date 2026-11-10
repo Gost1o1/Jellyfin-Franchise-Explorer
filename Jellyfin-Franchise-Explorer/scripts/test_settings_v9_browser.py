@@ -49,11 +49,15 @@ def run():
         browser=p.chromium.launch(headless=True,executable_path='/usr/bin/chromium' if Path('/usr/bin/chromium').exists() else None,args=['--no-sandbox'])
         page=browser.new_page(viewport={'width':1280,'height':1000},accept_downloads=True)
         errors=[]; requests=[];uploads=[]
+        viewer_preferences={'hasPreference':False,'subtitleEnabled':False,'subtitleLanguage':''}
         page.on('pageerror',lambda error: errors.append(str(error)))
         page.on('request',lambda request:requests.append(request.url))
         def route(request):
             path=urlsplit(request.request.url).path
             if path=='/settings':request.fulfill(content_type='text/html',body=HTML.replace('<script type="text/javascript">','<script>'+BOOT+'</script><script type="text/javascript">',1));return
+            if path.endswith('/ViewerPreferences'):
+                if request.request.method=='PUT':viewer_preferences.update(request.request.post_data_json,hasPreference=True)
+                request.fulfill(json=viewer_preferences);return
             if path.endswith('/AutoAdd/Source'):request.fulfill(json=SOURCE);return
             if re.search(r'/Items/[a-f0-9]+/Images$',path):request.fulfill(json=[{'ImageType':'Primary','ImageIndex':0},{'ImageType':'Backdrop','ImageIndex':0},{'ImageType':'Backdrop','ImageIndex':1}]);return
             if '/Images/' in path or '/Artwork/Assets/' in path:request.fulfill(content_type='image/png',body=PNG);return

@@ -89,7 +89,8 @@ public static class PlaybackSubtitleIdentity
 /// </summary>
 public sealed class PlaybackSubtitlePolicyFilter(
     PlaybackSubtitlePolicyStore store, IUserManager users, ISessionManager sessions,
-    ILibraryManager library, IMediaSourceManager mediaSources) : IAsyncActionFilter
+    ILibraryManager library, IMediaSourceManager mediaSources,
+    FranchiseViewerPreferenceStore? preferences = null, FranchiseSubtitleTimelineScope? timelines = null) : IAsyncActionFilter
 {
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
@@ -113,12 +114,28 @@ public sealed class PlaybackSubtitlePolicyFilter(
             return;
         }
         var device = context.HttpContext.User.FindFirst("Jellyfin-DeviceId")?.Value ?? string.Empty;
-        if (!PlaybackSubtitleIdentity.OwnsDevice(sessions, user, device)
-            || !store.TryGet(user, device, item, out var policy) || policy is null)
+        if (!PlaybackSubtitleIdentity.OwnsDevice(sessions, user, device))
         {
             await next().ConfigureAwait(false);
             return;
         }
+        FranchiseViewerPreference? saved = null;
+        try { saved = preferences?.Get(user); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException) { }
+        var enrolled = store.TryGet(user, device, item, out var policy);
+        // Native applications can use a different device ID from their embedded Web view.
+        // Inherit account preferences only for an explicitly active franchise queue.
+        if (!enrolled && saved?.HasPreference == true && timelines is not null
+            && timelines.TryQueue(user, device, item, sessions, out var queue))
+            policy = store.Set(user, device, queue, saved.SubtitleEnabled, saved.SubtitleLanguage);
+        if (policy is null)
+        {
+            await next().ConfigureAwait(false);
+            return;
+        }
+        if (saved?.HasPreference == true)
+            policy = policy with { Enabled = saved.SubtitleEnabled, Language = saved.SubtitleLanguage.Length > 0
+                ? saved.SubtitleLanguage : users.GetUserById(user)?.SubtitleLanguagePreference ?? string.Empty };
 
         if (action.MethodInfo.Name == "GetPostedPlaybackInfo")
         {
@@ -162,10 +179,18 @@ public sealed class PlaybackSubtitlePolicyFilter(
     {
         // Jellyfin media metadata can be cached and shared across requests/users.
         var copy = JsonSerializer.Deserialize<PlaybackInfoResponse>(JsonSerializer.SerializeToUtf8Bytes(response))!;
-        foreach (var source in copy.MediaSources)
+        for (var i = 0; i < copy.MediaSources.Count; i++)
         {
+            var source = copy.MediaSources[i];
+            // These are intentionally excluded from JSON by Jellyfin but still used by
+            // other host filters/negotiation code. Keep them when cloning the response.
+            source.TranscodeReasons = response.MediaSources[i].TranscodeReasons;
+            source.DefaultAudioIndexSource = response.MediaSources[i].DefaultAudioIndexSource;
             var index = SelectIndex(source, policy);
             source.DefaultSubtitleStreamIndex = index;
+            var secondary = source.GetType().GetProperty("DefaultSecondarySubtitleStreamIndex");
+            if (!policy.Enabled && secondary?.CanWrite == true && (secondary.PropertyType == typeof(int) || secondary.PropertyType == typeof(int?)))
+                secondary.SetValue(source, -1);
             source.TranscodingUrl = WithSubtitleIndex(source.TranscodingUrl, index);
             // Jellyfin 12.2 has no DirectStreamUrl member; support hosts exposing one without
             // introducing a dependency on their API assembly or losing other metadata.
