@@ -11,6 +11,7 @@ from urllib.parse import parse_qs, urlsplit
 import json
 import os
 import re
+import tempfile
 
 from playwright.sync_api import expect, sync_playwright
 
@@ -19,8 +20,8 @@ from test_recovery_attention_browser import BOOT, Fixture as AttentionFixture, T
 
 
 ORIGIN = 'http://jellyfin.test'
-ARTIFACTS = Path(os.environ.get('RECOVERY_PICKER_ARTIFACTS',
-                             '/workspace/artifacts/recovery-picker30'))
+ARTIFACTS = Path(os.environ.get('RECOVERY_PICKER_ARTIFACTS') or
+                 Path(tempfile.gettempdir()) / 'franchise-explorer-tests' / 'recovery-library-picker')
 gid = lambda value: f'{value:032x}'
 NODE, WRONG_TYPE, PARTIAL, EXACT = [gid(value) for value in (1, 11, 12, 13)]
 REFS = [WRONG_TYPE, PARTIAL, EXACT]
