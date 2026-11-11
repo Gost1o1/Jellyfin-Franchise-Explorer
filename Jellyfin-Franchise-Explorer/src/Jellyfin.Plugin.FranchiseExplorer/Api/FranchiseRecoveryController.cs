@@ -44,6 +44,15 @@ public sealed class FranchiseRecoveryController(MediaRecoveryService recovery, I
         catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
         catch (InvalidOperationException ex) { return Conflict(new { error = ex.Message }); }
     }
+    [HttpPost("Auto")]
+    public async Task<IActionResult> Auto(CancellationToken cancellationToken)
+    {
+        if (!IsAdministrator()) return Unauthorized();
+        try { return JsonResult(await recovery.AutoAsync(cancellationToken).ConfigureAwait(false)); }
+        catch (InvalidOperationException ex) { return Conflict(new { error = ex.Message }); }
+        catch (IOException) { return StatusCode(503, new { error = "Recovery could not save all timeline records. No media references were changed." }); }
+        catch (JsonException) { return StatusCode(503, new { error = "A timeline record needs repair before media links can be recovered." }); }
+    }
     [HttpPost("Apply")]
     [RequestSizeLimit(2 * 1024 * 1024)]
     public async Task<IActionResult> Apply([FromBody] MediaRecoveryApplyRequest request, CancellationToken cancellationToken)

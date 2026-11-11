@@ -4,7 +4,7 @@ This branch integrates the approved settings UI into the actual Jellyfin plugin.
 
 ## Editing
 
-- **Settings** contains subtitle preferences and the Home row visibility switch. **Advanced settings**, inside Settings, contains backup import/export and reusable IMDb lists. Viewer preferences are saved per user and server in the current browser; IMDb lists belong to the plugin configuration and its backups.
+- **Settings** contains subtitle preferences and the Home row visibility switch. **Advanced settings**, inside Settings, contains backup import/export and reusable IMDb lists. Subtitle preferences are saved for the signed-in Jellyfin account on the server and used by its franchise playback on other devices. The Home row visibility switch remains a per-user browser preference. IMDb lists belong to the plugin configuration and its backups.
 - **Franchises** starts closed. Add a franchise, or expand an existing franchise to see its rows and subgroups. Settings, plus and delete buttons stay beside each title on mobile.
 - A franchise or subgroup's **settings** button opens its title, description, poster, backdrop and IMDb sources. Groups and subgroups can be added here, including inside an existing subgroup.
 - A row's **settings** button opens its category and artwork. The category supplies the name; **Custom** reveals a name field. **Sub Group** creates a named subgroup. Converting an existing row keeps that row and its references inside the new subgroup.
@@ -80,3 +80,11 @@ Run `python3 scripts/build_settings_page.py` after editing them. Commit the resu
 Validation includes model migration and source ownership tests, production-page Playwright tests against mocked Jellyfin APIs, real XML configuration round trips, artwork controller tests, and the existing browsing/playback regressions. A running Jellyfin server is still required to verify dashboard integration, real library permissions, actual IMDb retrieval and browser video codecs in the target installation. This branch does not publish a release or update the catalog.
 
 Artwork regression: install Playwright Chromium and Firefox, then run `python3 scripts/test_artwork_image_loading_browser.py`. It checks actual rendered pixels under permissive and restrictive image policies, uploads and retries, external image authentication boundaries, and stale upload responses.
+
+## Subtitle preference scope
+
+**Enable subtitles** and the selected language are account preferences for Franchise Explorer playback. The latest server preference takes precedence over stale browser storage or an older queued playback request. They do not change Jellyfin's general library playback defaults for other titles or accounts.
+
+Off is applied to playback negotiation and to the active enrolled player. Web playback clears both primary and remembered secondary/custom subtitle renderers through Jellyfin's player commands; the policy follows actual playback starts and episode changes instead of ending after a few startup timers. Native correction uses the same account preference and active franchise session and requires the client's supported subtitle command; negotiation remains scoped to the franchise queue.
+
+Preferences are stored in the plugin data folder separately from the global franchise configuration. Back up that folder to retain them. After updating the plugin, restart Jellyfin and hard-refresh the Web client so the new player bridge is loaded. Actual app behavior still needs validation on the target client.

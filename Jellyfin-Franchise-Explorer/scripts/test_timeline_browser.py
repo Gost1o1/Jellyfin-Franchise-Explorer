@@ -36,6 +36,7 @@ window.fetch=async function(input,options={{}}){{
  if(path.includes('/FranchiseExplorer/TimelineState/')&&options.method==='PUT'){{window.__state=JSON.parse(options.body);return ok(window.__state);}}
  if(path.includes('/FranchiseExplorer/TimelineState'))return ok(window.__state?[window.__state]:[]);
  if(path.includes('/Shows/{showid}/Episodes'))return ok({{Items:SAMPLE_EPISODES,TotalRecordCount:SAMPLE_EPISODES.length}});
+ if(path.includes('/FranchiseExplorer/ViewerPreferences'))return ok({{hasPreference:false,subtitleEnabled:false,subtitleLanguage:''}});
  if(path.includes('/Sessions?'))return ok([{{Id:'dev1',DeviceId:'remote-web',UserId:'{user}',DeviceName:'Chrome Web',UserName:'Mock',SupportsMediaControl:true,SupportsRemoteControl:true,NowPlayingItem:window.__nowPlaying?{{Id:window.__nowPlaying}}:null}}]);
  if(path.includes('/FranchiseExplorer/PlaybackPreferences')){{const request=JSON.parse(options.body);if(request.deviceId!=='remote-web'||request.enabled!==false)throw Error('Wrong subtitle scope');window.__enrolled.push(request);return ok({{enabled:false,language:'',subtitleStreamIndex:-1,mediaSourceId:'first-source'}});}}
  if(path.includes('/Sessions/dev1/Playing')){{if(!window.__enrolled.length)throw Error('Playback started before subtitle enrollment');window.__played.push(path);if(path.includes('playCommand=PlayNow')){{window.__nowPlaying=new URLSearchParams(path.split('?')[1]).get('itemIds').split(',')[0];}}return new Response(null,{{status:204}});}}

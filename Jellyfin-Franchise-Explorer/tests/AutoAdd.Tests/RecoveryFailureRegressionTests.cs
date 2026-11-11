@@ -101,7 +101,7 @@ internal static class RecoveryFailureRegressionTests
 
         var manual = new PluginConfiguration(); manual.MediaLinks.Add(Link(old));
         var manualStatus = Review(manual, replacement);
-        Check(manualStatus.Status == "ManualReview" && manualStatus.Candidates.Count == 0, "Matching titles and years alone must never reconnect an old manual reference");
+        Check(manualStatus is { Status: "Verified", CanAutoRemap: true } && manualStatus.Candidates.Count == 1, "One unique exact title and type can reconnect an old manual reference with no provider evidence");
     }
 
     private static void OwnershipIdentities()
@@ -165,12 +165,12 @@ internal static class RecoveryFailureRegressionTests
         await fixture.AddMovie("tt999", "Unrelated offline movie", available: false);
         var status = await fixture.Service.CheckAsync();
         Check(!status.LibraryHealthy && status.CanSearch && status.ReferenceCount == 1 && status.AttentionCount == 1,
-            "An unrelated offline file must pause automation while keeping explicit recovery available");
+            "An unrelated offline file must keep available replacement recovery and complete reference counts available");
         var candidates = await fixture.Service.CandidatesAsync(link.Id, "Available", status.Revision, status.LibraryRevision);
         Check(candidates.Single().ItemId == replacement.Id.ToString("D") && candidates.Single().Verified,
             "An administrator must be able to find an available verified replacement while unrelated media is offline");
         var request = Request(status, link.Id, replacement.Id.ToString("D"));
-        Check(await Rejects(() => fixture.Service.ApplyAsync(request, automatic: true)), "Automatic recovery must stay conservative when any library media is unavailable");
+        Check(status.Entries.Single().CanAutoRemap, "An unrelated offline item must not block a clear replacement for a removed saved ID");
         await fixture.Service.ApplyAsync(request);
         var restored = fixture.Plugin.Configuration.MediaLinks.Single();
         Check(restored.JellyfinItemId == replacement.Id.ToString("D") && restored.Id == link.Id && restored.DisplayName == link.DisplayName
@@ -202,12 +202,12 @@ internal static class RecoveryFailureRegressionTests
             var replacement = await fixture.AddMovie("tt123", "Deferred replacement");
             var offline = await fixture.AddMovie("tt999", "Drive returns later", available: false);
             await fixture.Service.ProcessPendingAsync();
-            Check(fixture.Plugin.Configuration.MediaLinks.Single().JellyfinItemId == old.Id,
-                "An unhealthy startup snapshot must preserve the old reference and defer automatic recovery");
+            Check(fixture.Plugin.Configuration.MediaLinks.Single().JellyfinItemId == replacement.Id.ToString("D"),
+                "An unrelated offline item must not prevent startup from reconnecting a removed ID to a verified available replacement");
             await File.WriteAllTextAsync(offline.Path, "restored"); fixture.Snapshots.Invalidate();
             await fixture.Service.ProcessPendingAsync();
             Check(fixture.Plugin.Configuration.MediaLinks.Single().JellyfinItemId == replacement.Id.ToString("D"),
-                "An unhealthy startup check must remain pending and retry after media returns without a new configuration edit");
+                "A later retry after unrelated storage returns must retain the successful replacement");
         }
         using (var fixture = new Fixture())
         {

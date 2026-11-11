@@ -22,7 +22,7 @@
     const { page, $, getModel, load, notify, request, change } = context;
     if (!$('auto-manage')) return null;
     let status = null, recovery = null, preview = null, busy = false, generation = 0, editingId = '',
-      recoveryError = '', recoveryLoading = false, recoveryFocus = '', lastStatusError = '';
+      recoveryError = '', recoveryLoading = false, recoveryFocus = '', lastStatusError = '', lastAutoRemapped = null;
     const selected = new Set(), selectedRules = new Set(), previewSelected = new Set(), recoveryChoices = new Map();
     const recoveryQueries = new Map();
     const referenceKey = (value) => String(value || '').replace(/-/g, '').toLowerCase();
@@ -47,6 +47,7 @@
     const canSearchRecovery = () => !recoveryError && !!recovery &&
       (recovery.canSearch ?? recovery.libraryHealthy) === true;
     const unresolved = () => list(recovery?.entries).filter((entry) => entry.status !== 'Healthy');
+    const automaticMatches = () => unresolved().filter((entry) => entry.canAutoRemap === true);
     function savedReferenceCount() {
       const model = getModel();
       return list(model.MediaLinks).length + list(model.Rows).reduce((count, row) => count + list(row.Items).length, 0) +
@@ -66,11 +67,14 @@
       if (!recovery) return recoveryLoading ? 'Checking saved media references…' : 'Recovery has not checked your saved references yet.';
       const checked = recovery.referenceCount ?? list(recovery.entries).length,
         attention = recovery.attentionCount ?? unresolved().length,
-        healthy = recovery.healthyCount ?? Math.max(0, checked - attention);
+        healthy = recovery.healthyCount ?? Math.max(0, checked - attention),
+        ready = automaticMatches().length;
       return checked + ' saved references checked · ' + healthy + ' available · ' + attention + ' need attention. ' +
+        (ready ? ready + ' can remap automatically; ' + Math.max(0, attention - ready) + ' need manual review. ' : '') +
+        (lastAutoRemapped !== null ? 'Last auto remap: ' + lastAutoRemapped + ' references reconnected. ' : '') +
         (recovery.message || '') + (recovery.enabled === false ? ' Recovery is disabled.' : '') +
         (recovery.libraryHealthy === false
-          ? canSearchRecovery() ? ' Automatic reconnection is paused; available replacements can be chosen explicitly.'
+          ? canSearchRecovery() ? ' Original offline items stay protected; clear replacements for removed IDs can be remapped.'
             : ' Reconnection is paused until the library can be checked.'
           : '');
     }
@@ -101,6 +105,7 @@
       $('auto-keep-choices').disabled = busy || !pending().length;
       $('recovery-apply').disabled = busy || modelDirty() || !recoveryChoices.size ||
         !canSearchRecovery() || recovery?.enabled === false;
+      $('recovery-auto-remap').disabled = busy || modelDirty() || !canSearchRecovery() || recovery?.enabled === false;
       for (const element of $('recovery-results').querySelectorAll('[data-recovery-search]'))
         element.disabled = busy || !canSearchRecovery();
       $('auto-run').disabled = busy || !!status?.running;
@@ -269,9 +274,9 @@
       syncBusy();
     }
     function renderRecovery() {
-      const pendingEntries = unresolved(),
-        entries = list(recovery?.entries).filter((entry) => entry.status !== 'Healthy' ||
-          referenceKey(entry.referenceId) === referenceKey(recoveryFocus)),
+      const ready = automaticMatches().length,
+        entries = list(recovery?.entries).filter((entry) => entry.canAutoRemap !== true &&
+          (entry.status !== 'Healthy' || referenceKey(entry.referenceId) === referenceKey(recoveryFocus))),
         searchable = canSearchRecovery(),
         labels = { Verified: 'Ready to reconnect', Ambiguous: 'Choose a version', Missing: 'Media missing',
           ManualReview: 'Choose a replacement', Healthy: 'Available in the library' };
@@ -306,6 +311,7 @@
           !recovery ? '<p>The recovery report is loading.</p>' :
           savedReferenceCount() > 0 && !(recovery.referenceCount ?? list(recovery.entries).length)
             ? '<p>Your settings contain saved media, but this report did not check it. Save or reload your settings, then check recovery.</p>'
+            : ready ? '<p>No references need an individual selection. Auto remap can reconnect ' + ready + ' clear matches now.</p>'
             : '<p>All ' + (recovery.referenceCount ?? list(recovery.entries).length) + ' checked references resolve in the current library.</p>');
       syncBusy();
     }
@@ -400,6 +406,16 @@
         context.refreshMediaAvailability?.();
       }, { write: true, recoveryAction: true });
     };
+    $('recovery-auto-remap').onclick = () => act(async () => {
+      const result = camel(await post('Recovery/Auto', {}));
+      recovery = result.status;
+      lastAutoRemapped = Number(result.remappedCount) || 0;
+      recoveryFocus = '';
+      recoveryChoices.clear();
+      context.refreshMediaAvailability?.();
+      notify('Auto remap reconnected ' + lastAutoRemapped + ' references. ' +
+        unresolved().filter((entry) => entry.canAutoRemap !== true).length + ' remain for review.');
+    }, { write: true, recoveryAction: true });
     $('recovery-review').onclick = () => openRecovery();
     $('recovery-notice-review').onclick = () => openRecovery();
     $('recovery-refresh').onclick = () => void refresh();

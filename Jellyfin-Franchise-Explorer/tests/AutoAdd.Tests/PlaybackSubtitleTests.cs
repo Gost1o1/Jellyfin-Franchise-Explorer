@@ -346,13 +346,3 @@ internal static class PlaybackSubtitleTests
         }
     }
 }
-
-namespace Jellyfin.Api.Controllers
-{
-    // The filter deliberately uses the host type name to avoid a Jellyfin.Api package dependency.
-    public sealed class MediaInfoController
-    {
-        public void GetPlaybackInfo() { }
-        public void GetPostedPlaybackInfo() { }
-    }
-}

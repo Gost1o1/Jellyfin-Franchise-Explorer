@@ -25,6 +25,17 @@ window.__events = [];
 window.__profileResolvers = [];
 window.__denyWrites = false;
 window.__denyKey = '';
+window.__failPreferenceWrites = false;
+window.__preferenceRequests = [];
+const originalFetch = window.fetch;
+window.fetch = (url, options = {}) => {
+  if (String(url).includes('/FranchiseExplorer/ViewerPreferences')) {
+    window.__preferenceRequests.push({method: options.method || 'GET', body: options.body || ''});
+    if (window.__failPreferenceWrites && options.method === 'PUT')
+      return Promise.resolve(new Response('{}', {status: 503}));
+  }
+  return originalFetch(url, options);
+};
 if (!localStorage.getItem('viewer-preference-test-seeded')) {
   if (__options.servers !== null)
     localStorage.setItem('jellyfin_credentials', JSON.stringify({Servers: __options.servers}));
@@ -78,14 +89,22 @@ def run():
                               LocalAddress='http://jellyfin.test')],
                 values={subtitle_key(SERVER, USER): '1'})
             options.update(overrides)
+            server_preference = {'value': options.pop('serverPreference', None)}
             context = browser.new_context(viewport={'width': 390, 'height': 850},
                                           is_mobile=True, has_touch=True)
             page = context.new_page()
             page.on('pageerror', lambda error: errors.append(str(error)))
             boot = BOOT.replace('OPTIONS', json.dumps(options), 1)
-            page.route('http://jellyfin.test/**', lambda route: route.fulfill(
-                content_type='text/html', body=HTML.replace('<script type="text/javascript">',
-                    '<script>' + boot + '</script><script type="text/javascript">', 1)))
+            def respond(route):
+                if route.request.url.endswith('/FranchiseExplorer/ViewerPreferences'):
+                    if route.request.method == 'PUT':
+                        server_preference['value'] = dict(route.request.post_data_json, hasPreference=True)
+                    value = server_preference['value'] or dict(hasPreference=False,
+                        subtitleEnabled=False, subtitleLanguage='')
+                    return route.fulfill(content_type='application/json', body=json.dumps(value))
+                return route.fulfill(content_type='text/html', body=HTML.replace('<script type="text/javascript">',
+                    '<script>' + boot + '</script><script type="text/javascript">', 1))
+            page.route('http://jellyfin.test/**', respond)
             page.goto('http://jellyfin.test/settings')
             page.wait_for_function('window.FranchiseSettings && !document.querySelector("#save").disabled')
             return context, page
@@ -213,6 +232,33 @@ def run():
         assert storage(page, subtitle_key(SERVER, USER)) == storage(page, alias) == '1'
         assert page.evaluate('__events.length') == 0
         expect(page.locator('#toast')).to_contain_text('Could not save viewer preferences')
+        context.close()
+        assert not errors, errors
+        # The account's saved Off beats stale local On, and works in a new browser.
+        saved_off = dict(hasPreference=True, subtitleEnabled=False, subtitleLanguage='de')
+        context, page = open_case(serverPreference=saved_off)
+        page.locator('#settings > summary').click()
+        expect_enabled(page, False)
+        expect(page.locator('#language')).to_have_value('de')
+        assert storage(page, subtitle_key(SERVER, USER)) == '0'
+        page.locator('#subtitles').click()
+        expect_enabled(page)
+        page.locator('#subtitles').click()
+        expect_enabled(page, False)
+        page.reload()
+        page.locator('#settings > summary').click()
+        expect_enabled(page, False)
+        context.close()
+        context, page = open_case(values={}, serverPreference=saved_off)
+        page.locator('#settings > summary').click()
+        expect_enabled(page, False)
+        expect(page.locator('#language')).to_have_value('de')
+        # A server failure must not falsely present a successful save or emit playback changes.
+        page.evaluate('window.__failPreferenceWrites = true')
+        page.locator('#subtitles').click()
+        expect(page.locator('#toast')).to_contain_text('Could not save viewer preferences')
+        expect_enabled(page, False)
+        assert page.evaluate('__events.length') == 0
         context.close()
         assert not errors, errors
         browser.close()

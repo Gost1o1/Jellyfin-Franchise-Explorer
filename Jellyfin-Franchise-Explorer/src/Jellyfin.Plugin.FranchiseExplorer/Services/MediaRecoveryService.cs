@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.FranchiseExplorer.Services;
 
-/// <summary>Captures portable identities and reconnects verified references from complete library snapshots.</summary>
+/// <summary>Captures portable identities and reconnects unique exact matches from complete library snapshots.</summary>
 public sealed class MediaRecoveryService(ILibraryManager library, FranchiseLibrarySnapshotService snapshots, ILogger<MediaRecoveryService> logger) : BackgroundService
 {
     private readonly object _events = new();
@@ -79,14 +79,7 @@ public sealed class MediaRecoveryService(ILibraryManager library, FranchiseLibra
             if (library.IsScanRunning || Plugin.Instance is null) return;
             DateTimeOffset changedUtc;
             lock (_events) changedUtc = _changedUtc;
-            var status = await CheckAsync(true, cancellationToken).ConfigureAwait(false);
-            if (status.Enabled && status.AutoReconnect && status.LibraryHealthy)
-            {
-                var choices = status.Entries.Where(e => e.Status == "Verified" && e.Candidates.Count == 1)
-                    .Select(e => new MediaRecoveryChoice { ReferenceId = e.ReferenceId, ItemId = e.Candidates[0].ItemId }).ToList();
-                if (choices.Count > 0)
-                    await ApplyAsync(new() { Revision = status.Revision, LibraryRevision = status.LibraryRevision, Choices = choices }, true, cancellationToken).ConfigureAwait(false);
-            }
+            var status = (await AutoCoreAsync(false, cancellationToken).ConfigureAwait(false)).Status;
             lock (_events) if (_changedUtc == changedUtc) _libraryChanged = false;
             _lastConfigurationRevision = Plugin.Instance.Configuration.ConfigurationRevision;
             // Retry incomplete snapshots even when no later event or configuration edit arrives.
@@ -98,6 +91,28 @@ public sealed class MediaRecoveryService(ILibraryManager library, FranchiseLibra
     public Task<MediaRecoveryStatus> StatusAsync(CancellationToken cancellationToken = default) => CheckCoreAsync(false, false, cancellationToken);
 
     public Task<MediaRecoveryStatus> CheckAsync(bool force = true, CancellationToken cancellationToken = default) => CheckCoreAsync(force, true, cancellationToken);
+
+    /// <summary>Immediately reconnect every clear match, with the same server validation as scheduled recovery.</summary>
+    public async Task<MediaRecoveryAutoResult> AutoAsync(CancellationToken cancellationToken = default)
+    {
+        await _pending.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try { return await AutoCoreAsync(true, cancellationToken).ConfigureAwait(false); }
+        finally { _pending.Release(); }
+    }
+
+    private async Task<MediaRecoveryAutoResult> AutoCoreAsync(bool explicitRequest, CancellationToken cancellationToken)
+    {
+        var status = await CheckAsync(true, cancellationToken).ConfigureAwait(false);
+        var result = new MediaRecoveryAutoResult { Status = status };
+        if (!status.Enabled && explicitRequest) throw new InvalidOperationException("Media recovery is disabled.");
+        if (!status.Enabled || !explicitRequest && !status.AutoReconnect || !status.CanSearch) return result;
+        var choices = status.Entries.Where(e => e.CanAutoRemap)
+            .Select(e => new MediaRecoveryChoice { ReferenceId = e.ReferenceId, ItemId = e.Candidates[0].ItemId }).ToList();
+        if (choices.Count == 0) return result;
+        result.Status = await ApplyCoreAsync(new() { Revision = status.Revision, LibraryRevision = status.LibraryRevision, Choices = choices }, true, explicitRequest, cancellationToken).ConfigureAwait(false);
+        result.RemappedCount = choices.Count;
+        return result;
+    }
 
     private async Task<MediaRecoveryStatus> CheckCoreAsync(bool force, bool capture, CancellationToken cancellationToken)
     {
@@ -140,14 +155,17 @@ public sealed class MediaRecoveryService(ILibraryManager library, FranchiseLibra
         finally { FranchiseConfigurationGate.Gate.Release(); }
     }
 
-    private void ValidateRevision(PluginConfiguration config, FranchiseLibrarySnapshot snapshot, string revision, string libraryRevision, bool automatic = false)
+    private void ValidateRevision(PluginConfiguration config, FranchiseLibrarySnapshot snapshot, string revision, string libraryRevision)
     {
-        if (automatic ? !snapshot.Healthy : !snapshot.CanSearch) throw new InvalidOperationException(snapshot.Message);
+        if (!snapshot.CanSearch) throw new InvalidOperationException(snapshot.Message);
         if (MediaRecoveryPlanner.Revision(config) != revision || snapshot.Revision != libraryRevision || !snapshots.IsCurrent(libraryRevision))
             throw new InvalidOperationException("Configuration or library changed. Check media links again before applying a choice.");
     }
 
-    public async Task<MediaRecoveryStatus> ApplyAsync(MediaRecoveryApplyRequest request, bool automatic = false, CancellationToken cancellationToken = default)
+    public Task<MediaRecoveryStatus> ApplyAsync(MediaRecoveryApplyRequest request, bool automatic = false, CancellationToken cancellationToken = default)
+        => ApplyCoreAsync(request, automatic, false, cancellationToken);
+
+    private async Task<MediaRecoveryStatus> ApplyCoreAsync(MediaRecoveryApplyRequest request, bool automatic, bool explicitAutomatic, CancellationToken cancellationToken)
     {
         if (request?.Choices is null || request.Choices.Count == 0 || request.Choices.Count > 25000 || request.Choices.Select(c => c.ReferenceId).Distinct().Count() != request.Choices.Count)
             throw new ArgumentException("Select one replacement per reference.");
@@ -157,25 +175,29 @@ public sealed class MediaRecoveryService(ILibraryManager library, FranchiseLibra
         {
             var plugin = Plugin.Instance ?? throw new InvalidOperationException("Plugin configuration unavailable.");
             var previous = plugin.Configuration;
-            ValidateRevision(previous, snapshot, request.Revision, request.LibraryRevision, automatic);
-            if (!previous.MediaRecovery.Enabled || automatic && !previous.MediaRecovery.AutoReconnect) throw new InvalidOperationException("Media recovery is disabled.");
+            ValidateRevision(previous, snapshot, request.Revision, request.LibraryRevision);
+            if (!previous.MediaRecovery.Enabled || automatic && !explicitAutomatic && !previous.MediaRecovery.AutoReconnect) throw new InvalidOperationException("Media recovery is disabled.");
             var references = MediaRecoveryPlanner.References(previous).ToList();
             var currentItems = snapshot.Items.GroupBy(i => MediaRecoveryPlanner.Id(i.Id)).ToDictionary(g => g.Key, g => g.First());
             var mapping = new Dictionary<string, string>(StringComparer.Ordinal);
             var candidates = new MediaRecoveryPlanner.CandidateLookup(snapshot.Items);
+            var automaticEntries = automatic ? MediaRecoveryPlanner.Review(previous, snapshot).Entries.ToDictionary(e => e.ReferenceId) : null;
             foreach (var choice in request.Choices)
             {
                 var reference = references.SingleOrDefault(r => r.ReferenceId == choice.ReferenceId) ?? throw new ArgumentException("A selected reference no longer exists.");
                 var identity = MediaRecoveryPlanner.IdentityFor(previous, reference, snapshot.Items);
                 var current = currentItems.GetValueOrDefault(MediaRecoveryPlanner.Id(reference.ItemId));
+                if (automatic && current is not null) throw new InvalidOperationException("Automatic recovery retains saved items that are still in the library, including offline media.");
                 if (current is { IsAvailable: false }) current = null;
                 if (current is not null && (automatic || current.ItemType == reference.ItemType && (!MediaRecoveryPlanner.Stable(identity) || MediaRecoveryPlanner.Verified(identity, current))))
                     throw new InvalidOperationException("A selected reference is already available. Check media links again.");
                 var candidate = currentItems.GetValueOrDefault(MediaRecoveryPlanner.Id(choice.ItemId)) is { IsAvailable: true } available ? available
                     : throw new InvalidOperationException("The selected replacement is no longer available.");
                 if (candidate.ItemType != reference.ItemType) throw new ArgumentException("Replacement media type does not match the saved reference.");
-                if (automatic && (!MediaRecoveryPlanner.Verified(identity, candidate) || candidates.Find(identity).Count != 1))
-                    throw new InvalidOperationException("Automatic recovery requires one unique verified provider identity.");
+                if (automatic && (automaticEntries![reference.ReferenceId] is not { CanAutoRemap: true, Candidates.Count: 1 } entry
+                    || MediaRecoveryPlanner.Id(entry.Candidates[0].ItemId) != MediaRecoveryPlanner.Id(candidate.Id)
+                    || MediaRecoveryPlanner.Matches(previous, reference, identity, candidates).Count != 1))
+                    throw new InvalidOperationException("Automatic recovery requires one unique exact identity or title match without conflicting evidence.");
                 // An administrator may explicitly choose a version or repair a legacy manual reference.
                 // Stable evidence must still agree; a conflicting provider or episode is never accepted.
                 if (MediaRecoveryPlanner.Stable(identity) && !MediaRecoveryPlanner.Verified(identity, candidate)) throw new ArgumentException("Replacement conflicts with the saved provider or episode identity.");
@@ -189,6 +211,9 @@ public sealed class MediaRecoveryService(ILibraryManager library, FranchiseLibra
                 var identity = MediaRecoveryPlanner.IdentityFor(previous, reference, snapshot.Items);
                 if (reference.ItemType != target.ItemType || MediaRecoveryPlanner.Stable(identity) && !MediaRecoveryPlanner.Verified(identity, target))
                     throw new InvalidOperationException("Another reference to the old item has conflicting identity metadata. Review it before recovery.");
+                if (automatic && (automaticEntries![reference.ReferenceId] is not { CanAutoRemap: true, Candidates.Count: 1 } entry
+                    || MediaRecoveryPlanner.Id(entry.Candidates[0].ItemId) != MediaRecoveryPlanner.Id(target.Id)))
+                    throw new InvalidOperationException("Other references to the old item need review before automatic recovery.");
             }
             AddDependentMappings(previous, snapshot.Items, mapping);
             var next = MediaRecoveryPlanner.ApplyMappings(previous, mapping, snapshot.Items);

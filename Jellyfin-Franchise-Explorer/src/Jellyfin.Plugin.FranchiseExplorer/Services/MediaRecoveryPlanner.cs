@@ -28,6 +28,8 @@ public sealed class MediaRecoveryEntry
     public string ItemType { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public string Reason { get; set; } = string.Empty;
+    public bool CanAutoRemap { get; set; }
+    public string MatchMethod { get; set; } = string.Empty;
     public List<MediaRecoveryCandidate> Candidates { get; set; } = new();
 }
 
@@ -60,7 +62,13 @@ public sealed class MediaRecoveryApplyRequest
     public List<MediaRecoveryChoice> Choices { get; set; } = new();
 }
 
-/// <summary>Conservative provider matching and reversible configuration transformation; no title guessing.</summary>
+public sealed class MediaRecoveryAutoResult
+{
+    public MediaRecoveryStatus Status { get; set; } = new();
+    public int RemappedCount { get; set; }
+}
+
+/// <summary>Exact identity or unique exact title matching and reversible configuration transformation.</summary>
 public static class MediaRecoveryPlanner
 {
     public static string Id(string? value) => Guid.TryParse(value, out var id) ? id.ToString("N") : (value ?? string.Empty).ToLowerInvariant();
@@ -87,9 +95,11 @@ public static class MediaRecoveryPlanner
     private static bool ExactProviders(List<MediaProviderIdentity> expected, List<MediaProviderIdentity> actual)
         => expected.Count > 0 && expected.All(p => actual.Any(a => a.Name.Equals(p.Name, StringComparison.OrdinalIgnoreCase) && a.Value.Equals(p.Value, StringComparison.OrdinalIgnoreCase)));
 
-    public static bool Verified(MediaIdentity? expected, AutomationLibraryItem candidate)
+    public static bool Verified(MediaIdentity? expected, AutomationLibraryItem candidate) => candidate.IsAvailable && SameIdentity(expected, candidate);
+
+    private static bool SameIdentity(MediaIdentity? expected, AutomationLibraryItem candidate)
     {
-        if (!candidate.IsAvailable || !Stable(expected)) return false;
+        if (!Stable(expected)) return false;
         var actual = Capture(candidate);
         if (expected!.ItemType != actual.ItemType || expected.Year.HasValue && expected.Year != actual.Year) return false;
         if (expected.ItemType != "Episode") return ExactProviders(expected.ProviderIds, actual.ProviderIds);
@@ -99,15 +109,24 @@ public static class MediaRecoveryPlanner
             && (expected.ProviderIds.Count == 0 || ExactProviders(expected.ProviderIds, actual.ProviderIds));
     }
 
-    /// <summary>Indexes provider identities once per check, including episode coordinates, for large libraries.</summary>
+    /// <summary>Indexes provider identities, episode coordinates and exact titles once per check.</summary>
     public sealed class CandidateLookup
     {
         private readonly Dictionary<string, List<AutomationLibraryItem>> _items = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, List<AutomationLibraryItem>> _titles = new(StringComparer.OrdinalIgnoreCase);
         private static string Key(string type, string provider, string value, int? season, int? episode, int? end)
             => type + ":" + provider + ":" + value + (type == "Episode" ? ":" + season + ":" + episode + ":" + (end ?? episode) : "");
         public CandidateLookup(IReadOnlyList<AutomationLibraryItem> items)
         {
-            foreach (var item in items.Where(i => i.IsAvailable))
+            // Keep unavailable versions in this index: one available edition beside an offline
+            // duplicate is still an ambiguous title, rather than permission to choose a version.
+            foreach (var item in items.GroupBy(i => Id(i.Id)).Select(g => g.First()))
+            {
+                var key = item.ItemType + ":" + NormalizeTitle(item.Name);
+                if (!_titles.TryGetValue(key, out var matches)) _titles[key] = matches = new();
+                matches.Add(item);
+            }
+            foreach (var item in items.GroupBy(i => Id(i.Id)).Select(g => g.First()))
                 foreach (var provider in item.ItemType == "Episode" ? item.SeriesProviderIds : item.ProviderIds)
                 {
                     var key = Key(item.ItemType, provider.Key, provider.Value, item.SeasonNumber, item.EpisodeNumber, item.EpisodeEnd);
@@ -115,23 +134,74 @@ public static class MediaRecoveryPlanner
                     matches.Add(item);
                 }
         }
-        public IReadOnlyList<AutomationLibraryItem> Find(MediaIdentity? identity)
+        public IReadOnlyList<AutomationLibraryItem> Find(MediaIdentity? identity, bool includeUnavailable = false)
         {
             if (!Stable(identity)) return [];
             var provider = (identity!.ItemType == "Episode" ? identity.SeriesProviderIds : identity.ProviderIds)[0];
             return _items.TryGetValue(Key(identity.ItemType, provider.Name, provider.Value, identity.SeasonNumber, identity.EpisodeNumber, identity.EpisodeEnd), out var items)
-                ? items.Where(i => Verified(identity, i)).ToArray() : [];
+                ? items.Where(i => includeUnavailable ? SameIdentity(identity, i) : Verified(identity, i)).ToArray() : [];
         }
+        public IReadOnlyList<AutomationLibraryItem> FindTitle(Reference reference, int? year)
+            => _titles.TryGetValue(reference.ItemType + ":" + NormalizeTitle(RecoveryTitle(reference)), out var items)
+                ? items.Where(i => !year.HasValue || i.Year == year).ToArray() : [];
     }
 
-    public sealed record Reference(string ReferenceId, string RowId, string NodeId, string ItemId, string Title, string ItemType, MediaIdentity? Identity);
+    public sealed record Reference(string ReferenceId, string RowId, string NodeId, string ItemId, string Title, string ItemType, MediaIdentity? Identity,
+        string RangeMode = "Full", int StartSeason = 0, int EndSeason = 0, int StartEpisode = 0, int EndEpisode = 0);
     public static IEnumerable<Reference> References(PluginConfiguration config)
     {
-        foreach (var link in config.MediaLinks) yield return new(link.Id, "", link.NodeId, link.JellyfinItemId, link.DisplayName, link.ItemType, link.Identity);
+        foreach (var link in config.MediaLinks) yield return new(link.Id, "", link.NodeId, link.JellyfinItemId, link.DisplayName, link.ItemType, link.Identity,
+            link.RangeMode, link.StartSeason, link.EndSeason, link.StartEpisode, link.EndEpisode);
         foreach (var row in config.Rows)
-            foreach (var entry in row.Items) yield return new(entry.Id, row.Id, row.ParentNodeId, entry.JellyfinItemId, entry.DisplayName, entry.ItemType, entry.Identity);
+            foreach (var entry in row.Items) yield return new(entry.Id, row.Id, row.ParentNodeId, entry.JellyfinItemId, entry.DisplayName, entry.ItemType, entry.Identity,
+                entry.RangeMode, entry.StartSeason, entry.EndSeason, entry.StartEpisode, entry.EndEpisode);
         foreach (var node in config.Nodes.Where(n => n.CollectionId.Length > 0))
             yield return new("collection:" + node.Id, "", node.Id, node.CollectionId, node.Name, "BoxSet", config.MediaRecovery.KnownItems.FirstOrDefault(s => Id(s.ItemId) == Id(node.CollectionId))?.Identity);
+    }
+
+    private static string NormalizeTitle(string value) => Regex.Replace((value ?? "").Normalize(NormalizationForm.FormKC).Trim(), @"\s+", " ");
+
+    private static string RecoveryTitle(Reference reference)
+    {
+        if (reference.ItemType != "Series" || reference.RangeMode is not ("Episodes" or "Seasons")) return reference.Title;
+        var pattern = reference.RangeMode == "Episodes"
+            ? @"\s+(?:[·\-–—]\s+)?S(?<s>\d+)E(?<e>\d+)(?:\s*[-–—]\s*S(?<es>\d+)E(?<ee>\d+))?$"
+            : @"\s+(?:[·\-–—]\s+)?S(?<s>\d+)(?:\s*[-–—]\s*S(?<es>\d+))?$";
+        var match = Regex.Match(reference.Title, pattern, RegexOptions.IgnoreCase);
+        if (!match.Success || !int.TryParse(match.Groups["s"].Value, out var season) || season != reference.StartSeason) return reference.Title;
+        var endSeason = season;
+        if (match.Groups["es"].Success && !int.TryParse(match.Groups["es"].Value, out endSeason) || endSeason != reference.EndSeason) return reference.Title;
+        if (reference.RangeMode == "Episodes")
+        {
+            if (!int.TryParse(match.Groups["e"].Value, out var episode) || episode != reference.StartEpisode) return reference.Title;
+            var endEpisode = episode;
+            if (match.Groups["ee"].Success && !int.TryParse(match.Groups["ee"].Value, out endEpisode) || endEpisode != reference.EndEpisode) return reference.Title;
+        }
+        return reference.Title[..match.Index];
+    }
+
+    private static bool HasProviderEvidence(MediaIdentity? identity) => identity is not null && (identity.ProviderIds.Count > 0 || identity.SeriesProviderIds.Count > 0);
+
+    private static bool CanUseTitle(PluginConfiguration config, Reference reference)
+    {
+        if (reference.ItemType is not ("Movie" or "Series" or "BoxSet") || NormalizeTitle(RecoveryTitle(reference)).Length == 0) return false;
+        var saved = config.MediaRecovery.KnownItems.FirstOrDefault(s => Id(s.ItemId) == Id(reference.ItemId))?.Identity;
+        // Unresolved historical evidence is not absence of evidence. In particular, stale import
+        // provenance after a manual retarget must not acquire automatic permission from its title.
+        return !HasProviderEvidence(reference.Identity) && !HasProviderEvidence(saved)
+            && (reference.Identity is null || reference.Identity.ItemType.Length == 0 || reference.Identity.ItemType == reference.ItemType)
+            && (saved is null || saved.ItemType.Length == 0 || saved.ItemType == reference.ItemType)
+            && !(reference.Identity?.Year is int year && saved?.Year is int savedYear && year != savedYear)
+            && !config.Nodes.SelectMany(n => n.AutoAddRecords).Any(r => r.ReferenceId == reference.ReferenceId && r.ImdbIds.Count > 0)
+            && !config.AutoFranchises.Ownership.Any(o => o.ReferenceId == reference.ReferenceId && (o.ProviderId.Length > 0 || o.SeriesProviderId.Length > 0));
+    }
+
+    public static IReadOnlyList<AutomationLibraryItem> Matches(PluginConfiguration config, Reference reference, MediaIdentity? identity, CandidateLookup lookup)
+    {
+        if (Stable(identity)) return lookup.Find(identity, true).Where(i => i.ItemType == reference.ItemType).ToArray();
+        if (!CanUseTitle(config, reference)) return [];
+        var year = reference.Identity?.Year ?? config.MediaRecovery.KnownItems.FirstOrDefault(s => Id(s.ItemId) == Id(reference.ItemId))?.Identity.Year;
+        return lookup.FindTitle(reference, year);
     }
 
     public static MediaIdentity? IdentityFor(PluginConfiguration config, Reference reference, IReadOnlyList<AutomationLibraryItem> items)
@@ -238,14 +308,27 @@ public static class MediaRecoveryPlanner
             var current = byId.GetValueOrDefault(Id(reference.ItemId));
             var identity = IdentityFor(config, reference, library.Items);
             var currentHealthy = current is { IsAvailable: true } && current.ItemType == reference.ItemType && (!Stable(identity) || Verified(identity, current));
-            var candidates = currentHealthy || !Stable(identity) ? new List<MediaRecoveryCandidate>() : (lookup ??= new(library.Items)).Find(identity).Where(i => i.ItemType == reference.ItemType && Id(i.Id) != Id(reference.ItemId)).Select(i => Candidate(i, identity)).ToList();
-            var status = currentHealthy ? "Healthy" : current is { IsAvailable: true } ? "ManualReview" : !Stable(identity) ? "ManualReview" : candidates.Count == 1 ? "Verified" : candidates.Count > 1 ? "Ambiguous" : "Missing";
+            var matches = currentHealthy ? [] : Matches(config, reference, identity, lookup ??= new(library.Items)).Where(i => Id(i.Id) != Id(reference.ItemId)).ToArray();
+            var candidates = matches.Where(i => i.IsAvailable).Select(i => Candidate(i, identity)).ToList();
+            var status = currentHealthy ? "Healthy" : current is not null ? "ManualReview" : matches.Length > 1 ? "Ambiguous"
+                : matches.Length == 1 && candidates.Count == 1 ? "Verified" : !Stable(identity) ? "ManualReview" : "Missing";
+            if (status == "Verified") candidates[0].Verified = true;
             result.Entries.Add(new() { ReferenceId = reference.ReferenceId, RowId = reference.RowId, NodeId = reference.NodeId, OldItemId = reference.ItemId,
                 Title = reference.Title, ItemType = reference.ItemType, Status = status, Candidates = status == "Healthy" ? new() : candidates,
-                Reason = status switch { "Healthy" => "The saved Jellyfin item is available.", "Verified" => "One exact provider and media identity matches.", "Ambiguous" => "Several library versions share this identity. Choose a version.", "Missing" => "No verified replacement is available; the saved reference is retained.",
+                CanAutoRemap = status == "Verified" && library.CanSearch && current is null && !string.IsNullOrWhiteSpace(reference.ItemId),
+                MatchMethod = status == "Verified" ? Stable(identity) ? "Provider identity" : "Exact title and type" : "",
+                Reason = status switch { "Healthy" => "The saved Jellyfin item is available.", "Verified" when Stable(identity) => "One exact provider and media identity matches.", "Verified" => "One library item has the exact saved title and media type, with no conflicting identity evidence.", "Ambiguous" => "Several library versions match. Choose a version.", "Missing" => "No verified replacement is available; the saved reference is retained.",
                     _ when current is { IsAvailable: true } => "The saved Jellyfin item conflicts with its recorded media identity. Review the replacement explicitly.",
-                    _ => "The saved Jellyfin ID is unavailable and no trustworthy pre-move identity was recorded. Search and choose a replacement explicitly; titles are never matched automatically." } });
+                    _ when current is not null => "The saved Jellyfin item is still in the library but its media is offline. Restore its storage or choose a replacement explicitly.",
+                    _ => "No unique exact replacement can be confirmed from the saved identity or title. Search and choose a replacement explicitly." } });
         }
+        // Every occurrence of one old native ID changes together. Hold the whole group when
+        // its references disagree, so one clear title cannot silently retarget another reference.
+        foreach (var group in result.Entries.GroupBy(e => Id(e.OldItemId)))
+            if (group.Any(e => e.Status == "Verified") && (group.Any(e => e.Status != "Verified")
+                || group.Select(e => Id(e.Candidates.Single().ItemId)).Distinct().Count() != 1))
+                foreach (var entry in group.Where(e => e.Status == "Verified"))
+                { entry.Status = "ManualReview"; entry.CanAutoRemap = false; entry.Reason = "Other references to this saved item disagree about its replacement. Review them together."; }
         return result;
     }
 

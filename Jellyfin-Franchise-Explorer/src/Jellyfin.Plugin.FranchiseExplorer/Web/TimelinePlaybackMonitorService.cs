@@ -19,6 +19,7 @@ public sealed class TimelinePlaybackMonitorService : IHostedService
 {
     private readonly ISessionManager _sessions;
     private readonly ILogger<TimelinePlaybackMonitorService> _logger;
+    private readonly FranchiseSubtitlePlaybackService? _subtitles;
     private readonly ConcurrentDictionary<string, PlaybackWitness> _witnesses = new();
 
     private sealed class PlaybackWitness
@@ -80,10 +81,12 @@ public sealed class TimelinePlaybackMonitorService : IHostedService
         }
     }
 
-    public TimelinePlaybackMonitorService(ISessionManager sessions, ILogger<TimelinePlaybackMonitorService> logger)
+    public TimelinePlaybackMonitorService(ISessionManager sessions, ILogger<TimelinePlaybackMonitorService> logger,
+        FranchiseSubtitlePlaybackService? subtitles = null)
     {
         _sessions = sessions;
         _logger = logger;
+        _subtitles = subtitles;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -147,6 +150,14 @@ public sealed class TimelinePlaybackMonitorService : IHostedService
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Franchise Explorer: timeline progress was not persisted for this playback event.");
+            }
+            if (activePlaybackEvent && _subtitles is not null)
+            {
+                try { await _subtitles.EnforceAsync(args).ConfigureAwait(false); }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Franchise Explorer: the subtitle preference could not be applied to the active franchise player.");
+                }
             }
         });
     }

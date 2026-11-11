@@ -145,7 +145,7 @@ public sealed class FranchiseBrowseController : ControllerBase
         // titles that a particular user isn't allowed to browse.
         return Ok(new
         {
-            version = "0.8.9.28",
+            version = "0.8.9.29",
             title = string.IsNullOrWhiteSpace(config.NavigationLabel) ? "Franchises" : config.NavigationLabel,
             nodes = config.Nodes.Select(n => new
             {

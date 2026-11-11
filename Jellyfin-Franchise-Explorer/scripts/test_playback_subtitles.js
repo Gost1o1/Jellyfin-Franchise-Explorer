@@ -12,18 +12,19 @@ const ok=value=>({ok:true,status:200,json:async()=>value});
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 async function flush(){for(let i=0;i<8;i++)await tick();}
 function fixture(){
-  const data=new Map(),requests=[],events=[],errors=[],listeners=new Map();
+  const data=new Map(),requests=[],events=[],errors=[],listeners=new Map(),timers=new Map();
   const localStorage={getItem:key=>data.get(key)??null,setItem:(key,value)=>data.set(key,String(value)),
     key:index=>[...data.keys()][index]??null,get length(){return data.size;}};
-  let sessions=[],failure=0,handler=null;
+  let sessions=[],failure=0,handler=null,preference=null,timerId=0;
   const window={localStorage,addEventListener:(name,listener)=>listeners.set(name,listener),dispatchEvent:event=>{
     events.push(event);listeners.get(event.type)?.(event);
-  }};
+  },setTimeout:fn=>{const id=++timerId;timers.set(id,fn);return id;},clearTimeout:id=>timers.delete(id)};
   const fetch=async(url,options={})=>{
     const record={url,method:options.method||'GET',body:options.body?JSON.parse(options.body):null,headers:options.headers};
     requests.push(record);
     if(handler){const result=await handler(record);if(result)return result;}
     if(failure)return {ok:false,status:failure};
+    if(url.endsWith('/ViewerPreferences'))return ok(preference||{hasPreference:false,subtitleEnabled:false,subtitleLanguage:''});
     if(url.endsWith('/Sessions'))return ok(sessions);
     if(url.endsWith('/PlaybackPreferences'))return ok({enabled:record.body.enabled,language:record.body.language||'eng',
       subtitleStreamIndex:record.body.enabled?31:-1,mediaSourceId:record.body.mediaSourceId||'source-a'});
@@ -32,7 +33,9 @@ function fixture(){
   };
   vm.runInNewContext(source,{window,fetch,CustomEvent:class{constructor(type,options){this.type=type;this.detail=options.detail;}},console:{error:(...args)=>errors.push(args)}},{filename:'subtitle-preferences.js'});
   return {api:window.FranchiseSubtitlePreferences,data,requests,events,errors,emit:(name,event)=>listeners.get(name)?.(event),
-    set sessions(value){sessions=value;},set failure(value){failure=value;},set handler(value){handler=value;}};
+    set sessions(value){sessions=value;},set failure(value){failure=value;},set handler(value){handler=value;},
+    set preference(value){preference=value;},async monitor(){const entry=timers.entries().next().value;
+      assert(entry,'Playback monitoring must be armed');timers.delete(entry[0]);entry[1]();await flush();}};
 }
 const ownSession={Id:'own-session',UserId:user,DeviceId:context.deviceId,NowPlayingItem:{Id:second},PlayState:{MediaSourceId:'source-b'}};
 (async()=>{
@@ -45,8 +48,8 @@ const ownSession={Id:'own-session',UserId:user,DeviceId:context.deviceId,NowPlay
   assert.equal(disabled.subtitleEnabled,false,'Saved Off must beat an older enabled playback intent');
   assert.equal(disabled.subtitleStreamIndex,-1,'Off explicitly disables forced, ASS and server-default tracks');
   assert.equal(disabled.subtitleLanguage,'fra');
-  assert.deepEqual(f.requests[0].body,{deviceId:context.deviceId,itemIds:[first,second],mediaSourceId:null,enabled:false,language:'fra'});
-  assert.equal(f.requests[0].url,'/jellyfin/FranchiseExplorer/PlaybackPreferences');
+  assert.deepEqual(f.requests[1].body,{deviceId:context.deviceId,itemIds:[first,second],mediaSourceId:null,enabled:false,language:'fra'});
+  assert.equal(f.requests[1].url,'/jellyfin/FranchiseExplorer/PlaybackPreferences');
   assert.equal(f.requests[0].headers.Authorization,'MediaBrowser Token="test-token"');
   const beforeInvalid=f.requests.length;
   await assert.rejects(()=>f.api.prepare({...context,deviceId:''}),/device could not be identified/);
@@ -58,7 +61,7 @@ const ownSession={Id:'own-session',UserId:user,DeviceId:context.deviceId,NowPlay
   on.data.set('fe-subtitle-language:'+server+':'+user,'');
   const enabled=await on.api.prepare(context,{subtitleEnabled:false,subtitleLanguage:'fra'});
   assert.equal(enabled.subtitleEnabled,true);assert.equal(enabled.subtitleStreamIndex,31);
-  assert.equal(on.requests[0].body.language,'','An empty saved language inherits the Jellyfin account language');
+  assert.equal(on.requests[1].body.language,'','An empty saved language inherits the Jellyfin account language');
   assert.equal(enabled.subtitleLanguage,'eng');
   const failed=fixture();failed.failure=403;
   await assert.rejects(()=>failed.api.prepare(context),/HTTP 403/);
@@ -109,7 +112,7 @@ const ownSession={Id:'own-session',UserId:user,DeviceId:context.deviceId,NowPlay
   await flush();assert.equal(typeof releaseOld,'function');
   race.data.set('fe-subtitles:'+server+':'+user,'1');
   const newer=race.api.prepare({...context,itemIds:[other]});
-  await flush();assert.equal(race.requests.length,1,'A newer enrollment must wait for the older server mutation');
+  await flush();assert.equal(race.requests.filter(record=>record.url.endsWith('/PlaybackPreferences')).length,1,'A newer enrollment must wait for the older server mutation');
   releaseOld();
   assert.match((await old).error.message,/superseded/);
   assert.equal((await newer).subtitleStreamIndex,31);
@@ -132,5 +135,43 @@ const ownSession={Id:'own-session',UserId:user,DeviceId:context.deviceId,NowPlay
   assert.equal(refreshRace.requests.some(record=>record.url.endsWith('/Command')),false);
   assert.equal(refreshRace.events.length,0);
 
-  console.log('Playback subtitle preference tests passed: saved Off/On, language inheritance, device/queue scope, live refresh, failures and superseded enrollment.');
+  // A second browser/device's durable Off wins over this browser's stale On.
+  const durable=fixture();durable.data.set('fe-subtitles:'+server+':'+user,'1');
+  durable.preference={hasPreference:true,subtitleEnabled:false,subtitleLanguage:'de'};
+  const authoritative=await durable.api.prepare(context,{subtitleEnabled:true});
+  assert.equal(authoritative.subtitleEnabled,false);
+  assert.equal(durable.requests.find(record=>record.url.endsWith('/PlaybackPreferences')).body.enabled,false);
+
+  // PlaybackInfo and player creation can complete after the old 4.5s fallback.
+  // Observe actual starts, remembered/forced tracks restored later, and every
+  // enrolled queue entry instead of relying on launch-time HTML text tracks.
+  await durable.monitor();
+  assert.equal(durable.requests.some(record=>record.url.endsWith('/Command')),false);
+  durable.sessions=[{...ownSession,NowPlayingItem:{Id:first},PlayState:{SubtitleStreamIndex:7}}];
+  await durable.monitor();
+  assert.equal(durable.requests.filter(record=>record.url.endsWith('/Command')).at(-1).body.Arguments.Index,'-1');
+  const commandsAfterStart=durable.requests.filter(record=>record.url.endsWith('/Command')).length;
+  durable.sessions=[{...ownSession,NowPlayingItem:{Id:first},PlayState:{SubtitleStreamIndex:-1}}];
+  await durable.monitor();
+  assert.equal(durable.requests.filter(record=>record.url.endsWith('/Command')).length,commandsAfterStart);
+  durable.sessions=[{...ownSession,NowPlayingItem:{Id:first},PlayState:{SubtitleStreamIndex:12}}];
+  await durable.monitor();
+  assert.equal(durable.requests.filter(record=>record.url.endsWith('/Command')).length,commandsAfterStart+1,
+    'A forced/custom track re-enabled after startup must be switched Off through the actual player');
+  durable.sessions=[{...ownSession,PlayState:{SubtitleStreamIndex:3}}];await durable.monitor();
+  assert.deepEqual(durable.requests.filter(record=>record.url.endsWith('/PlaybackPreferences')).at(-1).body.itemIds,[second,first]);
+  const beforeUnrelated=durable.requests.filter(record=>record.url.endsWith('/Command')).length;
+  const beforeUnrelatedEvents=durable.events.length;
+  durable.sessions=[{...ownSession,NowPlayingItem:{Id:other},PlayState:{SubtitleStreamIndex:9}}];await durable.monitor();
+  assert.equal(durable.requests.filter(record=>record.url.endsWith('/Command')).length,beforeUnrelated);
+  assert.equal(durable.events.length,beforeUnrelatedEvents+1);
+  assert.equal(durable.events.at(-1).type,'franchise-subtitles-cleared',
+    'Ordinary playback must cancel delayed HTML track fallbacks from the franchise');
+  durable.sessions=[ownSession];
+  durable.preference={hasPreference:true,subtitleEnabled:true,subtitleLanguage:'fr'};
+  await durable.monitor();
+  assert.equal(durable.requests.filter(record=>record.url.endsWith('/Command')).at(-1).body.Arguments.Index,'31',
+    'An account change from another client must reach the currently enrolled player');
+
+  console.log('Playback subtitle preference tests passed: durable Off/On, late player startup/restoration, queue changes, cross-device refresh, scope, failures and superseded enrollment.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

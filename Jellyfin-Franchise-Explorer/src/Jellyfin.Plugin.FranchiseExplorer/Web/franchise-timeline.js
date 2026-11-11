@@ -34,7 +34,29 @@
     if(!response.ok)throw Error('Jellyfin could not apply franchise subtitle preferences (HTTP '+response.status+').');
     return response.status===204?null:response.json();
   }
-  let active=null,generation=0,enrollment=Promise.resolve();
+  let active=null,generation=0,enrollment=Promise.resolve(),monitorTimer=null;
+  function cache(context,preferences){
+    try{
+      for(const [prefix,value] of [['fe-subtitles:',preferences.subtitleEnabled?'1':'0'],
+        ['fe-subtitle-language:',preferences.subtitleLanguage||'']]){
+        const storage=global.localStorage,keys=[prefix+context.serverId+':'+context.userId];
+        for(let i=0;i<storage.length;i++){
+          const key=storage.key(i);if(!key?.startsWith(prefix))continue;
+          const [server,user]=key.slice(prefix.length).split(':');
+          if(canonical(server)===canonical(context.serverId)&&canonical(user)===canonical(context.userId))keys.push(key);
+        }
+        for(const key of new Set(keys))storage.setItem(key,value);
+      }
+    }catch(_){/* The server preference remains authoritative when browser storage is denied. */}
+  }
+  async function current(context,fallback){
+    const result=await request(context,'/FranchiseExplorer/ViewerPreferences');
+    if(result?.hasPreference&&typeof result.subtitleEnabled==='boolean'){
+      const preferences={subtitleEnabled:result.subtitleEnabled,subtitleLanguage:result.subtitleLanguage||''};
+      return preferences;
+    }
+    return read(context.serverId,context.userId,fallback);
+  }
   function queue(context){
     const ids=[...new Set((context.itemIds||[]).filter(guid))].slice(0,1000);
     if(!context.userId||!context.deviceId||!context.token||!ids.length)
@@ -54,17 +76,97 @@
     enrollment=pending.then(()=>{},()=>{});
     const result=await pending;
     if(serial!==generation)throw Error('Subtitle preference request was superseded by a newer selection.');
-    if(!result||typeof result.enabled!=='boolean'||result.enabled!==preferences.subtitleEnabled)
+    if(!result||typeof result.enabled!=='boolean'||
+      (!result.hasPreference&&result.enabled!==preferences.subtitleEnabled))
       throw Error('Jellyfin did not confirm the requested subtitle preference.');
-    return {...preferences,subtitleLanguage:result.language||preferences.subtitleLanguage,
+    const effective={subtitleEnabled:result.enabled,
+      subtitleLanguage:result.subtitleLanguage??preferences.subtitleLanguage};
+    if(result.hasPreference)cache(context,effective);
+    return {...effective,preferenceLanguage:effective.subtitleLanguage,
+      subtitleLanguage:result.language||effective.subtitleLanguage,deviceId:result.deviceId||context.deviceId,
       subtitleStreamIndex:result.enabled?(Number.isInteger(result.subtitleStreamIndex)?result.subtitleStreamIndex:null):-1,
       mediaSourceId:result.mediaSourceId||''};
   }
+  function matchingSession(sessions,context,observed){
+    return (Array.isArray(sessions)?sessions:[]).find(value=>
+      canonical(value.UserId)===canonical(context.userId)&&value.DeviceId===context.deviceId&&
+      (!observed||(value.Id===observed.Id&&
+        canonical(value.NowPlayingItem?.Id)===canonical(observed.NowPlayingItem?.Id)))&&
+      context.itemIds.some(id=>canonical(id)===canonical(value.NowPlayingItem?.Id)));
+  }
+  async function currentSession(context,observed,serial){
+    const sessions=await request(context,'/Sessions');
+    return serial===generation?matchingSession(sessions,context,observed):null;
+  }
+  function report(settings,context){
+    global.dispatchEvent?.(new CustomEvent('franchise-subtitles-applied',{
+      detail:{...settings,serverId:context.serverId,userId:context.userId,deviceId:context.deviceId}}));
+  }
+  async function command(context,session,index,serial){
+    if(!Number.isInteger(index))return false;
+    const pending=enrollment.catch(()=>{}).then(async()=>{
+      if(serial!==generation||!await currentSession(context,session,serial))return false;
+      await request(context,'/Sessions/'+encodeURIComponent(session.Id)+'/Command',{method:'POST',
+        body:JSON.stringify({Name:'SetSubtitleStreamIndex',Arguments:{Index:String(index)}})});
+      // The command's response can arrive after ordinary playback takes over.
+      // Do not apply its HTML fallback to that newer title.
+      return !!await currentSession(context,session,serial);
+    });
+    // A new launch must wait for an older in-flight player command, so its
+    // preference cannot be undone when the older request finally completes.
+    enrollment=pending.then(()=>{},()=>{});
+    return pending;
+  }
+  function armMonitor(){
+    if(monitorTimer!==null)global.clearTimeout?.(monitorTimer);
+    if(!active||!global.setTimeout)return;
+    // Negotiation can finish well after a card is clicked. Observe the actual
+    // enrolled session, including queue changes and Jellyfin's remembered
+    // secondary track promotion; command the player that owns its renderer.
+    monitorTimer=global.setTimeout(()=>{
+      monitorTimer=null;
+      void monitor().catch(error=>console.error('Franchise Explorer: subtitle playback check failed',error))
+        .finally(armMonitor);
+    },1500);
+  }
+  async function monitor(){
+    const previous=active,serial=generation;
+    if(!previous)return;
+    if(Date.now()-previous.created>12*60*60*1000){active=null;return;}
+    const preferences=await current(previous,previous.preferences);
+    if(active!==previous||serial!==generation)return;
+    if(preferences.subtitleEnabled!==previous.preferences.subtitleEnabled||
+      preferences.subtitleLanguage!==previous.preferences.subtitleLanguage){await refresh();return;}
+    const sessions=await request(previous,'/Sessions');
+    if(active!==previous||serial!==generation)return;
+    const session=matchingSession(sessions,previous);
+    if(!session?.Id){
+      if(previous.playingItem&&!previous.suspended){
+        previous.suspended=true;
+        global.dispatchEvent?.(new CustomEvent('franchise-subtitles-cleared',{detail:{
+          serverId:previous.serverId,userId:previous.userId,deviceId:previous.deviceId}}));
+      }
+      return;
+    }
+    const item=canonical(session.NowPlayingItem?.Id);
+    // On uses a per-title server selection. Off also repairs late custom or
+    // secondary subtitle initialization without touching unrelated playback.
+    if(item!==previous.playingItem||previous.suspended){
+      await refresh();return;
+    }
+    if(!previous.preferences.subtitleEnabled){
+      const current=session.PlayState?.SubtitleStreamIndex===-1||await command(previous,session,-1,serial);
+      if(current&&active===previous&&serial===generation)report({...previous.preferences,subtitleStreamIndex:-1},previous);
+    }
+  }
   async function prepare(context,fallback={}){
     const next=queue(context),serial=++generation;
-    const preferences=read(next.serverId,next.userId,fallback);
+    const preferences=await current(next,fallback);
+    if(serial!==generation)throw Error('Subtitle preference request was superseded by a newer selection.');
     const settings=await enroll(next,preferences,serial);
-    active={...next,preferences};
+    active={...next,deviceId:settings.deviceId,preferences:{subtitleEnabled:settings.subtitleEnabled,
+      subtitleLanguage:settings.preferenceLanguage},created:Date.now(),playingItem:''};
+    armMonitor();
     return settings;
   }
   async function refresh(){
@@ -72,25 +174,26 @@
     const previous=active,serial=++generation;
     const sessions=await request(previous,'/Sessions');
     if(serial!==generation||active!==previous)return;
-    const session=(Array.isArray(sessions)?sessions:[]).find(value=>
-      canonical(value.UserId)===canonical(previous.userId)&&value.DeviceId===previous.deviceId&&
-      previous.itemIds.some(id=>canonical(id)===canonical(value.NowPlayingItem?.Id)));
+    const session=matchingSession(sessions,previous);
     const id=session?.NowPlayingItem?.Id;
     const next=id?{...previous,mediaSourceId:session.PlayState?.MediaSourceId||'',
       itemIds:[id,...previous.itemIds.filter(value=>canonical(value)!==canonical(id))]}:previous;
-    const preferences=read(next.serverId,next.userId,previous.preferences);
+    const preferences=await current(next,previous.preferences);
+    if(serial!==generation)return;
     const settings=await enroll(next,preferences,serial);
     if(serial!==generation)return;
-    active={...next,preferences};
+    active={...next,deviceId:settings.deviceId,preferences:{subtitleEnabled:settings.subtitleEnabled,
+      subtitleLanguage:settings.preferenceLanguage},playingItem:canonical(id),
+      created:previous.created,suspended:false};
+    let confirmed=false;
     if(session?.Id){
       const index=settings.subtitleStreamIndex;
-      if(Number.isInteger(index)){
-        await request(next,'/Sessions/'+encodeURIComponent(session.Id)+'/Command',{method:'POST',
-          body:JSON.stringify({Name:'SetSubtitleStreamIndex',Arguments:{Index:String(index)}})});
-      }
+      // Enrollment can outlive the observed item, even within the same player
+      // session. Require that exact item again before changing or reporting it.
+      confirmed=Number.isInteger(index)?await command(next,session,index,serial)
+        :!!await currentSession(next,session,serial);
     }
-    if(session?.Id)global.dispatchEvent?.(new CustomEvent('franchise-subtitles-applied',{
-      detail:{...settings,serverId:next.serverId,userId:next.userId,deviceId:next.deviceId}}));
+    if(confirmed&&serial===generation)report(settings,active);
   }
   function changed(event){
     if(!active)return;

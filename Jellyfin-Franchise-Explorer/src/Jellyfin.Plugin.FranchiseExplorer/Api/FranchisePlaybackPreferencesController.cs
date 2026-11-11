@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using Jellyfin.Plugin.FranchiseExplorer.Web;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Session;
@@ -14,7 +13,8 @@ namespace Jellyfin.Plugin.FranchiseExplorer.Api;
 [Route("FranchiseExplorer/PlaybackPreferences")]
 public sealed class FranchisePlaybackPreferencesController(
     PlaybackSubtitlePolicyStore store, IUserManager users, ISessionManager sessions,
-    ILibraryManager? library = null, IMediaSourceManager? mediaSources = null) : ControllerBase
+    ILibraryManager? library = null, IMediaSourceManager? mediaSources = null,
+    FranchiseViewerPreferenceStore? preferences = null) : ControllerBase
 {
     public sealed class PlaybackPreferencesRequest
     {
@@ -30,15 +30,25 @@ public sealed class FranchisePlaybackPreferencesController(
     public IActionResult Save([FromBody] PlaybackPreferencesRequest request)
     {
         if (!PlaybackSubtitleIdentity.TryUser(User, users, out var user)) return Unauthorized();
-        if (request is null || string.IsNullOrWhiteSpace(request.DeviceId) || request.DeviceId.Length > 256
+        if (request is null) return BadRequest("Invalid playback preference scope.");
+        // A local/native client may omit the redundant device field. The fallback is
+        // Jellyfin's authenticated claim; an arbitrary supplied device is still checked.
+        var device = string.IsNullOrWhiteSpace(request.DeviceId)
+            ? User.FindFirst("Jellyfin-DeviceId")?.Value ?? string.Empty : request.DeviceId;
+        if (string.IsNullOrWhiteSpace(device) || device.Length > 256
             || request.ItemIds is null || request.ItemIds.Length is < 1 or > 1000 || request.ItemIds.Contains(Guid.Empty)
-            || request.Language is null || request.Language.Length > 20
-            || request.MediaSourceId?.Length > 256
-            || (request.Language.Length > 0 && !Regex.IsMatch(request.Language, "^[A-Za-z]{2,3}([-_][A-Za-z0-9]{2,8})?$", RegexOptions.CultureInvariant)))
+            || !FranchiseViewerPreferenceStore.ValidLanguage(request.Language)
+            || request.MediaSourceId?.Length > 256)
             return BadRequest("Invalid playback preference scope.");
-        if (!PlaybackSubtitleIdentity.OwnsDevice(sessions, user, request.DeviceId)) return Forbid();
-        var language = request.Language.Length > 0 ? request.Language : users.GetUserById(user)?.SubtitleLanguagePreference ?? string.Empty;
-        var policy = store.Set(user, request.DeviceId, request.ItemIds, request.Enabled, language.Length <= 20 ? language : string.Empty);
+        if (!PlaybackSubtitleIdentity.OwnsDevice(sessions, user, device)) return Forbid();
+        FranchiseViewerPreference? saved;
+        try { saved = preferences?.Get(user); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        { return StatusCode(503, "Viewer preferences temporarily unavailable."); }
+        var enabled = saved?.HasPreference == true ? saved.SubtitleEnabled : request.Enabled;
+        var chosenLanguage = saved?.HasPreference == true ? saved.SubtitleLanguage : request.Language;
+        var language = chosenLanguage.Length > 0 ? chosenLanguage : users.GetUserById(user)?.SubtitleLanguagePreference ?? string.Empty;
+        var policy = store.Set(user, device, request.ItemIds, enabled, language.Length <= 20 ? language : string.Empty);
         var account = users.GetUserById(user);
         var firstItem = library?.GetItemById(request.ItemIds[0]);
         var source = firstItem is null || account is null || !firstItem.IsVisible(account) ? null
@@ -48,7 +58,8 @@ public sealed class FranchisePlaybackPreferencesController(
         int? subtitleStreamIndex = source is null ? (policy.Enabled ? null : -1) : PlaybackSubtitlePolicyFilter.SelectIndex(source, policy);
         Response.Headers.CacheControl = "no-store";
         return Content(JsonSerializer.Serialize(new { policy.Enabled, policy.Language, expiresAt = policy.ExpiresAt,
-            subtitleStreamIndex, mediaSourceId = source?.Id },
+            subtitleStreamIndex, mediaSourceId = source?.Id, deviceId = device, hasPreference = saved?.HasPreference == true,
+            subtitleLanguage = chosenLanguage },
             new JsonSerializerOptions(JsonSerializerDefaults.Web)), "application/json; charset=utf-8");
     }
 }
