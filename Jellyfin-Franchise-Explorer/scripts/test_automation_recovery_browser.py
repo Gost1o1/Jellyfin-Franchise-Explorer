@@ -78,7 +78,7 @@ def config_fixture():
                                dict(Id=TVREF, JellyfinItemId=SHOW, DisplayName='Range show', ItemType='Series',
                                     RangeMode='Full', Identity={'ProviderIds': [{'Name': 'Imdb', 'Value': 'tt140'}]}),
                            ], NodeIds=[], MediaLinkIds=[], MediaOrder=[REF, TVREF])],
-                MediaLinks=[], MediaRecovery=dict(Enabled=True, AutoReconnect=True),
+                MediaLinks=[], MediaRecovery=dict(Enabled=True, AutoReconnect=False),
                 AutoFranchises=dict(Enabled=False, Registry=registry, Exclusions=rules,
                                     PendingChanges=pending, Ownership=[], LastRun=None, LastCompletedLocalDay=''))
 
@@ -101,7 +101,7 @@ def run():
                  source=[dict(imdbId='tt120', title='Keep imported movie', type='Movie', year=2003, position=1),
                          dict(imdbId='tt121', title='Skip imported movie', type='Movie', year=2004, position=2)])
     recovery = dict(revision='configuration-1', libraryRevision='library-1', libraryHealthy=True,
-                    enabled=True, autoReconnect=True, checkedUtc='2026-11-09T00:10:00Z', message='Three references need review.', entries=[
+                    enabled=True, autoReconnect=False, checkedUtc='2026-11-09T00:10:00Z', message='Three references need review.', entries=[
         dict(referenceId=REF, rowId=ROW, nodeId=NODE, oldItemId=MEDIA, title='Verified replacement', itemType='Movie',
              status='Verified', reason='Stable IMDb identity matches.', candidates=[
                  dict(itemId=NEW, title='Actual replacement', itemType='Movie', year=2025,
@@ -330,7 +330,8 @@ def run():
         assert state['config']['AutoFranchises']['Enabled'] is False
         assert state['config']['AutoFranchises']['Exclusions'] == rules_before_preview_apply
 
-        # Recovery includes verified, ambiguous and missing identities; apply exact selected item IDs.
+        # Automatic reconnection is disabled here so verified, ambiguous and
+        # missing identities all exercise explicit, exact-ID manual selection.
         page.locator('#recovery-check').click()
         expect(page.locator('#recovery-dialog')).to_be_visible()
         results = page.locator('#recovery-results')

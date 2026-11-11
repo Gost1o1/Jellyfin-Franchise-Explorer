@@ -53,6 +53,15 @@ public sealed class MediaRecoveryChoice
 {
     public string ReferenceId { get; set; } = string.Empty;
     public string ItemId { get; set; } = string.Empty;
+    public bool CorrectItemType { get; set; }
+}
+
+public sealed class MediaRecoveryLibraryPage
+{
+    public List<MediaRecoveryCandidate> Items { get; set; } = new();
+    public int TotalRecordCount { get; set; }
+    public int StartIndex { get; set; }
+    public int Limit { get; set; }
 }
 
 public sealed class MediaRecoveryApplyRequest
@@ -159,7 +168,10 @@ public static class MediaRecoveryPlanner
             yield return new("collection:" + node.Id, "", node.Id, node.CollectionId, node.Name, "BoxSet", config.MediaRecovery.KnownItems.FirstOrDefault(s => Id(s.ItemId) == Id(node.CollectionId))?.Identity);
     }
 
-    private static string NormalizeTitle(string value) => Regex.Replace((value ?? "").Normalize(NormalizationForm.FormKC).Trim(), @"\s+", " ");
+    // Treat subtitle separators as whitespace, retaining the complete word sequence. This
+    // accommodates library punctuation without fuzzy, partial, or cross-type title matching.
+    private static string NormalizeTitle(string value) => Regex.Replace(
+        Regex.Replace((value ?? "").Normalize(NormalizationForm.FormKC), @"[:\p{Pd}·]", " ").Trim(), @"\s+", " ");
 
     private static string RecoveryTitle(Reference reference)
     {
@@ -239,6 +251,32 @@ public static class MediaRecoveryPlanner
                 || !MergeProviders(merged.ProviderIds, identity.ProviderIds) || !MergeProviders(merged.SeriesProviderIds, identity.SeriesProviderIds)) return reference.Identity;
         }
         return merged;
+    }
+
+    /// <summary>Explicit corrections may change only the media kind, never conflicting identity or range evidence.</summary>
+    public static bool CanCorrectItemType(PluginConfiguration config, Reference reference, AutomationLibraryItem candidate, IReadOnlyList<AutomationLibraryItem> items)
+    {
+        if (reference.ReferenceId.StartsWith("collection:", StringComparison.Ordinal) || reference.RangeMode != "Full"
+            || reference.ItemType is not ("Movie" or "Series" or "BoxSet") || candidate.ItemType is not ("Movie" or "Series" or "BoxSet")) return false;
+        var actual = Capture(candidate);
+        bool Compatible(MediaIdentity? identity) => identity is null
+            || (identity.ItemType.Length == 0 || identity.ItemType == reference.ItemType || identity.ItemType == candidate.ItemType)
+                && identity.SeriesProviderIds.Count == 0 && identity.SeasonNumber is null && identity.EpisodeNumber is null && identity.EpisodeEnd is null
+                && (!identity.Year.HasValue || identity.Year == candidate.Year)
+                && (identity.ProviderIds.Count == 0 || ExactProviders(identity.ProviderIds, actual.ProviderIds));
+        if (!Compatible(reference.Identity) || !Compatible(IdentityFor(config, reference, items))) return false;
+        foreach (var saved in config.MediaRecovery.KnownItems.Where(s => Id(s.ItemId) == Id(reference.ItemId)))
+            if (saved.SeriesItemId.Length > 0 || !Compatible(saved.Identity)) return false;
+        bool ProviderAgrees(string value) => actual.ProviderIds.Any(p => p.Name == "Imdb" && p.Value.Equals(value, StringComparison.OrdinalIgnoreCase));
+        foreach (var record in config.Nodes.SelectMany(n => n.AutoAddRecords).Where(r => r.ReferenceId == reference.ReferenceId && r.ImdbIds.Count > 0))
+            if (record.RowId != reference.RowId || !LegacyReferenceMatches(record, reference) || record.ImdbIds.Any(id => !ProviderAgrees(id))) return false;
+        foreach (var owner in config.AutoFranchises.Ownership.Where(o => o.ReferenceId == reference.ReferenceId || Id(o.ItemId) == Id(reference.ItemId)))
+        {
+            if (Id(owner.ItemId) != Id(reference.ItemId) || owner.ItemType.Length > 0 && owner.ItemType != reference.ItemType && owner.ItemType != candidate.ItemType
+                || owner.SeriesProviderId.Length > 0 || owner.StartSeason != 0 || owner.EndSeason != 0 || owner.StartEpisode != 0 || owner.EndEpisode != 0 || owner.EpisodeIds.Count > 0
+                || owner.ProviderId.Length > 0 && !ProviderAgrees(owner.ProviderId)) return false;
+        }
+        return true;
     }
 
     // Native Auto-Add signatures are canonical JSON with a nested `ref`. Only the original
@@ -369,7 +407,8 @@ public static class MediaRecoveryPlanner
 
     public static IEnumerable<ArtworkMetadata> AllArtwork(PluginConfiguration config) => config.Nodes.Select(n => n.Artwork).Concat(config.Rows.Select(r => r.Artwork)).Concat(config.MediaLinks.Select(l => l.Artwork)).Concat(config.Rows.SelectMany(r => r.Items).Select(e => e.Artwork));
 
-    public static PluginConfiguration ApplyMappings(PluginConfiguration config, IReadOnlyDictionary<string, string> mapping, IReadOnlyList<AutomationLibraryItem> items)
+    public static PluginConfiguration ApplyMappings(PluginConfiguration config, IReadOnlyDictionary<string, string> mapping, IReadOnlyList<AutomationLibraryItem> items,
+        IReadOnlyDictionary<string, string>? correctedItemTypes = null)
     {
         var next = Clone(config);
         var map = mapping.ToDictionary(p => Id(p.Key), p => p.Value, StringComparer.Ordinal);
@@ -377,9 +416,19 @@ public static class MediaRecoveryPlanner
         var cleanOwnership = next.AutoFranchises.Ownership.Where(o => o.Signature.Length > 0 && AutoFranchisePlanner.Signature(next, o) == o.Signature).ToList();
         var editedLegacy = next.Nodes.SelectMany(n => n.AutoAddRecords).Where(r => r.Signature.Length > 0 && !cleanLegacy.Contains(r)).ToList();
         var editedOwnership = next.AutoFranchises.Ownership.Where(o => o.Signature.Length > 0 && !cleanOwnership.Contains(o)).ToList();
+        var corrections = (correctedItemTypes ?? new Dictionary<string, string>()).ToDictionary(p => Id(p.Key), p => p.Value, StringComparer.Ordinal);
+        var byId = items.GroupBy(i => Id(i.Id)).ToDictionary(g => g.Key, g => g.First());
         string Remap(string id) => map.GetValueOrDefault(Id(id), id);
-        foreach (var link in next.MediaLinks) link.JellyfinItemId = Remap(link.JellyfinItemId);
-        foreach (var entry in next.Rows.SelectMany(r => r.Items)) entry.JellyfinItemId = Remap(entry.JellyfinItemId);
+        foreach (var link in next.MediaLinks)
+        {
+            if (corrections.TryGetValue(Id(link.JellyfinItemId), out var type)) { link.ItemType = type; link.Identity = Capture(byId[Id(Remap(link.JellyfinItemId))]); }
+            link.JellyfinItemId = Remap(link.JellyfinItemId);
+        }
+        foreach (var entry in next.Rows.SelectMany(r => r.Items))
+        {
+            if (corrections.TryGetValue(Id(entry.JellyfinItemId), out var type)) { entry.ItemType = type; entry.Identity = Capture(byId[Id(Remap(entry.JellyfinItemId))]); }
+            entry.JellyfinItemId = Remap(entry.JellyfinItemId);
+        }
         foreach (var node in next.Nodes) node.CollectionId = Remap(node.CollectionId);
         foreach (var art in AllArtwork(next))
         {
@@ -387,15 +436,29 @@ public static class MediaRecoveryPlanner
             art.PrimaryUrl = Url(art.PrimaryUrl); art.BackdropUrl = Url(art.BackdropUrl); art.LogoUrl = Url(art.LogoUrl); art.ThumbUrl = Url(art.ThumbUrl); art.BannerUrl = Url(art.BannerUrl);
             art.BackdropVideoItemId = Remap(art.BackdropVideoItemId);
         }
-        foreach (var snapshot in next.MediaRecovery.KnownItems) { snapshot.ItemId = Remap(snapshot.ItemId); snapshot.SeriesItemId = Remap(snapshot.SeriesItemId); }
+        foreach (var snapshot in next.MediaRecovery.KnownItems)
+        {
+            if (corrections.ContainsKey(Id(snapshot.ItemId))) { snapshot.Identity = Capture(byId[Id(Remap(snapshot.ItemId))]); snapshot.SeriesItemId = ""; }
+            snapshot.ItemId = Remap(snapshot.ItemId); snapshot.SeriesItemId = Remap(snapshot.SeriesItemId);
+        }
         foreach (var own in next.AutoFranchises.Ownership)
         {
+            if (corrections.TryGetValue(Id(own.ItemId), out var type))
+            {
+                if (own.MediaKey.StartsWith(own.ItemType + ":", StringComparison.Ordinal)) own.MediaKey = type + own.MediaKey[own.ItemType.Length..];
+                own.ItemType = type;
+            }
             own.ItemId = Remap(own.ItemId);
             own.EpisodeIds = own.EpisodeIds.Select(Remap).ToList();
         }
         foreach (var exclusion in next.AutoFranchises.Exclusions) exclusion.JellyfinItemId = Remap(exclusion.JellyfinItemId);
         foreach (var change in next.AutoFranchises.PendingChanges)
         {
+            if (corrections.TryGetValue(Id(change.ItemId), out var type))
+            {
+                if (change.MediaKey.StartsWith(change.ItemType + ":", StringComparison.Ordinal)) change.MediaKey = type + change.MediaKey[change.ItemType.Length..];
+                change.ItemType = type;
+            }
             change.ItemId = Remap(change.ItemId);
             change.SeriesId = Remap(change.SeriesId);
             change.EpisodeIds = change.EpisodeIds.Select(Remap).ToList();

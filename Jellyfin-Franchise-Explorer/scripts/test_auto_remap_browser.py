@@ -10,6 +10,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 import json
 import re
+import time
 
 from playwright.sync_api import expect, sync_playwright
 from build_settings_page import generate
@@ -71,9 +72,10 @@ class Fixture(AttentionFixture):
     """Reuse the existing real-editor navigation and dirty-draft helpers."""
 
     def __init__(self, browser, html, *, healthy=True, can_search=True, legacy=False,
-                 use_pascal=True):
+                 use_pascal=True, auto_enabled=True):
         super().__init__(browser, html, healthy=healthy, can_search=can_search)
         self.config = config_fixture()
+        self.config['MediaRecovery']['AutoReconnect'] = auto_enabled
         self.legacy = legacy
         self.use_pascal = use_pascal
         self.auto_error = ''
@@ -82,6 +84,8 @@ class Fixture(AttentionFixture):
         self.hold_auto = False
         self.held_auto = None
         self.config_reads = 0
+        self.hold_config_reload = False
+        self.held_config_reload = None
         self.library = [dict(Id=NEW[reference], Name=TITLES[reference], Type='Movie',
                              ProductionYear=2000 + index % 25, ProviderIds={}, ImageTags={})
                         for index, reference in enumerate(REFS)]
@@ -161,7 +165,10 @@ class Fixture(AttentionFixture):
         if path == '/emby/MockConfiguration':
             assert request.method == 'GET', 'Auto remap must not save a browser-built configuration.'
             self.config_reads += 1
-            route.fulfill(json=self.config)
+            if self.hold_config_reload and self.auto_counts:
+                self.held_config_reload = route
+            else:
+                route.fulfill(json=self.config)
         elif path.endswith('/Automation/Status'):
             route.fulfill(json=dict(settings=self.config['AutoFranchises'],
                                     fingerprint='automation-1', running=False))
@@ -206,6 +213,13 @@ def auto_button(page):
     return page.locator('#recovery-dialog .dialog-footer #recovery-auto-remap')
 
 
+def wait_for_held(fixture, attribute):
+    deadline = time.monotonic() + 5
+    while getattr(fixture, attribute) is None and time.monotonic() < deadline:
+        fixture.page.wait_for_timeout(20)
+    assert getattr(fixture, attribute) is not None, f'Timed out waiting for {attribute}'
+
+
 def expect_two_unresolved(fixture):
     page = fixture.page
     expect(page.locator('[data-recovery-entry]')).to_have_count(2)
@@ -222,27 +236,36 @@ def check_bulk_remap(browser, html):
     page = fixture.page
     model_before = page.evaluate('FranchiseSettings.getModel()')
     reads = fixture.config_reads
+    fixture.hold_auto = True
+    fixture.hold_config_reload = True
     fixture.review()
-    expect_two_unresolved(fixture)
     status = page.locator('#recovery-dialog-status')
-    expect(status).to_contain_text('129 saved references checked')
-    expect(status).to_contain_text(re.compile(r'127.*(?:automatic|auto remap)', re.I))
-    expect(status).to_contain_text(re.compile(r'2.*manual review', re.I))
-    expect(auto_button(page)).to_have_text('Auto remap')
-    expect(auto_button(page)).to_be_enabled()
+    expect(auto_button(page)).to_be_disabled()
+    expect(page.locator('[data-recovery-entry]')).to_have_count(0)
     expect(page.locator('#recovery-apply')).to_be_disabled()
-    assert fixture.writes == [] and fixture.queries == []
+    assert fixture.writes == [AUTO_PATH] and fixture.queries == []
     assert fixture.config == before
+    wait_for_held(fixture, 'held_auto')
     assert page.locator('#recovery-auto').evaluate('(element)=>element.type') == 'checkbox'
 
-    auto_button(page).click()
+    fixture.hold_auto = False
+    fixture.finish_auto(fixture.held_auto)
+    # A successful server write is followed by a real configuration reload;
+    # manual cards must wait until the editor has that saved revision too.
+    expect(auto_button(page)).to_be_disabled()
+    expect(page.locator('[data-recovery-entry]')).to_have_count(0)
+    wait_for_held(fixture, 'held_config_reload')
+    assert page.evaluate('FranchiseSettings.getModel()') == model_before
+    fixture.hold_config_reload = False
+    fixture.held_config_reload.fulfill(json=fixture.config)
     page.wait_for_function('(id)=>FranchiseSettings.getModel().Rows[0].Items[26].JellyfinItemId===id',
                            arg=NEW[READY[-1]])
+    expect(status).to_contain_text('129 saved references checked')
     expect(status).to_contain_text('127 available')
     expect(status).to_contain_text(re.compile(r'Last auto remap: 127 references reconnected', re.I))
-    expect(page.locator('#toast')).to_contain_text(re.compile(r'reconnect.*127|127.*reconnect', re.I))
     expect(page.locator('#save-state')).to_have_text('All changes saved')
     expect_two_unresolved(fixture)
+    expect(auto_button(page)).to_have_text('Auto remap')
     assert fixture.writes == [AUTO_PATH]
     assert len(fixture.auto_bodies) == 1 and fixture.auto_counts == [127]
     assert fixture.applied == [] and fixture.queries == []
@@ -264,6 +287,7 @@ def check_bulk_remap(browser, html):
     expect(auto_button(page)).to_be_enabled()
     auto_button(page).click()
     expect(status).to_contain_text(re.compile(r'Last auto remap: 0 references reconnected', re.I))
+    expect(page.locator('#toast')).to_contain_text(re.compile(r'reconnect.*0|0.*reconnect', re.I))
     assert fixture.auto_counts == [127, 0]
     assert fixture.writes == [AUTO_PATH, AUTO_PATH]
     assert fixture.config == expected_server
@@ -322,12 +346,11 @@ def check_errors_and_drafts(browser, html):
     # An edit made while the server is working must survive the Auto response.
     fixture = Fixture(browser, html)
     fixture.open()
+    fixture.hold_auto = True
     fixture.review()
     page = fixture.page
-    fixture.hold_auto = True
-    auto_button(page).click()
     expect(auto_button(page)).to_be_disabled()
-    assert fixture.held_auto is not None
+    wait_for_held(fixture, 'held_auto')
     fixture.close_review()
     fixture.draft('Draft during auto remap')
     draft = page.evaluate('FranchiseSettings.getModel()')
@@ -347,9 +370,11 @@ def check_availability_and_legacy(browser, html):
     page = fixture.page
     expect_two_unresolved(fixture)
     expect(auto_button(page)).to_be_enabled()
-    auto_button(page).click()
     expect(page.locator('#recovery-dialog-status')).to_contain_text('127 available')
-    assert fixture.auto_counts == [127]
+    assert fixture.auto_counts == [127] and fixture.writes == [AUTO_PATH]
+    auto_button(page).click()
+    expect(page.locator('#recovery-dialog-status')).to_contain_text('Last auto remap: 0 references reconnected')
+    assert fixture.auto_counts == [127, 0]
     fixture.finish()
 
     fixture = Fixture(browser, html, healthy=False, can_search=False)
@@ -361,9 +386,9 @@ def check_availability_and_legacy(browser, html):
     assert fixture.writes == []
     fixture.finish()
 
-    # Older servers omit CanAutoRemap and MatchMethod. Their matches must remain
-    # selectable instead of being silently hidden as new automatic matches.
-    fixture = Fixture(browser, html, legacy=True)
+    # With automatic reconnection disabled, old reports that omit CanAutoRemap
+    # and MatchMethod must retain all candidates for an explicit manual choice.
+    fixture = Fixture(browser, html, legacy=True, auto_enabled=False)
     fixture.open()
     fixture.review()
     page = fixture.page

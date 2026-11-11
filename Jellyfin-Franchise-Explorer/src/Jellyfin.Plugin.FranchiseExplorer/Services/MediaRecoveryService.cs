@@ -137,7 +137,7 @@ public sealed class MediaRecoveryService(ILibraryManager library, FranchiseLibra
         finally { FranchiseConfigurationGate.Gate.Release(); }
     }
 
-    public async Task<IReadOnlyList<MediaRecoveryCandidate>> CandidatesAsync(string referenceId, string query, string revision, string libraryRevision, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<MediaRecoveryCandidate>> CandidatesAsync(string referenceId, string query, string revision, string libraryRevision, CancellationToken cancellationToken = default, string? itemType = null)
     {
         if (string.IsNullOrWhiteSpace(query) || query.Trim().Length < 2 || query.Length > 200) throw new ArgumentException("Enter at least two characters of the replacement title.");
         var snapshot = snapshots.Get(true);
@@ -147,12 +147,52 @@ public sealed class MediaRecoveryService(ILibraryManager library, FranchiseLibra
             var config = Plugin.Instance?.Configuration ?? throw new InvalidOperationException("Plugin configuration unavailable.");
             ValidateRevision(config, snapshot, revision, libraryRevision);
             var reference = MediaRecoveryPlanner.References(config).SingleOrDefault(r => r.ReferenceId == referenceId) ?? throw new ArgumentException("The reference no longer exists.");
+            var type = SearchType(reference, itemType, false);
             var identity = MediaRecoveryPlanner.IdentityFor(config, reference, snapshot.Items);
-            return snapshot.Items.Where(i => i.IsAvailable && i.ItemType == reference.ItemType && MediaRecoveryPlanner.Id(i.Id) != MediaRecoveryPlanner.Id(reference.ItemId)
+            return snapshot.Items.Where(i => i.IsAvailable && i.ItemType == type && (MediaRecoveryPlanner.Id(i.Id) != MediaRecoveryPlanner.Id(reference.ItemId) || i.ItemType != reference.ItemType)
                     && i.Name.Contains(query.Trim(), StringComparison.OrdinalIgnoreCase))
-                .OrderBy(i => i.Name, StringComparer.OrdinalIgnoreCase).ThenBy(i => i.Year).Take(50).Select(i => MediaRecoveryPlanner.Candidate(i, identity)).ToArray();
+                .GroupBy(i => MediaRecoveryPlanner.Id(i.Id)).Select(g => g.First())
+                .OrderBy(i => i.Name, StringComparer.OrdinalIgnoreCase).ThenBy(i => i.Year).ThenBy(i => i.Id, StringComparer.Ordinal)
+                .Take(50).Select(i => MediaRecoveryPlanner.Candidate(i, identity)).ToArray();
         }
         finally { FranchiseConfigurationGate.Gate.Release(); }
+    }
+
+    /// <summary>Browse available metadata from one fresh complete snapshot without capturing or saving configuration.</summary>
+    public async Task<MediaRecoveryLibraryPage> LibraryAsync(string referenceId, string revision, string libraryRevision, string? itemType = null, string? query = null,
+        int startIndex = 0, int limit = 30, CancellationToken cancellationToken = default)
+    {
+        if (startIndex < 0 || limit < 1) throw new ArgumentException("Use a non-negative start index and a positive page limit.");
+        if (query?.Length > 200) throw new ArgumentException("Replacement titles must be at most 200 characters.");
+        limit = Math.Min(limit, 50);
+        var snapshot = snapshots.Get(true);
+        await FranchiseConfigurationGate.Gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var config = Plugin.Instance?.Configuration ?? throw new InvalidOperationException("Plugin configuration unavailable.");
+            ValidateRevision(config, snapshot, revision, libraryRevision);
+            var reference = MediaRecoveryPlanner.References(config).SingleOrDefault(r => r.ReferenceId == referenceId) ?? throw new ArgumentException("The reference no longer exists.");
+            var type = SearchType(reference, itemType, true);
+            var identity = MediaRecoveryPlanner.IdentityFor(config, reference, snapshot.Items);
+            var search = query?.Trim() ?? "";
+            var items = snapshot.Items.Where(i => i.IsAvailable
+                    && (type.Length > 0 ? i.ItemType == type : i.ItemType is "Movie" or "Series" or "BoxSet" || reference.ItemType == "Episode" && i.ItemType == "Episode")
+                    && (search.Length == 0 || i.Name.Contains(search, StringComparison.OrdinalIgnoreCase)))
+                .GroupBy(i => MediaRecoveryPlanner.Id(i.Id)).Select(g => g.First())
+                .OrderBy(i => i.Name, StringComparer.OrdinalIgnoreCase).ThenBy(i => i.Year).ThenBy(i => i.ItemType, StringComparer.Ordinal).ThenBy(i => i.Id, StringComparer.Ordinal).ToArray();
+            return new() { Items = items.Skip(startIndex).Take(limit).Select(i => MediaRecoveryPlanner.Candidate(i, identity)).ToList(),
+                TotalRecordCount = items.Length, StartIndex = startIndex, Limit = limit };
+        }
+        finally { FranchiseConfigurationGate.Gate.Release(); }
+    }
+
+    private static string SearchType(MediaRecoveryPlanner.Reference reference, string? itemType, bool allByDefault)
+    {
+        var type = itemType?.Trim() ?? "";
+        if (type.Length == 0) return allByDefault ? "" : reference.ItemType;
+        if (type is not ("Movie" or "Series" or "BoxSet" or "Episode") || type == "Episode" && reference.ItemType != "Episode")
+            throw new ArgumentException("Choose Movie, Series or BoxSet. Episode is available only for a saved episode reference.");
+        return type;
     }
 
     private void ValidateRevision(PluginConfiguration config, FranchiseLibrarySnapshot snapshot, string revision, string libraryRevision)
@@ -180,6 +220,7 @@ public sealed class MediaRecoveryService(ILibraryManager library, FranchiseLibra
             var references = MediaRecoveryPlanner.References(previous).ToList();
             var currentItems = snapshot.Items.GroupBy(i => MediaRecoveryPlanner.Id(i.Id)).ToDictionary(g => g.Key, g => g.First());
             var mapping = new Dictionary<string, string>(StringComparer.Ordinal);
+            var correctedTypes = new Dictionary<string, string>(StringComparer.Ordinal);
             var candidates = new MediaRecoveryPlanner.CandidateLookup(snapshot.Items);
             var automaticEntries = automatic ? MediaRecoveryPlanner.Review(previous, snapshot).Entries.ToDictionary(e => e.ReferenceId) : null;
             foreach (var choice in request.Choices)
@@ -193,30 +234,37 @@ public sealed class MediaRecoveryService(ILibraryManager library, FranchiseLibra
                     throw new InvalidOperationException("A selected reference is already available. Check media links again.");
                 var candidate = currentItems.GetValueOrDefault(MediaRecoveryPlanner.Id(choice.ItemId)) is { IsAvailable: true } available ? available
                     : throw new InvalidOperationException("The selected replacement is no longer available.");
-                if (candidate.ItemType != reference.ItemType) throw new ArgumentException("Replacement media type does not match the saved reference.");
+                var correctType = candidate.ItemType != reference.ItemType;
+                if (correctType && (automatic || !choice.CorrectItemType || !MediaRecoveryPlanner.CanCorrectItemType(previous, reference, candidate, snapshot.Items)))
+                    throw new ArgumentException("Replacement media type does not match the saved reference. An explicit type correction requires a full movie, series or collection link without conflicting identity evidence.");
                 if (automatic && (automaticEntries![reference.ReferenceId] is not { CanAutoRemap: true, Candidates.Count: 1 } entry
                     || MediaRecoveryPlanner.Id(entry.Candidates[0].ItemId) != MediaRecoveryPlanner.Id(candidate.Id)
                     || MediaRecoveryPlanner.Matches(previous, reference, identity, candidates).Count != 1))
                     throw new InvalidOperationException("Automatic recovery requires one unique exact identity or title match without conflicting evidence.");
                 // An administrator may explicitly choose a version or repair a legacy manual reference.
                 // Stable evidence must still agree; a conflicting provider or episode is never accepted.
-                if (MediaRecoveryPlanner.Stable(identity) && !MediaRecoveryPlanner.Verified(identity, candidate)) throw new ArgumentException("Replacement conflicts with the saved provider or episode identity.");
+                if (!correctType && MediaRecoveryPlanner.Stable(identity) && !MediaRecoveryPlanner.Verified(identity, candidate)) throw new ArgumentException("Replacement conflicts with the saved provider or episode identity.");
                 var oldId = MediaRecoveryPlanner.Id(reference.ItemId);
                 if (mapping.TryGetValue(oldId, out var existing) && MediaRecoveryPlanner.Id(existing) != MediaRecoveryPlanner.Id(candidate.Id)) throw new ArgumentException("References to the same old item must select the same replacement.");
                 mapping[oldId] = candidate.Id;
+                if (correctType) correctedTypes[oldId] = candidate.ItemType;
             }
             foreach (var reference in references.Where(r => mapping.ContainsKey(MediaRecoveryPlanner.Id(r.ItemId))))
             {
                 var target = currentItems[MediaRecoveryPlanner.Id(mapping[MediaRecoveryPlanner.Id(reference.ItemId)])];
                 var identity = MediaRecoveryPlanner.IdentityFor(previous, reference, snapshot.Items);
-                if (reference.ItemType != target.ItemType || MediaRecoveryPlanner.Stable(identity) && !MediaRecoveryPlanner.Verified(identity, target))
+                var correctingGroup = correctedTypes.ContainsKey(MediaRecoveryPlanner.Id(reference.ItemId));
+                var correctableReference = !reference.ReferenceId.StartsWith("collection:", StringComparison.Ordinal);
+                if (correctingGroup && correctableReference
+                    ? !MediaRecoveryPlanner.CanCorrectItemType(previous, reference, target, snapshot.Items)
+                    : reference.ItemType != target.ItemType || MediaRecoveryPlanner.Stable(identity) && !MediaRecoveryPlanner.Verified(identity, target))
                     throw new InvalidOperationException("Another reference to the old item has conflicting identity metadata. Review it before recovery.");
                 if (automatic && (automaticEntries![reference.ReferenceId] is not { CanAutoRemap: true, Candidates.Count: 1 } entry
                     || MediaRecoveryPlanner.Id(entry.Candidates[0].ItemId) != MediaRecoveryPlanner.Id(target.Id)))
                     throw new InvalidOperationException("Other references to the old item need review before automatic recovery.");
             }
             AddDependentMappings(previous, snapshot.Items, mapping);
-            var next = MediaRecoveryPlanner.ApplyMappings(previous, mapping, snapshot.Items);
+            var next = MediaRecoveryPlanner.ApplyMappings(previous, mapping, snapshot.Items, correctedTypes);
             if (!snapshots.IsCurrent(snapshot.Revision)) throw new InvalidOperationException("The library changed during recovery. Check media links again.");
             await using var progress = await FranchiseTimelineController.RemapItemIdsAsync(mapping, cancellationToken).ConfigureAwait(false);
             if (!snapshots.IsCurrent(snapshot.Revision)) throw new InvalidOperationException("The library changed during recovery. Check media links again.");
