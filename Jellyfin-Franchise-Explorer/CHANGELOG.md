@@ -1,4 +1,9 @@
-## 0.8.9.30 (unreleased)
+## 0.8.9.31 (unreleased)
+
+- Collapse recovery search and library results after choosing a replacement, keeping the selected media and type-correction notice visible.
+- Add a keyboard-accessible Change replacement disclosure that preserves search terms, filters, paging and the staged selection when reopened.
+
+## 0.8.9.30
 
 - Run an automatic recovery pass before reviewing saved references when automatic recovery is enabled, while preserving unsaved editor changes.
 - Recognize title separator differences such as colons and dashes while retaining the complete title word sequence, media type, year and identity-conflict checks.
