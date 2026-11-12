@@ -513,6 +513,11 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
 #FranchiseExplorerConfigPage .recovery-library-pagination{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
 #FranchiseExplorerConfigPage .recovery-library button{max-width:100%;white-space:normal}
 #FranchiseExplorerConfigPage .recovery-type-correction{border-left:3px solid #2fc0cf;padding:8px 10px}
+#FranchiseExplorerConfigPage .recovery-selected-media{margin:12px 0}
+#FranchiseExplorerConfigPage .recovery-search-details{margin-top:12px;min-width:0}
+#FranchiseExplorerConfigPage .recovery-search-details>summary{display:list-item;cursor:pointer;font-weight:600;min-height:24px;line-height:24px;padding:10px 0;overflow-wrap:anywhere}
+#FranchiseExplorerConfigPage .recovery-search-details>summary:focus-visible{outline:2px solid #2fc0cf;outline-offset:3px;border-radius:4px}
+#FranchiseExplorerConfigPage .recovery-search-details[open]>summary .recovery-search-show,#FranchiseExplorerConfigPage .recovery-search-details:not([open])>summary .recovery-search-hide{display:none}
 #FranchiseExplorerConfigPage .automation-dialog-note{font-size:12px;color:var(--muted)}
 #FranchiseExplorerConfigPage #automation-error{border:1px solid #90515c;background:#4c292e;border-radius:8px;padding:10px 12px;color:#ffd1d1;font-size:13px;overflow-wrap:anywhere}
 #FranchiseExplorerConfigPage .automation-section a,#FranchiseExplorerConfigPage .automation-change a,#FranchiseExplorerConfigPage .automation-entry-summary a{color:#8edbe4}
@@ -554,7 +559,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
 <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
 </defs></svg>
 <main class="fx-wrap">
-<header class="top"><div><h1>Franchise Explorer<span class="version">v0.8.9.30</span></h1></div><div class="top-actions"><span id="save-state" class="save-state" role="status">Loading configuration…</span><button class="icon-button quiet" id="undo" aria-label="Undo" data-help="Undo the most recent unsaved edit or move." disabled><svg class="icon"><use href="#i-undo"/></svg></button><button class="icon-button quiet" id="reset" aria-label="Reload saved settings" data-help="Reload the saved plugin configuration. Unsaved changes can be restored with Undo."><svg class="icon"><use href="#i-reset"/></svg></button><button class="primary" id="save" data-help="Save these changes to the Jellyfin plugin configuration.">Save changes</button></div></header>
+<header class="top"><div><h1>Franchise Explorer<span class="version">v0.8.9.31</span></h1></div><div class="top-actions"><span id="save-state" class="save-state" role="status">Loading configuration…</span><button class="icon-button quiet" id="undo" aria-label="Undo" data-help="Undo the most recent unsaved edit or move." disabled><svg class="icon"><use href="#i-undo"/></svg></button><button class="icon-button quiet" id="reset" aria-label="Reload saved settings" data-help="Reload the saved plugin configuration. Unsaved changes can be restored with Undo."><svg class="icon"><use href="#i-reset"/></svg></button><button class="primary" id="save" data-help="Save these changes to the Jellyfin plugin configuration.">Save changes</button></div></header>
 <div id="automation-notice" class="automation-notice" role="status" hidden><span id="automation-notice-count"></span><button id="automation-notice-review">Review changes</button></div><p id="automation-error" role="alert" hidden></p>
 <div id="recovery-notice" class="automation-notice recovery-notice" role="status" hidden><span id="recovery-notice-count"></span><button id="recovery-notice-review">Review media references</button><button id="recovery-reload" data-automation-action data-help="Reload server references. The previous draft can be restored with Undo." hidden>Reload saved settings</button></div>
 <details class="panel" id="settings"><summary><svg class="icon label-icon"><use href="#i-settings"/></svg>Settings<span class="section-count"></span></summary><div class="panel-body settings-grid">
@@ -2660,7 +2665,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       recoveryError = '', recoveryLoading = false, recoveryPreparing = false, recoveryReportUnavailable = false,
       recoveryFocus = '', lastStatusError = '', lastAutoRemapped = null;
     const selected = new Set(), selectedRules = new Set(), previewSelected = new Set(), recoveryChoices = new Map();
-    const recoveryQueries = new Map(), recoveryLibrary = new Map(), recoveryLibraryChoices = new Map();
+    const recoveryQueries = new Map(), recoveryLibrary = new Map(), recoveryLibraryChoices = new Map(), recoverySearchOpen = new Map();
     const referenceKey = (value) => String(value || '').replace(/-/g, '').toLowerCase();
     const settings = () => camel((context.isDirty?.() && getModel().AutoFranchises) || status?.settings || getModel().AutoFranchises || {});
     const registrations = () => list(settings().registry);
@@ -2946,6 +2951,16 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         { open: false, itemType: '', query: '', items: [], totalRecordCount: 0, startIndex: 0, limit: 30, loaded: false, loading: false });
       return recoveryLibrary.get(referenceId);
     }
+    function collapseRecoverySearch(referenceId) {
+      recoverySearchOpen.set(referenceId, false);
+      renderRecovery();
+      const details = [...$('recovery-results').querySelectorAll('[data-recovery-search-details]')]
+        .find((element) => element.dataset.recoverySearchDetails === referenceId);
+      const summary = details?.querySelector('summary');
+      summary?.focus({ preventScroll: true });
+      (details?.closest('[data-recovery-entry]')?.querySelector('[data-recovery-selected]') || summary)
+        ?.scrollIntoView({ block: 'nearest' });
+    }
     function renderLibrary(entry) {
       const state = recoveryLibrary.get(entry.referenceId);
       if (!state?.open) return '';
@@ -2980,7 +2995,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
           ManualReview: 'Choose a replacement', Healthy: 'Available in the library' };
       for (const [id, selectedId] of recoveryChoices)
         if (!entries.some((entry) => entry.status !== 'Healthy' && entry.referenceId === id && recoveryCandidates(entry).some((candidate) => candidate.itemId === selectedId))) {
-          recoveryChoices.delete(id); recoveryLibraryChoices.delete(id);
+          recoveryChoices.delete(id); recoveryLibraryChoices.delete(id); recoverySearchOpen.delete(id);
         }
       $('recovery-dialog-status').textContent = recoverySummary() +
         (modelDirty() ? ' Your unsaved draft is kept. Save or reload it before automatic or selected reconnection.' : '');
@@ -2992,7 +3007,9 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         $('recovery-results').innerHTML = '<p role="status">Please wait while recovery checks the saved configuration.</p>';
         syncBusy(); return;
       }
-      $('recovery-results').innerHTML = entries.map((entry) => '<article class="automation-change' +
+      $('recovery-results').innerHTML = entries.map((entry) => {
+        const selected = recoveryCandidates(entry).find((candidate) => candidate.itemId === recoveryChoices.get(entry.referenceId));
+        return '<article class="automation-change' +
         (referenceKey(entry.referenceId) === referenceKey(recoveryFocus) ? ' recovery-focused' : '') +
         '" data-recovery-entry="' + esc(entry.referenceId) + '"><h3>' + esc(entry.title) + '</h3><p><strong>' +
         esc(labels[entry.status] || entry.status) + '</strong> · ' + esc(entry.itemType) + ' · ' + esc(entry.reason) + '</p>' +
@@ -3010,6 +3027,11 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
           recoveryLibraryChoices.get(entry.referenceId).itemType !== entry.itemType ? '<p class="recovery-type-correction" role="status"><strong>Saved type: ' + esc(entry.itemType) +
           '. Selected library type: ' + esc(recoveryLibraryChoices.get(entry.referenceId).itemType) + '.</strong> Reconnect selected will correct this reference’s saved type to ' +
           esc(recoveryLibraryChoices.get(entry.referenceId).itemType) + '.</p>' : '') +
+        (selected ? '<div class="recovery-candidate-detail recovery-selected-media" data-recovery-selected="' + esc(entry.referenceId) +
+          '" role="group" aria-label="Selected replacement">' + candidateDetail(selected) + '</div>' : '') +
+        '<details class="recovery-search-details" data-recovery-search-details="' + esc(entry.referenceId) + '"' +
+        (recoverySearchOpen.get(entry.referenceId) !== false ? ' open' : '') + '><summary><span class="recovery-search-show">' + (selected ? 'Change replacement' : 'Show search results') + '</span>' +
+        '<span class="recovery-search-hide">Hide search results</span></summary>' +
         '<div class="automation-recovery-search"><label class="field"><span>Find a library candidate</span><input data-recovery-query="' +
         esc(entry.referenceId) + '" type="search" maxlength="120" value="' +
         esc(recoveryQueries.get(entry.referenceId) ?? entry.title ?? '') + '" placeholder="Title in your Jellyfin library"' +
@@ -3017,7 +3039,8 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         '" data-automation-action>Find candidate</button></div><p>Search uses the saved media type. If it is incorrect or no match appears, browse All media and choose the actual item.</p>' +
         '<button data-recovery-browse="' + esc(entry.referenceId) + '" data-recovery-read data-automation-action aria-expanded="' + !!recoveryLibrary.get(entry.referenceId)?.open + '">Browse library</button>' +
         (recoveryCandidates(entry).length ? '<ul class="automation-candidate">' + recoveryCandidates(entry).map((candidate) => '<li class="recovery-candidate-detail">' + candidateDetail(candidate) +
-          '</li>').join('') + '</ul>' : '<p>No replacement is selected. Search or browse for the matching library item; the saved reference is kept.</p>') + renderLibrary(entry)) + '</article>').join('') ||
+          '</li>').join('') + '</ul>' : '<p>No replacement is selected. Search or browse for the matching library item; the saved reference is kept.</p>') + renderLibrary(entry) + '</details>') + '</article>';
+      }).join('') ||
         (recoveryError ? '<p>The recovery report is unavailable. Refresh the report to try again.</p>' :
           !recovery ? '<p>The recovery report is loading.</p>' :
           savedReferenceCount() > 0 && !(recovery.referenceCount ?? list(recovery.entries).length)
@@ -3153,7 +3176,8 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         const referenceId = target.dataset.recoveryChoice;
         if (target.value) recoveryChoices.set(referenceId, target.value); else recoveryChoices.delete(referenceId);
         if (recoveryLibraryChoices.get(referenceId)?.itemId !== target.value) recoveryLibraryChoices.delete(referenceId);
-        renderRecovery();
+        if (target.value) collapseRecoverySearch(referenceId);
+        else { recoverySearchOpen.set(referenceId, true); renderRecovery(); }
       }
       const type = event.target.closest('[data-recovery-library-type]');
       if (type) {
@@ -3161,6 +3185,11 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         void loadLibrary(type.dataset.recoveryLibraryType, 0);
       }
     });
+    $('recovery-results').addEventListener('toggle', (event) => {
+      const details = event.target;
+      if (details.matches?.('[data-recovery-search-details]'))
+        recoverySearchOpen.set(details.dataset.recoverySearchDetails, details.open);
+    }, true);
     function checkedRecoverySnapshot() {
       if (!canSearchRecovery()) throw Error('Refresh the recovery report when the library is ready, then try again.');
       return { revision: recovery.revision, libraryRevision: recovery.libraryRevision };
@@ -3203,7 +3232,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         const referenceId = choose.closest('[data-recovery-entry]').dataset.recoveryEntry,
           candidate = libraryState(referenceId).items.find((item) => item.itemId === choose.dataset.recoveryLibraryChoose);
         if (candidate && !busy && canSearchRecovery()) {
-          recoveryLibraryChoices.set(referenceId, candidate); recoveryChoices.set(referenceId, candidate.itemId); renderRecovery();
+          recoveryLibraryChoices.set(referenceId, candidate); recoveryChoices.set(referenceId, candidate.itemId); collapseRecoverySearch(referenceId);
         }
         return;
       }

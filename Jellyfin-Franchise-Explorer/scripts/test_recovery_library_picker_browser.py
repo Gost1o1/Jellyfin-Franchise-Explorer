@@ -243,6 +243,14 @@ def assert_open_link(entry, identifier):
     assert {'noopener', 'noreferrer'} <= set((link.get_attribute('rel') or '').split())
 
 
+def reopen_search(entry):
+    details = entry.locator('[data-recovery-search-details]')
+    expect(details).to_have_js_property('open', False)
+    details.locator('> summary').click()
+    expect(details).to_have_js_property('open', True)
+    return details
+
+
 def check_browse_and_correct_type(browser, html):
     fixture = Fixture(browser, html)
     before = deepcopy(fixture.config)
@@ -309,6 +317,112 @@ def check_browse_and_correct_type(browser, html):
     fixture.finish()
 
 
+def check_collapsed_selection(browser, html):
+    fixture = Fixture(browser, html, auto_enabled=False)
+    fixture.library.extend(dict(Id=gid(1000 + index), Name=f'Paged movie {index:02}',
+                                Type='Movie', ProductionYear=2000 + index % 20,
+                                ProviderIds={'Imdb': f'tt{1000 + index}'}) for index in range(65))
+    before = deepcopy(fixture.config)
+    selected_id = gid(1030)
+    fixture.open()
+    fixture.review()
+    for reference in REFS:
+        expect(fixture.entry(reference).locator('[data-recovery-search-details]')).to_have_js_property('open', True)
+    entry = fixture.browse()
+    entry.locator('[data-recovery-query]').fill('Preserved candidate query')
+    entry.locator('[data-recovery-library-query]').fill('Paged movie')
+    entry.locator('[data-recovery-library-type]').select_option('Movie')
+    expect(entry.locator('[data-recovery-library-choose]')).to_have_count(30)
+    entry.locator('[data-recovery-library-next]').click()
+    expect(entry.locator(f'[data-recovery-library-choose="{selected_id}"]')).to_be_visible()
+    assert fixture.library_queries[-1]['query'] == ['Paged movie']
+    assert fixture.library_queries[-1]['itemType'] == ['Movie']
+    assert fixture.library_queries[-1]['startIndex'] == ['30']
+    entry.locator(f'[data-recovery-library-choose="{selected_id}"]').click()
+    details = entry.locator('[data-recovery-search-details]')
+    summary = details.locator('> summary')
+    expect(details).to_have_js_property('open', False)
+    expect(summary).to_be_focused()
+    expect(summary.get_by_text('Change replacement', exact=True)).to_be_visible()
+    expect(entry.locator('[data-recovery-choice]')).to_be_visible()
+    expect(entry.locator('[data-recovery-choice]')).to_have_value(selected_id)
+    expect(entry.locator('.recovery-type-correction')).to_be_visible()
+    expect(entry.locator('.recovery-type-correction')).to_contain_text('Selected library type: Movie')
+    selected = entry.locator(f'[data-recovery-selected="{WRONG_TYPE}"]')
+    expect(selected).to_be_visible()
+    expect(selected).to_be_in_viewport()
+    expect(selected).to_contain_text('Paged movie 30')
+    expect(selected).to_contain_text(selected_id)
+    expect(selected).to_contain_text('tt1030')
+    assert_open_link(selected, selected_id)
+    for selector in ('[data-recovery-query]', '[data-recovery-search]', '[data-recovery-browse]',
+                     '.automation-candidate', '.recovery-library'):
+        expect(entry.locator(selector)).to_be_hidden()
+    assert fixture.writes == [] and fixture.config == before
+
+    # Native keyboard toggles only change visibility: the saved page and every
+    # query/filter/selection stay available without fetching the library again.
+    requests = fixture.requests[:]
+    summary.press('Enter')
+    expect(details).to_have_js_property('open', True)
+    expect(summary.get_by_text('Hide search results', exact=True)).to_be_visible()
+    summary.press('Space')
+    expect(details).to_have_js_property('open', False)
+    summary.press('Enter')
+    expect(details).to_have_js_property('open', True)
+    assert fixture.requests == requests
+
+    def assert_saved_picker():
+        expect(entry.locator('[data-recovery-query]')).to_have_value('Preserved candidate query')
+        expect(entry.locator('[data-recovery-library-query]')).to_have_value('Paged movie')
+        expect(entry.locator('[data-recovery-library-type]')).to_have_value('Movie')
+        expect(entry.locator('.recovery-library [role="status"]')).to_have_text('31–60 of 65 library items')
+        expect(entry.locator('[data-recovery-library-choose]')).to_have_count(30)
+        expect(entry.locator(f'[data-recovery-library-choose="{selected_id}"]')).to_have_text('Selected')
+        expect(entry.locator('[data-recovery-library-previous]')).to_be_enabled()
+        expect(entry.locator('[data-recovery-choice]')).to_have_value(selected_id)
+
+    assert_saved_picker()
+    # Finding and selecting another entry rerenders both disclosures. The first
+    # stays manually open, while a dropdown choice also folds its own search.
+    other = fixture.entry(PARTIAL)
+    other.locator('[data-recovery-search]').click()
+    expect(other.locator(f'option[value="{MOVIE}"]')).to_have_count(1)
+    expect(details).to_have_js_property('open', True)
+    assert_saved_picker()
+    requests = fixture.requests[:]
+    other.locator('[data-recovery-choice]').select_option(MOVIE)
+    expect(other.locator('[data-recovery-search-details]')).to_have_js_property('open', False)
+    expect(other.locator('[data-recovery-search-details] > summary')).to_be_focused()
+    expect(other.locator('[data-recovery-choice]')).to_be_visible()
+    expect(other.locator('[data-recovery-choice]')).to_have_value(MOVIE)
+    expect(other.locator('[data-recovery-selected]')).to_be_visible()
+    expect(other.locator('[data-recovery-search]')).to_be_hidden()
+    expect(details).to_have_js_property('open', True)
+    assert_saved_picker()
+    assert fixture.requests == requests
+    assert fixture.writes == [] and fixture.config == before
+
+    summary.focus()
+    summary.press('Space')
+    expect(details).to_have_js_property('open', False)
+    fixture.apply_error = 'Recovery apply failed. Selected replacements retained.'
+    fixture.page.locator('#recovery-apply').click()
+    expect(fixture.page.locator('#recovery-dialog-error')).to_contain_text('Selected replacements retained')
+    expect(details).to_have_js_property('open', False)
+    expect(other.locator('[data-recovery-search-details]')).to_have_js_property('open', False)
+    expect(entry.locator('[data-recovery-choice]')).to_have_value(selected_id)
+    expect(other.locator('[data-recovery-choice]')).to_have_value(MOVIE)
+    expect(selected).to_be_visible()
+    assert fixture.config == before and fixture.applied == []
+    assert fixture.writes == ['/emby/FranchiseExplorer/Recovery/Apply']
+    requests = fixture.requests[:]
+    reopen_search(entry)
+    assert_saved_picker()
+    assert fixture.requests == requests
+    fixture.finish()
+
+
 def check_find_uses_fresh_automatic_pass(browser, html):
     fixture = Fixture(browser, html)
     fixture.open()
@@ -336,6 +450,7 @@ def check_errors_and_dirty_draft(browser, html):
     fixture.review()
     entry = fixture.browse()
     entry.locator(f'[data-recovery-library-choose="{MOVIE}"]').click()
+    reopen_search(entry)
     entry.locator('[data-recovery-query]').fill('Preserved manual candidate query')
     entry.locator('[data-recovery-library-query]').fill('Preserved picker query')
     fixture.library_error = 'Library browse unavailable. Saved choices retained.'
@@ -366,6 +481,7 @@ def check_errors_and_dirty_draft(browser, html):
     fixture.browse()
     fixture.entry(WRONG_TYPE).locator(f'[data-recovery-library-choose="{MOVIE}"]').click()
     expect(fixture.page.locator('#recovery-apply')).to_be_disabled()
+    reopen_search(fixture.entry(WRONG_TYPE))
     fixture.entry(WRONG_TYPE).locator('[data-recovery-search]').click()
     expect(fixture.entry(WRONG_TYPE).locator(f'option[value="{MOVIE}"]')).to_have_count(1)
     assert fixture.writes == [] and fixture.auto_counts == []
@@ -388,9 +504,15 @@ def check_mobile(browser, html):
             entry.locator('.recovery-library-heading').evaluate("(el)=>el.scrollIntoView({block:'start'})")
             fixture.page.screenshot(path=str(ARTIFACTS / 'recovery-picker-library-390.png'), full_page=True)
         entry.locator(f'[data-recovery-library-choose="{MOVIE}"]').click()
+        expect(entry.locator('[data-recovery-search-details]')).to_have_js_property('open', False)
+        expect(entry.locator('[data-recovery-selected]')).to_be_visible()
+        expect(entry.locator('[data-recovery-selected]')).to_be_in_viewport()
+        expect(entry.locator('[data-recovery-choice]')).to_be_visible()
         expect(entry.locator('.recovery-type-correction')).to_contain_text('Selected library type: Movie')
         entry.locator('.recovery-type-correction').scroll_into_view_if_needed()
         fixture.page.screenshot(path=str(ARTIFACTS / f'recovery-picker-correction-{width}.png'), full_page=True)
+        fixture.page.screenshot(path=str(ARTIFACTS / f'recovery-collapsed{width}.png'), full_page=True)
+        reopen_search(entry)
         entry.locator('[data-recovery-library-query]').fill('Long title')
         entry.locator('[data-recovery-library-search]').click()
         expect(entry.locator('[data-recovery-library-choose]')).to_have_count(1)
@@ -416,6 +538,7 @@ def check_stale_library_responses(browser, html):
         fixture.review()
         entry = fixture.browse()
         entry.locator(f'[data-recovery-library-choose="{MOVIE}"]').click()
+        reopen_search(entry)
         entry.locator('[data-recovery-library-query]').fill('Library item 0')
         fixture.hold_library = True
         with fixture.page.expect_request(lambda request: urlsplit(request.url).path == LIBRARY_PATH):
@@ -470,6 +593,7 @@ def run():
             headless=True, executable_path='/usr/bin/chromium' if Path('/usr/bin/chromium').exists() else None,
             args=['--no-sandbox'])
         check_browse_and_correct_type(browser, html)
+        check_collapsed_selection(browser, html)
         check_find_uses_fresh_automatic_pass(browser, html)
         check_errors_and_dirty_draft(browser, html)
         check_stale_library_responses(browser, html)
@@ -477,7 +601,8 @@ def run():
         check_mobile(browser, html)
         browser.close()
     print('Recovery library picker browser checks passed: blank browse, pagination and type filtering, '
-          'explicit type correction, safe Jellyfin links, automatic prepass and fresh Find, errors, stale replies, drafts, '
+          'explicit type correction, collapsible search with cached keyboard reopen and dropdown choices, '
+          'safe Jellyfin links, automatic prepass and fresh Find, errors, stale replies, drafts, '
           'escaped content and 320/390px layouts.')
 
 
