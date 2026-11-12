@@ -559,7 +559,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
 <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
 </defs></svg>
 <main class="fx-wrap">
-<header class="top"><div><h1>Franchise Explorer<span class="version">v0.8.9.31</span></h1></div><div class="top-actions"><span id="save-state" class="save-state" role="status">Loading configuration…</span><button class="icon-button quiet" id="undo" aria-label="Undo" data-help="Undo the most recent unsaved edit or move." disabled><svg class="icon"><use href="#i-undo"/></svg></button><button class="icon-button quiet" id="reset" aria-label="Reload saved settings" data-help="Reload the saved plugin configuration. Unsaved changes can be restored with Undo."><svg class="icon"><use href="#i-reset"/></svg></button><button class="primary" id="save" data-help="Save these changes to the Jellyfin plugin configuration.">Save changes</button></div></header>
+<header class="top"><div><h1>Franchise Explorer<span class="version">v0.8.9.32</span></h1></div><div class="top-actions"><span id="save-state" class="save-state" role="status">Loading configuration…</span><button class="icon-button quiet" id="undo" aria-label="Undo" data-help="Undo the most recent unsaved edit or move." disabled><svg class="icon"><use href="#i-undo"/></svg></button><button class="icon-button quiet" id="reset" aria-label="Reload saved settings" data-help="Reload the saved plugin configuration. Unsaved changes can be restored with Undo."><svg class="icon"><use href="#i-reset"/></svg></button><button class="primary" id="save" data-help="Save these changes to the Jellyfin plugin configuration.">Save changes</button></div></header>
 <div id="automation-notice" class="automation-notice" role="status" hidden><span id="automation-notice-count"></span><button id="automation-notice-review">Review changes</button></div><p id="automation-error" role="alert" hidden></p>
 <div id="recovery-notice" class="automation-notice recovery-notice" role="status" hidden><span id="recovery-notice-count"></span><button id="recovery-notice-review">Review media references</button><button id="recovery-reload" data-automation-action data-help="Reload server references. The previous draft can be restored with Undo." hidden>Reload saved settings</button></div>
 <details class="panel" id="settings"><summary><svg class="icon label-icon"><use href="#i-settings"/></svg>Settings<span class="section-count"></span></summary><div class="panel-body settings-grid">
@@ -579,7 +579,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
 <dialog id="auto-preview-dialog" aria-labelledby="auto-preview-heading"><div class="dialog-head"><h2 id="auto-preview-heading">Auto Franchises · Build preview</h2><button class="icon-button quiet" data-close="auto-preview-dialog" aria-label="Close build preview">✕</button></div><div class="dialog-content"><p class="automation-dialog-note">Current server configuration and library matches. Apply only selected changes; midnight updates can stay off. Protected changes start unselected.</p><div id="auto-preview-results"></div></div><div class="dialog-footer"><span id="auto-preview-selected-count" class="selected-count"></span><button data-close="auto-preview-dialog">Close</button><button id="auto-preview-apply" class="primary" data-automation-action disabled>Apply selected</button></div></dialog>
 <dialog id="auto-inbox-dialog" aria-labelledby="auto-inbox-heading"><div class="dialog-head"><h2 id="auto-inbox-heading">Auto Franchises · Pending changes</h2><button class="icon-button quiet" data-close="auto-inbox-dialog" aria-label="Close pending changes">✕</button></div><div class="dialog-content"><p class="automation-dialog-note">Protected changes start unselected. Restore / Apply selected rechecks the current configuration and library. Keep my choices acknowledges selected changes, or all shown changes when none are selected.</p><div id="auto-inbox-list"></div></div><div class="dialog-footer"><button data-close="auto-inbox-dialog">Close</button><button id="auto-keep-choices" data-automation-action>Keep my choices</button><button id="auto-restore-selected" class="primary" data-automation-action disabled>Restore / Apply selected</button></div></dialog>
 <dialog id="auto-choices-dialog" aria-labelledby="auto-choices-heading"><div class="dialog-head"><h2 id="auto-choices-heading">Auto Franchises · Saved choices</h2><button class="icon-button quiet" data-close="auto-choices-dialog" aria-label="Close saved choices">✕</button></div><div class="dialog-content"><p class="automation-dialog-note">Only selected restrictions are restored. Other show, season and episode restrictions stay protected. The server verifies an available candidate before clearing a restriction; later builds can add verified media.</p><div id="auto-choices-list"></div></div><div class="dialog-footer"><button data-close="auto-choices-dialog">Close</button><button id="auto-restore-rules" class="primary" data-automation-action disabled>Restore selected choices</button></div></dialog>
-<dialog id="recovery-dialog" aria-labelledby="recovery-heading"><div class="dialog-head"><h2 id="recovery-heading">Media recovery · Review matches</h2><button class="icon-button quiet" data-close="recovery-dialog" aria-label="Close recovery review">✕</button></div><div class="dialog-content"><p class="automation-dialog-note">With automatic recovery enabled, opening review first reconnects clear matches from saved settings. Missing or uncertain references remain for your choice. Search or browse the library, inspect an item in Jellyfin, then choose a replacement and Reconnect selected.</p><p id="recovery-dialog-status" role="status"></p><p id="recovery-dialog-error" role="alert" hidden></p><div id="recovery-results"></div></div><div class="dialog-footer"><button data-close="recovery-dialog">Close</button><button id="recovery-refresh" data-automation-action>Refresh report</button><button id="recovery-auto-remap" class="primary" data-automation-action>Auto remap</button><button id="recovery-apply" class="primary" data-automation-action disabled>Reconnect selected</button></div></dialog>
+<dialog id="recovery-dialog" aria-labelledby="recovery-heading"><div class="dialog-head"><h2 id="recovery-heading">Media recovery · Review matches</h2><button class="icon-button quiet" data-close="recovery-dialog" aria-label="Close recovery review">✕</button></div><div class="dialog-content"><p id="recovery-dialog-status" role="status" hidden></p><p id="recovery-dialog-error" role="alert" hidden></p><div id="recovery-results"></div></div><div class="dialog-footer"><button data-close="recovery-dialog">Close</button><button id="recovery-refresh" data-automation-action>Refresh report</button><button id="recovery-auto-remap" class="primary" data-automation-action>Auto remap</button><button id="recovery-apply" class="primary" data-automation-action disabled>Reconnect selected</button></div></dialog>
 <dialog id="franchise-dialog" class="franchise-dialog" aria-labelledby="franchise-heading"><div class="dialog-head"><div><h2 id="franchise-heading"><svg class="icon"><use href="#i-gear"/></svg>Franchise settings</h2><div id="franchise-scope" class="scope-title"></div></div><button class="icon-button quiet" data-close="franchise-dialog" aria-label="Close franchise settings">✕</button></div><div class="dialog-content"><div class="franchise-fields"><section class="structure-tools"><h3>Groups and subgroups</h3><div id="franchise-structure-owner" class="structure-owner"></div><div class="button-row"><button id="franchise-add-row">＋ Add group / row</button><button id="franchise-add-subgroup">＋ Add subgroup</button></div><div id="franchise-pending-structure" class="pending-structure"></div></section>
 <label class="field" data-help="Rename this franchise or subgroup. Changes are staged until you save or apply selected changes."><span>Title</span><input id="detail-title" maxlength="120" required></label>
 <label class="field" data-help="Edit the description for this franchise or subgroup."><span>Description</span><textarea id="detail-description" maxlength="1500"></textarea></label>
@@ -2974,7 +2974,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         '<div class="recovery-library-controls"><label class="field"><span>Media type</span><select data-recovery-library-type="' + id + '" data-recovery-read>' +
         types.map(([value, label]) => '<option value="' + value + '"' + (state.itemType === value ? ' selected' : '') + '>' + label + '</option>').join('') +
         '</select></label><label class="field"><span>Search library (optional)</span><input type="search" maxlength="120" data-recovery-library-query="' + id +
-        '" data-recovery-read value="' + esc(state.query) + '" placeholder="Leave blank to browse all titles"></label>' +
+        '" data-recovery-read value="' + esc(state.query) + '" placeholder="Title or IMDb ID / URL; blank for all"></label>' +
         '<button data-recovery-library-search="' + id + '" data-recovery-read data-automation-action>Search library</button></div>' +
         '<p role="status">' + (state.loading ? 'Loading library items…' : state.loaded ? first + '–' + last + ' of ' + total + ' library items' :
           'Library items could not be loaded. Search library to try again.') + '</p>' +
@@ -2990,20 +2990,21 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
       const ready = automaticMatches().length,
         entries = list(recovery?.entries).filter((entry) => entry.canAutoRemap !== true &&
           (entry.status !== 'Healthy' || referenceKey(entry.referenceId) === referenceKey(recoveryFocus))),
-        searchable = canSearchRecovery(),
-        labels = { Verified: 'Ready to reconnect', Ambiguous: 'Choose a version', Missing: 'Media missing',
-          ManualReview: 'Choose a replacement', Healthy: 'Available in the library' };
+        searchable = canSearchRecovery();
       for (const [id, selectedId] of recoveryChoices)
         if (!entries.some((entry) => entry.status !== 'Healthy' && entry.referenceId === id && recoveryCandidates(entry).some((candidate) => candidate.itemId === selectedId))) {
           recoveryChoices.delete(id); recoveryLibraryChoices.delete(id); recoverySearchOpen.delete(id);
         }
-      $('recovery-dialog-status').textContent = recoverySummary() +
-        (modelDirty() ? ' Your unsaved draft is kept. Save or reload it before automatic or selected reconnection.' : '');
+      const dialogStatus = recoveryPreparing || recoveryLoading ? 'Checking media…'
+        : modelDirty() ? 'Your unsaved draft is kept. Save or reload it before reconnecting media.'
+        : recovery?.enabled === false ? 'Media recovery is disabled.'
+        : recovery && !canSearchRecovery() ? 'Recovery is paused until the Jellyfin library is ready. Refresh after the scan finishes.'
+        : recovery?.libraryHealthy === false ? 'Some library files are unavailable. Offline references are retained.' : '';
+      $('recovery-dialog-status').textContent = dialogStatus;
+      $('recovery-dialog-status').hidden = !dialogStatus;
       $('recovery-dialog-error').textContent = recoveryError;
       $('recovery-dialog-error').hidden = !recoveryError;
       if (recoveryPreparing) {
-        $('recovery-dialog-status').textContent = modelDirty() ? 'Loading the saved recovery report. Your unsaved draft is kept.' :
-          'Checking saved references and automatically reconnecting clear matches…';
         $('recovery-results').innerHTML = '<p role="status">Please wait while recovery checks the saved configuration.</p>';
         syncBusy(); return;
       }
@@ -3011,8 +3012,7 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         const selected = recoveryCandidates(entry).find((candidate) => candidate.itemId === recoveryChoices.get(entry.referenceId));
         return '<article class="automation-change' +
         (referenceKey(entry.referenceId) === referenceKey(recoveryFocus) ? ' recovery-focused' : '') +
-        '" data-recovery-entry="' + esc(entry.referenceId) + '"><h3>' + esc(entry.title) + '</h3><p><strong>' +
-        esc(labels[entry.status] || entry.status) + '</strong> · ' + esc(entry.itemType) + ' · ' + esc(entry.reason) + '</p>' +
+        '" data-recovery-entry="' + esc(entry.referenceId) + '"><h3>' + esc(entry.title) + '</h3>' +
         '<p>' + esc(list(getModel().Nodes).find((node) => node.Id === entry.nodeId)?.Name || 'Saved franchise') + ' / ' +
         esc(list(getModel().Rows).find((row) => row.Id === entry.rowId)?.Name || 'Franchise media') + '</p>' +
         (entry.status === 'Healthy' ? '<p>This saved reference resolves on the server. If it cannot be opened here, check Jellyfin access and refresh the page.</p>' :
@@ -3034,9 +3034,9 @@ body:has(#FranchiseExplorerConfigPage dialog[open]){overflow:hidden}
         '<span class="recovery-search-hide">Hide search results</span></summary>' +
         '<div class="automation-recovery-search"><label class="field"><span>Find a library candidate</span><input data-recovery-query="' +
         esc(entry.referenceId) + '" type="search" maxlength="120" value="' +
-        esc(recoveryQueries.get(entry.referenceId) ?? entry.title ?? '') + '" placeholder="Title in your Jellyfin library"' +
+        esc(recoveryQueries.get(entry.referenceId) ?? entry.title ?? '') + '" placeholder="Title or IMDb ID / URL"' +
         (!searchable ? ' disabled' : '') + '></label><button data-recovery-search="' + esc(entry.referenceId) +
-        '" data-automation-action>Find candidate</button></div><p>Search uses the saved media type. If it is incorrect or no match appears, browse All media and choose the actual item.</p>' +
+        '" data-automation-action>Find candidate</button></div>' +
         '<button data-recovery-browse="' + esc(entry.referenceId) + '" data-recovery-read data-automation-action aria-expanded="' + !!recoveryLibrary.get(entry.referenceId)?.open + '">Browse library</button>' +
         (recoveryCandidates(entry).length ? '<ul class="automation-candidate">' + recoveryCandidates(entry).map((candidate) => '<li class="recovery-candidate-detail">' + candidateDetail(candidate) +
           '</li>').join('') + '</ul>' : '<p>No replacement is selected. Search or browse for the matching library item; the saved reference is kept.</p>') + renderLibrary(entry) + '</details>') + '</article>';

@@ -240,6 +240,9 @@ def check_bulk_remap(browser, html):
     fixture.hold_config_reload = True
     fixture.review()
     status = page.locator('#recovery-dialog-status')
+    notice = page.locator('#recovery-notice-count')
+    expect(status).to_be_visible()
+    expect(status).to_have_text('Checking media…')
     expect(auto_button(page)).to_be_disabled()
     expect(page.locator('[data-recovery-entry]')).to_have_count(0)
     expect(page.locator('#recovery-apply')).to_be_disabled()
@@ -260,9 +263,11 @@ def check_bulk_remap(browser, html):
     fixture.held_config_reload.fulfill(json=fixture.config)
     page.wait_for_function('(id)=>FranchiseSettings.getModel().Rows[0].Items[26].JellyfinItemId===id',
                            arg=NEW[READY[-1]])
-    expect(status).to_contain_text('129 saved references checked')
-    expect(status).to_contain_text('127 available')
-    expect(status).to_contain_text(re.compile(r'Last auto remap: 127 references reconnected', re.I))
+    expect(notice).to_contain_text('129 saved references checked')
+    expect(notice).to_contain_text('127 available')
+    expect(notice).to_contain_text(re.compile(r'Last auto remap: 127 references reconnected', re.I))
+    expect(status).to_have_text('')
+    expect(status).to_be_hidden()
     expect(page.locator('#save-state')).to_have_text('All changes saved')
     expect_two_unresolved(fixture)
     expect(auto_button(page)).to_have_text('Auto remap')
@@ -286,7 +291,7 @@ def check_bulk_remap(browser, html):
     # A complete pass remains available when only unresolved entries remain.
     expect(auto_button(page)).to_be_enabled()
     auto_button(page).click()
-    expect(status).to_contain_text(re.compile(r'Last auto remap: 0 references reconnected', re.I))
+    expect(notice).to_contain_text(re.compile(r'Last auto remap: 0 references reconnected', re.I))
     expect(page.locator('#toast')).to_contain_text(re.compile(r'reconnect.*0|0.*reconnect', re.I))
     assert fixture.auto_counts == [127, 0]
     assert fixture.writes == [AUTO_PATH, AUTO_PATH]
@@ -370,10 +375,10 @@ def check_availability_and_legacy(browser, html):
     page = fixture.page
     expect_two_unresolved(fixture)
     expect(auto_button(page)).to_be_enabled()
-    expect(page.locator('#recovery-dialog-status')).to_contain_text('127 available')
+    expect(page.locator('#recovery-notice-count')).to_contain_text('127 available')
     assert fixture.auto_counts == [127] and fixture.writes == [AUTO_PATH]
     auto_button(page).click()
-    expect(page.locator('#recovery-dialog-status')).to_contain_text('Last auto remap: 0 references reconnected')
+    expect(page.locator('#recovery-notice-count')).to_contain_text('Last auto remap: 0 references reconnected')
     assert fixture.auto_counts == [127, 0]
     fixture.finish()
 

@@ -348,7 +348,8 @@ def run():
         results.locator('[data-recovery-choice]').select_option(gid(9))
         page.locator('#recovery-apply').click()
         expect(results).to_contain_text('All 3 checked references resolve in the current library.')
-        expect(page.locator('#recovery-dialog-status')).to_contain_text('3 available · 0 need attention')
+        expect(page.locator('#recovery-notice-count')).to_contain_text('3 available · 0 need attention')
+        expect(page.locator('#recovery-dialog-status')).to_be_hidden()
         page.locator('#recovery-dialog').get_by_role('button', name='Close', exact=True).click()
         expect(page.locator('#recovery-status')).to_contain_text('Last check:')
 

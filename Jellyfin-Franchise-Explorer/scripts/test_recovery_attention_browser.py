@@ -110,7 +110,7 @@ class Fixture:
                 candidates=[]))
         healthy_count = sum(entry['status'] == 'Healthy' for entry in entries)
         message = ('Library unavailable; recovery is paused.' if not self.can_search else
-                   'Automatic reconnection is paused until a healthy scan; manual review is available.'
+                   'Some library files are unavailable; offline references are retained.'
                    if not self.healthy else 'Review the saved media references that need attention.')
         return dict(revision=f"configuration-{self.config['ConfigurationRevision']}",
                     libraryRevision='library-1', enabled=self.config['MediaRecovery']['Enabled'],
@@ -252,7 +252,7 @@ class Fixture:
 
 
 def assert_counts(page, total, healthy, attention):
-    status = page.locator('#recovery-dialog-status')
+    status = page.locator('#recovery-notice-count')
     expect(status).to_contain_text(re.compile(rf'\b{total}\b.*reference', re.I))
     expect(status).to_contain_text(re.compile(rf'\b{healthy}\b\s+(?:healthy|available)', re.I))
     expect(status).to_contain_text(re.compile(rf'\b{attention}\b.*(?:attention|review)', re.I))
@@ -268,7 +268,13 @@ def check_legacy_review(browser, html):
     fixture.review()
     assert_counts(page, 6, 0, 6)
     expect(page.locator('[data-recovery-entry]')).to_have_count(6)
-    expect(page.locator('#recovery-results')).to_contain_text('Legacy reference has no stable identity')
+    dialog = page.locator('#recovery-dialog')
+    expect(page.locator('#recovery-dialog-status')).to_have_text('')
+    expect(page.locator('#recovery-dialog-status')).to_be_hidden()
+    for removed_copy in ('With automatic recovery enabled, opening review first reconnects clear matches',
+                         'saved references checked', 'Choose a replacement',
+                         'Legacy reference has no stable identity', 'Search uses the saved media type'):
+        expect(dialog).not_to_contain_text(removed_copy)
     for reference in REFS:
         expect(fixture.entry(reference).locator('[data-recovery-query]')).to_have_value(TITLES[reference])
         expect(fixture.entry(reference).locator('[data-recovery-choice]')).to_have_value('')
@@ -391,19 +397,21 @@ def check_library_availability(browser, html):
     page = fixture.page
     assert_counts(page, 6, 0, 6)
     expect(page.locator('#recovery-dialog-status')).to_contain_text(re.compile('paused', re.I))
+    expect(page.locator('#recovery-dialog-status')).to_be_visible()
     for control in page.locator('[data-recovery-search], [data-recovery-choice]').all():
         expect(control).to_be_disabled()
     expect(page.locator('#recovery-apply')).to_be_disabled()
     assert fixture.writes == []
     fixture.finish()
 
-    # A partial scan pauses automatic matching while actual available items can
+    # A partial scan retains offline references while actual available items can
     # still be selected manually. CanSearch, rather than LibraryHealthy, gates it.
     fixture = Fixture(browser, html, healthy=False, can_search=True)
     fixture.open()
     fixture.review()
     page = fixture.page
-    expect(page.locator('#recovery-dialog-status')).to_contain_text(re.compile('paused', re.I))
+    expect(page.locator('#recovery-dialog-status')).to_contain_text(re.compile('unavailable|offline', re.I))
+    expect(page.locator('#recovery-dialog-status')).to_be_visible()
     reference = ROW_REF
     entry = fixture.find(reference)
     expect(entry.locator('[data-recovery-choice]')).to_be_enabled()
@@ -442,6 +450,7 @@ def check_draft_protection(browser, html):
     writes = len(fixture.writes)
     fixture.review()
     expect(page.locator('#recovery-dialog-status')).to_contain_text(re.compile('save|reload|unsaved', re.I))
+    expect(page.locator('#recovery-dialog-status')).to_be_visible()
     expect(page.locator('#recovery-apply')).to_be_disabled()
     # DOM click also covers implementations that disable Check while dirty.
     page.locator('#recovery-check').evaluate('(element)=>element.click()')
@@ -488,11 +497,12 @@ def check_background_reconnection(browser, html):
         reference['JellyfinItemId'] = NEW_IDS[reference['Id']]
     fixture.config['ConfigurationRevision'] += 1
     page.locator('#recovery-refresh').click()
-    assert_counts(page, 6, 6, 0)
     notice = page.locator('#recovery-notice')
     expect(notice).to_be_visible()
     expect(notice).to_contain_text(re.compile(r'6.*references changed.*server', re.I))
     expect(notice).to_contain_text(re.compile(r'draft.*kept', re.I))
+    expect(page.locator('#recovery-results')).to_contain_text('All 6 checked references resolve in the current library.')
+    expect(page.locator('[data-recovery-entry]')).to_have_count(0)
     assert page.evaluate('FranchiseSettings.getModel()') == draft
     assert fixture.writes == []
     fixture.close_review()
