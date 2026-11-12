@@ -334,7 +334,7 @@
         '<div class="recovery-library-controls"><label class="field"><span>Media type</span><select data-recovery-library-type="' + id + '" data-recovery-read>' +
         types.map(([value, label]) => '<option value="' + value + '"' + (state.itemType === value ? ' selected' : '') + '>' + label + '</option>').join('') +
         '</select></label><label class="field"><span>Search library (optional)</span><input type="search" maxlength="120" data-recovery-library-query="' + id +
-        '" data-recovery-read value="' + esc(state.query) + '" placeholder="Leave blank to browse all titles"></label>' +
+        '" data-recovery-read value="' + esc(state.query) + '" placeholder="Title or IMDb ID / URL; blank for all"></label>' +
         '<button data-recovery-library-search="' + id + '" data-recovery-read data-automation-action>Search library</button></div>' +
         '<p role="status">' + (state.loading ? 'Loading library items…' : state.loaded ? first + '–' + last + ' of ' + total + ' library items' :
           'Library items could not be loaded. Search library to try again.') + '</p>' +
@@ -350,20 +350,21 @@
       const ready = automaticMatches().length,
         entries = list(recovery?.entries).filter((entry) => entry.canAutoRemap !== true &&
           (entry.status !== 'Healthy' || referenceKey(entry.referenceId) === referenceKey(recoveryFocus))),
-        searchable = canSearchRecovery(),
-        labels = { Verified: 'Ready to reconnect', Ambiguous: 'Choose a version', Missing: 'Media missing',
-          ManualReview: 'Choose a replacement', Healthy: 'Available in the library' };
+        searchable = canSearchRecovery();
       for (const [id, selectedId] of recoveryChoices)
         if (!entries.some((entry) => entry.status !== 'Healthy' && entry.referenceId === id && recoveryCandidates(entry).some((candidate) => candidate.itemId === selectedId))) {
           recoveryChoices.delete(id); recoveryLibraryChoices.delete(id); recoverySearchOpen.delete(id);
         }
-      $('recovery-dialog-status').textContent = recoverySummary() +
-        (modelDirty() ? ' Your unsaved draft is kept. Save or reload it before automatic or selected reconnection.' : '');
+      const dialogStatus = recoveryPreparing || recoveryLoading ? 'Checking media…'
+        : modelDirty() ? 'Your unsaved draft is kept. Save or reload it before reconnecting media.'
+        : recovery?.enabled === false ? 'Media recovery is disabled.'
+        : recovery && !canSearchRecovery() ? 'Recovery is paused until the Jellyfin library is ready. Refresh after the scan finishes.'
+        : recovery?.libraryHealthy === false ? 'Some library files are unavailable. Offline references are retained.' : '';
+      $('recovery-dialog-status').textContent = dialogStatus;
+      $('recovery-dialog-status').hidden = !dialogStatus;
       $('recovery-dialog-error').textContent = recoveryError;
       $('recovery-dialog-error').hidden = !recoveryError;
       if (recoveryPreparing) {
-        $('recovery-dialog-status').textContent = modelDirty() ? 'Loading the saved recovery report. Your unsaved draft is kept.' :
-          'Checking saved references and automatically reconnecting clear matches…';
         $('recovery-results').innerHTML = '<p role="status">Please wait while recovery checks the saved configuration.</p>';
         syncBusy(); return;
       }
@@ -371,8 +372,7 @@
         const selected = recoveryCandidates(entry).find((candidate) => candidate.itemId === recoveryChoices.get(entry.referenceId));
         return '<article class="automation-change' +
         (referenceKey(entry.referenceId) === referenceKey(recoveryFocus) ? ' recovery-focused' : '') +
-        '" data-recovery-entry="' + esc(entry.referenceId) + '"><h3>' + esc(entry.title) + '</h3><p><strong>' +
-        esc(labels[entry.status] || entry.status) + '</strong> · ' + esc(entry.itemType) + ' · ' + esc(entry.reason) + '</p>' +
+        '" data-recovery-entry="' + esc(entry.referenceId) + '"><h3>' + esc(entry.title) + '</h3>' +
         '<p>' + esc(list(getModel().Nodes).find((node) => node.Id === entry.nodeId)?.Name || 'Saved franchise') + ' / ' +
         esc(list(getModel().Rows).find((row) => row.Id === entry.rowId)?.Name || 'Franchise media') + '</p>' +
         (entry.status === 'Healthy' ? '<p>This saved reference resolves on the server. If it cannot be opened here, check Jellyfin access and refresh the page.</p>' :
@@ -394,9 +394,9 @@
         '<span class="recovery-search-hide">Hide search results</span></summary>' +
         '<div class="automation-recovery-search"><label class="field"><span>Find a library candidate</span><input data-recovery-query="' +
         esc(entry.referenceId) + '" type="search" maxlength="120" value="' +
-        esc(recoveryQueries.get(entry.referenceId) ?? entry.title ?? '') + '" placeholder="Title in your Jellyfin library"' +
+        esc(recoveryQueries.get(entry.referenceId) ?? entry.title ?? '') + '" placeholder="Title or IMDb ID / URL"' +
         (!searchable ? ' disabled' : '') + '></label><button data-recovery-search="' + esc(entry.referenceId) +
-        '" data-automation-action>Find candidate</button></div><p>Search uses the saved media type. If it is incorrect or no match appears, browse All media and choose the actual item.</p>' +
+        '" data-automation-action>Find candidate</button></div>' +
         '<button data-recovery-browse="' + esc(entry.referenceId) + '" data-recovery-read data-automation-action aria-expanded="' + !!recoveryLibrary.get(entry.referenceId)?.open + '">Browse library</button>' +
         (recoveryCandidates(entry).length ? '<ul class="automation-candidate">' + recoveryCandidates(entry).map((candidate) => '<li class="recovery-candidate-detail">' + candidateDetail(candidate) +
           '</li>').join('') + '</ul>' : '<p>No replacement is selected. Search or browse for the matching library item; the saved reference is kept.</p>') + renderLibrary(entry) + '</details>') + '</article>';

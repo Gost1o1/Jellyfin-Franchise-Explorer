@@ -1,4 +1,9 @@
-## 0.8.9.31 (unreleased)
+## 0.8.9.32 (unreleased)
+
+- Remove the recovery dialog introduction, routine report totals, per-reference status explanation and saved-type search hint. Keep loading, error, draft and unavailable-library notices visible when needed.
+- Find indexed library media by an exact IMDb ID or IMDb title URL in manual candidate search and library browsing, including canonical titles that differ from the filename.
+
+## 0.8.9.31
 
 - Collapse recovery search and library results after choosing a replacement, keeping the selected media and type-correction notice visible.
 - Add a keyboard-accessible Change replacement disclosure that preserves search terms, filters, paging and the staged selection when reopened.

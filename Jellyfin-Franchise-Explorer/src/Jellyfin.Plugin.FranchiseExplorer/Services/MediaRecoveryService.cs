@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Jellyfin.Plugin.FranchiseExplorer.Api;
 using Jellyfin.Plugin.FranchiseExplorer.Configuration;
 using Jellyfin.Plugin.FranchiseExplorer.Models;
@@ -140,6 +141,8 @@ public sealed class MediaRecoveryService(ILibraryManager library, FranchiseLibra
     public async Task<IReadOnlyList<MediaRecoveryCandidate>> CandidatesAsync(string referenceId, string query, string revision, string libraryRevision, CancellationToken cancellationToken = default, string? itemType = null)
     {
         if (string.IsNullOrWhiteSpace(query) || query.Trim().Length < 2 || query.Length > 200) throw new ArgumentException("Enter at least two characters of the replacement title.");
+        var search = query.Trim();
+        var imdbId = SearchImdbId(search);
         var snapshot = snapshots.Get(true);
         await FranchiseConfigurationGate.Gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -150,7 +153,7 @@ public sealed class MediaRecoveryService(ILibraryManager library, FranchiseLibra
             var type = SearchType(reference, itemType, false);
             var identity = MediaRecoveryPlanner.IdentityFor(config, reference, snapshot.Items);
             return snapshot.Items.Where(i => i.IsAvailable && i.ItemType == type && (MediaRecoveryPlanner.Id(i.Id) != MediaRecoveryPlanner.Id(reference.ItemId) || i.ItemType != reference.ItemType)
-                    && i.Name.Contains(query.Trim(), StringComparison.OrdinalIgnoreCase))
+                    && MatchesSearch(i, search, imdbId))
                 .GroupBy(i => MediaRecoveryPlanner.Id(i.Id)).Select(g => g.First())
                 .OrderBy(i => i.Name, StringComparer.OrdinalIgnoreCase).ThenBy(i => i.Year).ThenBy(i => i.Id, StringComparer.Ordinal)
                 .Take(50).Select(i => MediaRecoveryPlanner.Candidate(i, identity)).ToArray();
@@ -175,9 +178,10 @@ public sealed class MediaRecoveryService(ILibraryManager library, FranchiseLibra
             var type = SearchType(reference, itemType, true);
             var identity = MediaRecoveryPlanner.IdentityFor(config, reference, snapshot.Items);
             var search = query?.Trim() ?? "";
+            var imdbId = SearchImdbId(search);
             var items = snapshot.Items.Where(i => i.IsAvailable
                     && (type.Length > 0 ? i.ItemType == type : i.ItemType is "Movie" or "Series" or "BoxSet" || reference.ItemType == "Episode" && i.ItemType == "Episode")
-                    && (search.Length == 0 || i.Name.Contains(search, StringComparison.OrdinalIgnoreCase)))
+                    && (search.Length == 0 || MatchesSearch(i, search, imdbId)))
                 .GroupBy(i => MediaRecoveryPlanner.Id(i.Id)).Select(g => g.First())
                 .OrderBy(i => i.Name, StringComparer.OrdinalIgnoreCase).ThenBy(i => i.Year).ThenBy(i => i.ItemType, StringComparer.Ordinal).ThenBy(i => i.Id, StringComparer.Ordinal).ToArray();
             return new() { Items = items.Skip(startIndex).Take(limit).Select(i => MediaRecoveryPlanner.Candidate(i, identity)).ToList(),
@@ -185,6 +189,20 @@ public sealed class MediaRecoveryService(ILibraryManager library, FranchiseLibra
         }
         finally { FranchiseConfigurationGate.Gate.Release(); }
     }
+
+    private static string? SearchImdbId(string search)
+    {
+        const RegexOptions options = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant;
+        if (Regex.IsMatch(search, "^tt[0-9]{1,18}$", options)) return search;
+        if (!Uri.TryCreate(search, UriKind.Absolute, out var url) || url.Scheme is not ("http" or "https")
+            || !(url.Host.Equals("imdb.com", StringComparison.OrdinalIgnoreCase) || url.Host.Equals("www.imdb.com", StringComparison.OrdinalIgnoreCase))) return null;
+        var match = Regex.Match(url.AbsolutePath, "^/title/(tt[0-9]{1,18})/?$", options);
+        return match.Success ? match.Groups[1].Value : null;
+    }
+
+    private static bool MatchesSearch(AutomationLibraryItem item, string search, string? imdbId)
+        => imdbId is null ? item.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
+            : item.ProviderIds.TryGetValue("Imdb", out var value) && string.Equals(value, imdbId, StringComparison.OrdinalIgnoreCase);
 
     private static string SearchType(MediaRecoveryPlanner.Reference reference, string? itemType, bool allByDefault)
     {

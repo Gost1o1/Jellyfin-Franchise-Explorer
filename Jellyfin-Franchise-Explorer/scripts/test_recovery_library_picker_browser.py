@@ -553,7 +553,7 @@ def check_stale_library_responses(browser, html):
         # Jellyfin can reload the settings controller while a library request is
         # pending. Use its existing public load hook, leaving busy UI guards intact.
         fixture.page.evaluate('FranchiseSettings.load()')
-        expect(fixture.page.locator('#recovery-dialog-status')).to_contain_text('Fresh recovery report loaded')
+        expect(fixture.page.locator('#recovery-notice-count')).to_contain_text('Fresh recovery report loaded')
         route, result = fixture.held_library.pop()
         assert len(result['items']) == 10
         route.fulfill(json=result)
