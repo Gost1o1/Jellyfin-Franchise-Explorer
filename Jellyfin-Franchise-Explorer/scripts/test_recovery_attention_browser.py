@@ -52,7 +52,9 @@ def config_fixture():
                          DisplayName=TITLES[reference], ItemType='Movie', RangeMode='Full',
                          ViewingOrder='Custom', Position=index + 1)
                     for index, reference in enumerate(LINK_REFS)],
-        MediaRecovery=dict(Enabled=True, AutoReconnect=True),
+        # This suite exercises explicit manual review. Enabled automatic passes
+        # on opening review are covered by test_auto_remap_browser.py.
+        MediaRecovery=dict(Enabled=True, AutoReconnect=False),
         AutoFranchises=dict(Enabled=False, Registry=[], Exclusions=[], PendingChanges=[],
                            Ownership=[], LastRun=None, LastCompletedLocalDay=''))
 

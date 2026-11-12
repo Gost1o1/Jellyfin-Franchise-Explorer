@@ -22,9 +22,10 @@
     const { page, $, getModel, load, notify, request, change } = context;
     if (!$('auto-manage')) return null;
     let status = null, recovery = null, preview = null, busy = false, generation = 0, editingId = '',
-      recoveryError = '', recoveryLoading = false, recoveryFocus = '', lastStatusError = '', lastAutoRemapped = null;
+      recoveryError = '', recoveryLoading = false, recoveryPreparing = false, recoveryReportUnavailable = false,
+      recoveryFocus = '', lastStatusError = '', lastAutoRemapped = null;
     const selected = new Set(), selectedRules = new Set(), previewSelected = new Set(), recoveryChoices = new Map();
-    const recoveryQueries = new Map();
+    const recoveryQueries = new Map(), recoveryLibrary = new Map(), recoveryLibraryChoices = new Map();
     const referenceKey = (value) => String(value || '').replace(/-/g, '').toLowerCase();
     const settings = () => camel((context.isDirty?.() && getModel().AutoFranchises) || status?.settings || getModel().AutoFranchises || {});
     const registrations = () => list(settings().registry);
@@ -44,8 +45,13 @@
       recoveryError = message;
       if (message) notify(message, true);
     }
-    const canSearchRecovery = () => !recoveryError && !!recovery &&
+    const canSearchRecovery = () => !recoveryReportUnavailable && !!recovery &&
       (recovery.canSearch ?? recovery.libraryHealthy) === true;
+    const automaticRecoveryEnabled = () => {
+      const config = getModel().MediaRecovery || {};
+      return (recovery?.enabled ?? get(config, 'enabled', true)) !== false &&
+        (recovery?.autoReconnect ?? get(config, 'autoReconnect', true)) !== false;
+    };
     const unresolved = () => list(recovery?.entries).filter((entry) => entry.status !== 'Healthy');
     const automaticMatches = () => unresolved().filter((entry) => entry.canAutoRemap === true);
     function savedReferenceCount() {
@@ -103,11 +109,11 @@
       $('auto-preview-apply').disabled = busy || !previewSelected.size;
       $('auto-preview-selected-count').textContent = previewSelected.size + ' selected';
       $('auto-keep-choices').disabled = busy || !pending().length;
-      $('recovery-apply').disabled = busy || modelDirty() || !recoveryChoices.size ||
+      $('recovery-apply').disabled = busy || recoveryPreparing || modelDirty() || !recoveryChoices.size ||
         !canSearchRecovery() || recovery?.enabled === false;
-      $('recovery-auto-remap').disabled = busy || modelDirty() || !canSearchRecovery() || recovery?.enabled === false;
-      for (const element of $('recovery-results').querySelectorAll('[data-recovery-search]'))
-        element.disabled = busy || !canSearchRecovery();
+      $('recovery-auto-remap').disabled = busy || recoveryPreparing || modelDirty() || !canSearchRecovery() || recovery?.enabled === false;
+      for (const element of $('recovery-results').querySelectorAll('[data-recovery-read], [data-recovery-search], [data-recovery-choice], [data-recovery-query]'))
+        element.disabled = busy || recoveryPreparing || !canSearchRecovery() || element.dataset.recoveryPageDisabled === 'true';
       $('auto-run').disabled = busy || !!status?.running;
     }
     async function act(action, { write = false, reload = write, recoveryAction = false } = {}) {
@@ -146,7 +152,11 @@
       if (results[1].status === 'fulfilled') {
         recovery = camel(results[1].value);
         recoveryError = '';
-      } else recoveryError = results[1].reason?.message || 'The recovery report could not be loaded.';
+        recoveryReportUnavailable = false;
+      } else {
+        recoveryError = results[1].reason?.message || 'The recovery report could not be loaded.';
+        recoveryReportUnavailable = true;
+      }
       if (results[0].status === 'rejected') {
         lastStatusError = results[0].reason?.message || 'Automation status could not be loaded.';
         $('automation-error').textContent = lastStatusError;
@@ -273,6 +283,59 @@
         list(plan.missing).map((entry) => '<p>' + esc((entry.title || 'Missing title') + ' · ' + (entry.reason || 'No library match')) + '</p>').join('') + '</section>').join('') || '<p>' + esc(preview?.message || 'No enabled registrations to preview.') + '</p>';
       syncBusy();
     }
+    function recoveryCandidates(entry) {
+      const candidates = list(entry.candidates), chosen = recoveryLibraryChoices.get(entry.referenceId);
+      return chosen && !candidates.some((candidate) => candidate.itemId === chosen.itemId) ? [...candidates, chosen] : candidates;
+    }
+    function jellyfinLink(candidate) {
+      if (!/^(?:[a-f0-9]{32}|[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})$/i.test(candidate.itemId || '')) return '';
+      try {
+        const address = typeof window.ApiClient?.getUrl === 'function' ? window.ApiClient.getUrl('web/index.html') :
+          (typeof window.ApiClient?.serverAddress === 'function' ? window.ApiClient.serverAddress() : window.location.origin).replace(/\/$/, '') + '/web/index.html';
+        const server = new URL(address, window.location.href);
+        if (!/^https?:$/.test(server.protocol)) return '';
+        server.username = ''; server.password = ''; server.search = ''; server.hash = '';
+        server.hash = '!/details?id=' + encodeURIComponent(candidate.itemId);
+        return '<a href="' + esc(server.href) + '" data-recovery-open="' + esc(candidate.itemId) +
+          '" target="_blank" rel="noopener noreferrer">Open in Jellyfin</a>';
+      } catch (_) { return ''; }
+    }
+    function candidateDetail(candidate) {
+      return '<strong>' + esc(candidate.title) + '</strong>' +
+        '<span>' + esc((candidate.year ? candidate.year + ' · ' : '') + candidate.itemType + ' · ' + candidate.itemId) + '</span>' +
+        (list(candidate.providerIds).length ? '<span>' + esc(candidate.providerIds.map((provider) => provider.name + ': ' + provider.value).join(', ')) + '</span>' : '') +
+        jellyfinLink(candidate);
+    }
+    function libraryState(referenceId) {
+      if (!recoveryLibrary.has(referenceId)) recoveryLibrary.set(referenceId,
+        { open: false, itemType: '', query: '', items: [], totalRecordCount: 0, startIndex: 0, limit: 30, loaded: false, loading: false });
+      return recoveryLibrary.get(referenceId);
+    }
+    function renderLibrary(entry) {
+      const state = recoveryLibrary.get(entry.referenceId);
+      if (!state?.open) return '';
+      const id = esc(entry.referenceId), total = state.totalRecordCount || 0,
+        first = total ? state.startIndex + 1 : 0, last = Math.min(state.startIndex + state.items.length, total),
+        types = [['', 'All media'], ['Movie', 'Movies'], ['Series', 'TV shows'], ['BoxSet', 'Collections']];
+      if (entry.itemType === 'Episode') types.push(['Episode', 'Episodes']);
+      return '<section class="recovery-library" aria-label="Browse library for ' + esc(entry.title) + '">' +
+        '<div class="recovery-library-heading"><h4>Browse your Jellyfin library</h4><button data-recovery-library-close="' + id + '" data-automation-action>Close browser</button></div>' +
+        '<p>Inspect the actual library item, then choose it. Your saved reference changes only after Reconnect selected.</p>' +
+        '<div class="recovery-library-controls"><label class="field"><span>Media type</span><select data-recovery-library-type="' + id + '" data-recovery-read>' +
+        types.map(([value, label]) => '<option value="' + value + '"' + (state.itemType === value ? ' selected' : '') + '>' + label + '</option>').join('') +
+        '</select></label><label class="field"><span>Search library (optional)</span><input type="search" maxlength="120" data-recovery-library-query="' + id +
+        '" data-recovery-read value="' + esc(state.query) + '" placeholder="Leave blank to browse all titles"></label>' +
+        '<button data-recovery-library-search="' + id + '" data-recovery-read data-automation-action>Search library</button></div>' +
+        '<p role="status">' + (state.loading ? 'Loading library items…' : state.loaded ? first + '–' + last + ' of ' + total + ' library items' :
+          'Library items could not be loaded. Search library to try again.') + '</p>' +
+        (state.loaded && !state.items.length ? '<p>No library items match this filter. Try All media or leave the search blank.</p>' : '') +
+        '<ul class="recovery-library-items">' + state.items.map((candidate) => '<li><div class="recovery-candidate-detail">' + candidateDetail(candidate) +
+          '</div><button data-recovery-library-choose="' + esc(candidate.itemId) + '" data-recovery-read data-automation-action aria-label="Choose ' + esc(candidate.title) + '">' +
+          (recoveryChoices.get(entry.referenceId) === candidate.itemId ? 'Selected' : 'Choose replacement') + '</button></li>').join('') + '</ul>' +
+        '<div class="recovery-library-pagination"><button data-recovery-library-previous="' + id + '" data-recovery-read data-automation-action data-recovery-page-disabled="' +
+        (!state.loaded || state.startIndex <= 0) + '">Previous page</button><button data-recovery-library-next="' + id +
+        '" data-recovery-read data-automation-action data-recovery-page-disabled="' + (!state.loaded || state.startIndex + state.limit >= total) + '">Next page</button></div></section>';
+    }
     function renderRecovery() {
       const ready = automaticMatches().length,
         entries = list(recovery?.entries).filter((entry) => entry.canAutoRemap !== true &&
@@ -281,11 +344,19 @@
         labels = { Verified: 'Ready to reconnect', Ambiguous: 'Choose a version', Missing: 'Media missing',
           ManualReview: 'Choose a replacement', Healthy: 'Available in the library' };
       for (const [id, selectedId] of recoveryChoices)
-        if (!entries.some((entry) => entry.referenceId === id && list(entry.candidates).some((candidate) => candidate.itemId === selectedId))) recoveryChoices.delete(id);
+        if (!entries.some((entry) => entry.status !== 'Healthy' && entry.referenceId === id && recoveryCandidates(entry).some((candidate) => candidate.itemId === selectedId))) {
+          recoveryChoices.delete(id); recoveryLibraryChoices.delete(id);
+        }
       $('recovery-dialog-status').textContent = recoverySummary() +
-        (modelDirty() ? ' Save or reload your draft before reconnecting media.' : '');
+        (modelDirty() ? ' Your unsaved draft is kept. Save or reload it before automatic or selected reconnection.' : '');
       $('recovery-dialog-error').textContent = recoveryError;
       $('recovery-dialog-error').hidden = !recoveryError;
+      if (recoveryPreparing) {
+        $('recovery-dialog-status').textContent = modelDirty() ? 'Loading the saved recovery report. Your unsaved draft is kept.' :
+          'Checking saved references and automatically reconnecting clear matches…';
+        $('recovery-results').innerHTML = '<p role="status">Please wait while recovery checks the saved configuration.</p>';
+        syncBusy(); return;
+      }
       $('recovery-results').innerHTML = entries.map((entry) => '<article class="automation-change' +
         (referenceKey(entry.referenceId) === referenceKey(recoveryFocus) ? ' recovery-focused' : '') +
         '" data-recovery-entry="' + esc(entry.referenceId) + '"><h3>' + esc(entry.title) + '</h3><p><strong>' +
@@ -295,18 +366,23 @@
         (entry.status === 'Healthy' ? '<p>This saved reference resolves on the server. If it cannot be opened here, check Jellyfin access and refresh the page.</p>' :
         '<label class="field"><span>Choose the actual library item</span><select data-recovery-choice="' + esc(entry.referenceId) + '"' +
         (!searchable || busy ? ' disabled' : '') + '><option value="">Keep current reference</option>' +
-        list(entry.candidates).map((candidate) => '<option value="' + esc(candidate.itemId) + '"' +
+        recoveryCandidates(entry).map((candidate) => '<option value="' + esc(candidate.itemId) + '"' +
           (recoveryChoices.get(entry.referenceId) === candidate.itemId ? ' selected' : '') + '>' +
           esc(candidate.title + (candidate.year ? ' (' + candidate.year + ')' : '') + ' · ' + candidate.itemType + ' · ' + candidate.itemId +
             (candidate.verified ? ' · Verified identity' : ' · Manual choice')) + '</option>').join('') +
-        '</select></label><div class="automation-recovery-search"><label class="field"><span>Find a library candidate</span><input data-recovery-query="' +
+        '</select></label>' +
+        (recoveryLibraryChoices.get(entry.referenceId)?.itemType && recoveryChoices.get(entry.referenceId) === recoveryLibraryChoices.get(entry.referenceId).itemId &&
+          recoveryLibraryChoices.get(entry.referenceId).itemType !== entry.itemType ? '<p class="recovery-type-correction" role="status"><strong>Saved type: ' + esc(entry.itemType) +
+          '. Selected library type: ' + esc(recoveryLibraryChoices.get(entry.referenceId).itemType) + '.</strong> Reconnect selected will correct this reference’s saved type to ' +
+          esc(recoveryLibraryChoices.get(entry.referenceId).itemType) + '.</p>' : '') +
+        '<div class="automation-recovery-search"><label class="field"><span>Find a library candidate</span><input data-recovery-query="' +
         esc(entry.referenceId) + '" type="search" maxlength="120" value="' +
         esc(recoveryQueries.get(entry.referenceId) ?? entry.title ?? '') + '" placeholder="Title in your Jellyfin library"' +
         (!searchable ? ' disabled' : '') + '></label><button data-recovery-search="' + esc(entry.referenceId) +
-        '" data-automation-action>Find candidate</button></div>' +
-        (list(entry.candidates).length ? '<ul class="automation-candidate">' + entry.candidates.map((candidate) => '<li>' +
-          esc(candidate.title + ' · ' + candidate.itemId + ' · ' + list(candidate.providerIds).map((provider) => provider.name + ': ' + provider.value).join(', ')) +
-          '</li>').join('') + '</ul>' : '<p>No verified replacement is selected. Search for the matching library title; the saved reference is kept.</p>')) + '</article>').join('') ||
+        '" data-automation-action>Find candidate</button></div><p>Search uses the saved media type. If it is incorrect or no match appears, browse All media and choose the actual item.</p>' +
+        '<button data-recovery-browse="' + esc(entry.referenceId) + '" data-recovery-read data-automation-action aria-expanded="' + !!recoveryLibrary.get(entry.referenceId)?.open + '">Browse library</button>' +
+        (recoveryCandidates(entry).length ? '<ul class="automation-candidate">' + recoveryCandidates(entry).map((candidate) => '<li class="recovery-candidate-detail">' + candidateDetail(candidate) +
+          '</li>').join('') + '</ul>' : '<p>No replacement is selected. Search or browse for the matching library item; the saved reference is kept.</p>') + renderLibrary(entry)) + '</article>').join('') ||
         (recoveryError ? '<p>The recovery report is unavailable. Refresh the report to try again.</p>' :
           !recovery ? '<p>The recovery report is loading.</p>' :
           savedReferenceCount() > 0 && !(recovery.referenceCount ?? list(recovery.entries).length)
@@ -315,12 +391,28 @@
             : '<p>All ' + (recovery.referenceCount ?? list(recovery.entries).length) + ' checked references resolve in the current library.</p>');
       syncBusy();
     }
-    function openRecovery(referenceId = '') {
+    async function autoReconnect({ announce = false } = {}) {
+      return act(async () => {
+        const result = camel(await post('Recovery/Auto', {}));
+        recovery = result.status;
+        recoveryReportUnavailable = false;
+        lastAutoRemapped = Number(result.remappedCount) || 0;
+        context.refreshMediaAvailability?.();
+        if (announce) notify('Auto remap reconnected ' + lastAutoRemapped + ' references. ' +
+          unresolved().filter((entry) => entry.canAutoRemap !== true).length + ' remain for review.');
+        return result;
+      }, { write: true, recoveryAction: true });
+    }
+    async function openRecovery(referenceId = '') {
+      if (busy || recoveryPreparing) return;
       recoveryFocus = referenceId || '';
-      recoveryChoices.clear();
+      recoveryPreparing = true;
       show('recovery-dialog');
       renderRecovery();
-      void refresh();
+      try {
+        if (!modelDirty() && automaticRecoveryEnabled() && (!recovery || canSearchRecovery())) await autoReconnect();
+        else await refresh();
+      } finally { recoveryPreparing = false; render(); }
     }
     $('auto-manage').onclick = () => { render(); show('auto-registry-dialog'); };
     $('auto-add-entry').onclick = () => openEntry();
@@ -400,22 +492,14 @@
       getModel().MediaRecovery = { ...(getModel().MediaRecovery || {}), Enabled: $('recovery-enabled').checked, AutoReconnect: $('recovery-auto').checked };
     });
     $('recovery-check').onclick = () => {
+      if (automaticRecoveryEnabled() || modelDirty()) return openRecovery();
       show('recovery-dialog'); renderRecovery();
       return act(async () => {
         recovery = camel(await post('Recovery/Check', {})); recoveryChoices.clear();
         context.refreshMediaAvailability?.();
       }, { write: true, recoveryAction: true });
     };
-    $('recovery-auto-remap').onclick = () => act(async () => {
-      const result = camel(await post('Recovery/Auto', {}));
-      recovery = result.status;
-      lastAutoRemapped = Number(result.remappedCount) || 0;
-      recoveryFocus = '';
-      recoveryChoices.clear();
-      context.refreshMediaAvailability?.();
-      notify('Auto remap reconnected ' + lastAutoRemapped + ' references. ' +
-        unresolved().filter((entry) => entry.canAutoRemap !== true).length + ' remain for review.');
-    }, { write: true, recoveryAction: true });
+    $('recovery-auto-remap').onclick = () => autoReconnect({ announce: true });
     $('recovery-review').onclick = () => openRecovery();
     $('recovery-notice-review').onclick = () => openRecovery();
     $('recovery-refresh').onclick = () => void refresh();
@@ -425,27 +509,110 @@
     $('recovery-results').addEventListener('input', (event) => {
       const target = event.target.closest('[data-recovery-query]');
       if (target) recoveryQueries.set(target.dataset.recoveryQuery, target.value);
+      const libraryQuery = event.target.closest('[data-recovery-library-query]');
+      if (libraryQuery) libraryState(libraryQuery.dataset.recoveryLibraryQuery).query = libraryQuery.value;
     });
     $('recovery-results').addEventListener('change', (event) => {
       const target = event.target.closest('[data-recovery-choice]');
-      if (target) { if (target.value) recoveryChoices.set(target.dataset.recoveryChoice, target.value); else recoveryChoices.delete(target.dataset.recoveryChoice); syncBusy(); }
+      if (target) {
+        const referenceId = target.dataset.recoveryChoice;
+        if (target.value) recoveryChoices.set(referenceId, target.value); else recoveryChoices.delete(referenceId);
+        if (recoveryLibraryChoices.get(referenceId)?.itemId !== target.value) recoveryLibraryChoices.delete(referenceId);
+        renderRecovery();
+      }
+      const type = event.target.closest('[data-recovery-library-type]');
+      if (type) {
+        libraryState(type.dataset.recoveryLibraryType).itemType = type.value;
+        void loadLibrary(type.dataset.recoveryLibraryType, 0);
+      }
     });
+    function checkedRecoverySnapshot() {
+      if (!canSearchRecovery()) throw Error('Refresh the recovery report when the library is ready, then try again.');
+      return { revision: recovery.revision, libraryRevision: recovery.libraryRevision };
+    }
+    function verifyRecoverySnapshot(snapshot) {
+      if (recovery?.revision !== snapshot.revision || recovery?.libraryRevision !== snapshot.libraryRevision)
+        throw Error('The recovery report changed while loading library items. Your choices were kept. Search or browse again.');
+    }
+    async function loadLibrary(referenceId, startIndex = 0) {
+      if (busy || recoveryPreparing) return null;
+      const state = libraryState(referenceId);
+      state.open = true; state.loading = true;
+      renderRecovery();
+      return act(async () => {
+        try {
+          const snapshot = checkedRecoverySnapshot(), query = state.query.trim(), itemType = state.itemType;
+          if (startIndex && (query !== state.appliedQuery || itemType !== state.appliedItemType)) startIndex = 0;
+          const result = camel(await request('FranchiseExplorer/Recovery/Library?' + new URLSearchParams({
+            referenceId, ...snapshot, query, itemType, startIndex: String(startIndex), limit: '30',
+          })));
+          verifyRecoverySnapshot(snapshot);
+          Object.assign(state, { items: list(result.items), totalRecordCount: Number(result.totalRecordCount) || 0,
+            startIndex: Number(result.startIndex) || 0, limit: Number(result.limit) || 30,
+            appliedQuery: query, appliedItemType: itemType, loaded: true });
+        } finally { state.loading = false; }
+      }, { recoveryAction: true });
+    }
     $('recovery-results').addEventListener('click', (event) => {
+      const browse = event.target.closest('[data-recovery-browse]'), close = event.target.closest('[data-recovery-library-close]'),
+        librarySearch = event.target.closest('[data-recovery-library-search]'), previous = event.target.closest('[data-recovery-library-previous]'),
+        next = event.target.closest('[data-recovery-library-next]'), choose = event.target.closest('[data-recovery-library-choose]');
+      if (browse) { void loadLibrary(browse.dataset.recoveryBrowse); return; }
+      if (close) { libraryState(close.dataset.recoveryLibraryClose).open = false; renderRecovery(); return; }
+      if (librarySearch) { void loadLibrary(librarySearch.dataset.recoveryLibrarySearch); return; }
+      if (previous || next) {
+        const referenceId = previous?.dataset.recoveryLibraryPrevious || next.dataset.recoveryLibraryNext, state = libraryState(referenceId);
+        void loadLibrary(referenceId, Math.max(0, state.startIndex + (previous ? -state.limit : state.limit))); return;
+      }
+      if (choose) {
+        const referenceId = choose.closest('[data-recovery-entry]').dataset.recoveryEntry,
+          candidate = libraryState(referenceId).items.find((item) => item.itemId === choose.dataset.recoveryLibraryChoose);
+        if (candidate && !busy && canSearchRecovery()) {
+          recoveryLibraryChoices.set(referenceId, candidate); recoveryChoices.set(referenceId, candidate.itemId); renderRecovery();
+        }
+        return;
+      }
       const button = event.target.closest('[data-recovery-search]');
       if (!button) return;
       const referenceId = button.dataset.recoverySearch;
       const query = [...$('recovery-results').querySelectorAll('[data-recovery-query]')].find((input) => input.dataset.recoveryQuery === referenceId)?.value.trim();
       if (!query) { problem('Enter a title to find a library candidate.'); return; }
-      act(async () => {
-        const candidates = camel(await request('FranchiseExplorer/Recovery/Candidates?' + new URLSearchParams({ referenceId, query, revision: recovery.revision, libraryRevision: recovery.libraryRevision })));
-        const entry = recovery.entries.find((item) => item.referenceId === referenceId);
-        if (entry) { entry.candidates = candidates; recoveryChoices.delete(referenceId); }
-      }, { recoveryAction: true });
+      recoveryQueries.set(referenceId, query);
+      void (async () => {
+        if (!modelDirty() && automaticRecoveryEnabled()) {
+          const result = await autoReconnect();
+          if (!result || !unresolved().some((entry) => entry.referenceId === referenceId)) return;
+        }
+        await act(async () => {
+          const snapshot = checkedRecoverySnapshot(), candidates = camel(await request('FranchiseExplorer/Recovery/Candidates?' +
+            new URLSearchParams({ referenceId, query, ...snapshot })));
+          verifyRecoverySnapshot(snapshot);
+          const entry = recovery.entries.find((item) => item.referenceId === referenceId);
+          if (entry) {
+            const chosen = recoveryCandidates(entry).find((candidate) => candidate.itemId === recoveryChoices.get(referenceId));
+            entry.candidates = candidates;
+            if (chosen && !candidates.some((candidate) => candidate.itemId === chosen.itemId)) recoveryLibraryChoices.set(referenceId, chosen);
+          }
+        }, { recoveryAction: true });
+      })();
+    });
+    $('recovery-results').addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      const libraryQuery = event.target.closest('[data-recovery-library-query]'), query = event.target.closest('[data-recovery-query]');
+      if (!libraryQuery && !query) return;
+      event.preventDefault();
+      if (libraryQuery) void loadLibrary(libraryQuery.dataset.recoveryLibraryQuery);
+      else [...$('recovery-results').querySelectorAll('[data-recovery-search]')].find((button) => button.dataset.recoverySearch === query.dataset.recoveryQuery)?.click();
     });
     $('recovery-apply').onclick = () => act(async () => {
       recovery = camel(await post('Recovery/Apply', { revision: recovery.revision, libraryRevision: recovery.libraryRevision,
-        choices: [...recoveryChoices].map(([referenceId, itemId]) => ({ referenceId, itemId })) }));
-      recoveryChoices.clear(); context.refreshMediaAvailability?.(); notify('Selected media references reconnected.');
+        choices: [...recoveryChoices].map(([referenceId, itemId]) => {
+          const choice = { referenceId, itemId }, candidate = recoveryLibraryChoices.get(referenceId),
+            entry = recovery.entries.find((item) => item.referenceId === referenceId);
+          if (candidate?.itemId === itemId && candidate.itemType !== entry?.itemType) choice.correctItemType = true;
+          return choice;
+        }) }));
+      recoveryChoices.clear(); recoveryLibraryChoices.clear(); context.refreshMediaAvailability?.(); notify('Selected media references reconnected.');
     }, { write: true, recoveryAction: true });
     // These hooks run inside the main controller's local configuration transaction.
     // They never POST independently and therefore participate in Save, Undo and backup export.

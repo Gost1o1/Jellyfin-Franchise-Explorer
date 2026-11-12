@@ -1,4 +1,12 @@
-## 0.8.9.29 (unreleased)
+## 0.8.9.30 (unreleased)
+
+- Run an automatic recovery pass before reviewing saved references when automatic recovery is enabled, while preserving unsaved editor changes.
+- Recognize title separator differences such as colons and dashes while retaining the complete title word sequence, media type, year and identity-conflict checks.
+- Add a paged library browser to recovery, with media-type filters, replacement selection and links to inspect the actual item in Jellyfin.
+- Allow an explicit correction of a mistakenly saved movie, show or collection type for full-media references; retain provider, episode-range and collection-binding checks.
+- Add regressions for unresolved-media browsing, wrong-type references, competing versions, stale reports and protected editor drafts.
+
+## 0.8.9.29
 
 - Automatically remap older movie, show and collection references with one exact title/type match when trustworthy provider identity was never saved; retain conflicting identities, duplicate versions and insufficient episode context for review.
 - Add Auto remap for an immediate complete pass and keep clear automatic matches out of the per-record review list. Preserve reference IDs, membership, ranges, artwork and progress.

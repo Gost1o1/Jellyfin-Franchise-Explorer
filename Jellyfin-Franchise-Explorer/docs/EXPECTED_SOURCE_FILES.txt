@@ -210,4 +210,6 @@ Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Web/FranchiseS
 Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Web/FranchiseSubtitleTimelineScope.cs
 Jellyfin-Franchise-Explorer/src/Jellyfin.Plugin.FranchiseExplorer/Web/FranchiseViewerPreferenceStore.cs
 Jellyfin-Franchise-Explorer/tests/AutoAdd.Tests/AutoRecoveryTests.cs
+Jellyfin-Franchise-Explorer/tests/AutoAdd.Tests/RecoveryLibraryPickerTests.cs
+Jellyfin-Franchise-Explorer/scripts/test_recovery_library_picker_browser.py
 Jellyfin-Franchise-Explorer/tests/AutoAdd.Tests/SubtitleOffRegressionTests.cs

@@ -47,7 +47,8 @@ internal static class AutoRecoveryTests
         var iron = Link("  Iron\tMan 3  ");
         Check(Review(iron, Item("Iron Man 3")) is { CanAutoRemap: true, MatchMethod: "Exact title and type" }, "Case and whitespace normalization must recover a unique exact movie title");
         Check(!Review(Link("Iron Man"), Item("Iron Man 3")).CanAutoRemap, "Partial and fuzzy titles must never be automatic matches");
-        Check(!Review(Link("Thor The Dark World"), Item("Thor: The Dark World")).CanAutoRemap, "Normalization must preserve punctuation rather than manufacture a title match");
+        Check(Review(Link("Thor The Dark World"), Item("Thor: The Dark World")).CanAutoRemap, "Subtitle separators may vary when the entire title word sequence and type agree");
+        Check(!Review(Link("The Worlds End"), Item("The World's End")).CanAutoRemap, "Normalization must retain punctuation within words");
         Check(Review(Link("Dune"), Item("Dune", year: 1984), Item("Dune", year: 2021)) is { Status: "Ambiguous", CanAutoRemap: false }, "Remakes without a stored production year must remain ambiguous");
         var year = Link("Dune"); year.Identity = new() { ItemType = "Movie", Year = 2021 };
         Check(Review(year, Item("Dune", year: 1984), Item("Dune", year: 2021)).CanAutoRemap, "A stored production year may disambiguate otherwise exact titles");

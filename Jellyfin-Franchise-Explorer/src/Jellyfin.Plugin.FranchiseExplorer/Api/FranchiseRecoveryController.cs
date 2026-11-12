@@ -37,10 +37,19 @@ public sealed class FranchiseRecoveryController(MediaRecoveryService recovery, I
         catch (InvalidOperationException ex) { return Conflict(new { error = ex.Message }); }
     }
     [HttpGet("Candidates")]
-    public async Task<IActionResult> Candidates([FromQuery] string referenceId, [FromQuery] string query, [FromQuery] string revision, [FromQuery] string libraryRevision, CancellationToken cancellationToken)
+    public async Task<IActionResult> Candidates([FromQuery] string referenceId, [FromQuery] string query, [FromQuery] string revision, [FromQuery] string libraryRevision, CancellationToken cancellationToken, [FromQuery] string? itemType = null)
     {
         if (!IsAdministrator()) return Unauthorized();
-        try { return JsonResult(await recovery.CandidatesAsync(referenceId, query, revision, libraryRevision, cancellationToken).ConfigureAwait(false)); }
+        try { return JsonResult(await recovery.CandidatesAsync(referenceId, query, revision, libraryRevision, cancellationToken, itemType).ConfigureAwait(false)); }
+        catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+        catch (InvalidOperationException ex) { return Conflict(new { error = ex.Message }); }
+    }
+    [HttpGet("Library")]
+    public async Task<IActionResult> Library([FromQuery] string referenceId, [FromQuery] string revision, [FromQuery] string libraryRevision, CancellationToken cancellationToken,
+        [FromQuery] string? itemType = null, [FromQuery] string? query = null, [FromQuery] int startIndex = 0, [FromQuery] int limit = 30)
+    {
+        if (!IsAdministrator()) return Unauthorized();
+        try { return JsonResult(await recovery.LibraryAsync(referenceId, revision, libraryRevision, itemType, query, startIndex, limit, cancellationToken).ConfigureAwait(false)); }
         catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
         catch (InvalidOperationException ex) { return Conflict(new { error = ex.Message }); }
     }

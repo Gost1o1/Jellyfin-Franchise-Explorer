@@ -96,6 +96,7 @@ jobs:
           python3 scripts/test_missing_media_display_browser.py
           python3 scripts/test_recovery_attention_browser.py
           python3 scripts/test_auto_remap_browser.py
+          python3 scripts/test_recovery_library_picker_browser.py
           python3 scripts/test_subtitle_lifecycle_browser.py
           python3 scripts/test_card_navigation_v081.py
           python3 scripts/test_local_web_handoff.py
