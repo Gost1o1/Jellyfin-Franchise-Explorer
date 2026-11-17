@@ -261,7 +261,9 @@ public sealed class FranchiseTimelineController : ControllerBase
             if (state is null || state.PlaybackMode != "playing" || state.SessionId != request.SessionId) return Conflict("Timeline session not active.");
             bool SameItem(string key) => MatchesItem(key, itemId);
             if (state.Index > 0 && state.QueueKeys.Count > state.Index - 1
-                && SameItem(state.QueueKeys[state.Index - 1]) && state.PendingAutoAdvanceUtc.HasValue)
+                && SameItem(state.QueueKeys[state.Index - 1])
+                && (state.PendingAutoAdvanceUtc.HasValue || !CurrentItemMatches(state, itemId)
+                    && state.CompletedKeys.Contains(state.QueueKeys[state.Index - 1])))
                 return TimelineJson(state); // Server PlaybackStopped already advanced it.
             if (state.Index < 0 || state.Index >= state.QueueKeys.Count || !SameItem(state.QueueKeys[state.Index]))
                 return Conflict("The ended video is not the current timeline item.");
@@ -495,6 +497,22 @@ public sealed class FranchiseTimelineController : ControllerBase
                 var index = progress.Index;
                 if (!MatchesItem(progress.QueueKeys[index], itemId))
                 {
+                    // The native Web queue can start its next episode before
+                    // the previous PlaybackStopped task acquires this lock.
+                    // Record that genuine completion without rolling the new
+                    // episode back or scheduling a second auto-next handoff.
+                    if (playedToCompletion && index > 0 && MatchesItem(progress.QueueKeys[index - 1], itemId))
+                    {
+                        var previous = progress.QueueKeys[index - 1];
+                        if (!progress.CompletedKeys.Contains(previous))
+                        {
+                            progress.CompletedKeys.Add(previous);
+                            progress.UpdatedUtc = DateTimeOffset.UtcNow;
+                            await WriteProgressAsync(path, progress, cancellationToken).ConfigureAwait(false);
+                            savedCompletions++;
+                        }
+                        continue;
+                    }
                     // A user may seek forward in the same Jellyfin queue. Do not
                     // falsely mark skipped episodes watched.
                     index = progress.QueueKeys.FindIndex(progress.Index + 1, key => MatchesItem(key, itemId));
@@ -506,6 +524,17 @@ public sealed class FranchiseTimelineController : ControllerBase
                 {
                     progress.Index = index;
                     progress.PositionTicks = 0;
+                    progress.ItemId = itemId.ToString("D");
+                    changed = true;
+                }
+                if (activePlaybackEvent && progress.PendingAutoAdvanceUtc.HasValue
+                    && MatchesItem(progress.PendingAutoAdvanceToKey, itemId))
+                {
+                    // PlaybackStart at position zero is already proof that
+                    // native auto-next consumed the completion marker.
+                    progress.PendingAutoAdvanceUtc = null;
+                    progress.PendingAutoAdvanceFromKey = string.Empty;
+                    progress.PendingAutoAdvanceToKey = string.Empty;
                     changed = true;
                 }
                 if (playedToCompletion)

@@ -54,6 +54,8 @@ jobs:
           python3 scripts/test_episode_presentation_browser.py
           python3 scripts/test_viewer_preferences_browser.py
           python3 scripts/test_my_media_tile_browser.py
+          python3 scripts/test_kefin_home_browser.py
+          python3 scripts/test_chronological_native_queue_browser.py
           python3 scripts/test_my_media_tile_resize.py
           python3 scripts/test_v085_native_card.py
           python3 scripts/test_v085_card_progress.py
