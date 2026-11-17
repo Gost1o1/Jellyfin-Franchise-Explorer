@@ -24,9 +24,9 @@
 > [!IMPORTANT]
 > **Experimental project for Jellyfin 12.2.** Franchise Explorer is unfinished and is being tested on a personal Jellyfin server. Features and client compatibility can change. **Back up Jellyfin and your plugin data before installing or updating.** Chronological playback and automatic next-item playback are still experimental; do not assume they work in every client.
 
-## v0.8.9.32 — Recovery dialog cleanup and IMDb search (unreleased)
+## v0.8.9.32 — Recovery diagnostics and IMDb search (unreleased)
 
-This branch prepares v0.8.9.32 with less explanatory text in the media recovery dialog and exact manual IMDb ID or title-URL searches for indexed library items. The published catalog remains on v0.8.9.31; v0.8.9.32 has not been released.
+This branch prepares v0.8.9.32 with less explanatory text in the media recovery dialog and exact manual IMDb ID or title-URL searches for indexed library items. For a missing video, **Check video file** inspects the full server path from Jellyfin's own process and reports read access, file attributes, matching library content types, and actual native records, including unexpected types. **Scan Jellyfin libraries** queues Jellyfin's native scan; automatic recovery retries after indexing finishes. ReadOnly and Archive flags are reported without changing them. A scan request does not guarantee that Jellyfin imports the file, and an unindexed file cannot be linked until it has a real Jellyfin item ID. The published catalog remains on v0.8.9.31; v0.8.9.32 has not been released.
 
 | Component | Current target or requirement |
 | --- | --- |

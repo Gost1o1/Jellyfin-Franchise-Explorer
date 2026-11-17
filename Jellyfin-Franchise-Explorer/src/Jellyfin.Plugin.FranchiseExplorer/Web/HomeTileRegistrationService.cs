@@ -234,6 +234,7 @@ public sealed class PluginServiceRegistrator : IPluginServiceRegistrator
         services.AddSingleton<AutoFranchiseService>();
         services.AddSingleton<IScheduledTask, AutoFranchisesTask>();
         services.AddSingleton<MediaRecoveryService>();
+        services.AddSingleton<RecoveryFileService>();
         services.AddHostedService(provider => provider.GetRequiredService<MediaRecoveryService>());
         services.AddSingleton<PlaybackSubtitlePolicyStore>();
         services.AddSingleton<FranchiseViewerPreferenceStore>();

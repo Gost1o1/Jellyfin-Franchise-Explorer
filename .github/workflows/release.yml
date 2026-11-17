@@ -47,6 +47,7 @@ jobs:
           python3 scripts/test_recovery_attention_browser.py
           python3 scripts/test_auto_remap_browser.py
           python3 scripts/test_recovery_library_picker_browser.py
+          python3 scripts/test_recovery_file_check_browser.py
           python3 scripts/test_subtitle_lifecycle_browser.py
           python3 scripts/test_specific_episode_browser.py
           python3 scripts/test_imdb_lists_episode_ui_browser.py

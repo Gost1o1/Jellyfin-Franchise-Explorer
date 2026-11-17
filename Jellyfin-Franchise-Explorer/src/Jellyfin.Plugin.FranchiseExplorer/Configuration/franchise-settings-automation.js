@@ -25,7 +25,7 @@
       recoveryError = '', recoveryLoading = false, recoveryPreparing = false, recoveryReportUnavailable = false,
       recoveryFocus = '', lastStatusError = '', lastAutoRemapped = null;
     const selected = new Set(), selectedRules = new Set(), previewSelected = new Set(), recoveryChoices = new Map();
-    const recoveryQueries = new Map(), recoveryLibrary = new Map(), recoveryLibraryChoices = new Map(), recoverySearchOpen = new Map();
+    const recoveryQueries = new Map(), recoveryLibrary = new Map(), recoveryLibraryChoices = new Map(), recoverySearchOpen = new Map(), recoveryFiles = new Map();
     const referenceKey = (value) => String(value || '').replace(/-/g, '').toLowerCase();
     const settings = () => camel((context.isDirty?.() && getModel().AutoFranchises) || status?.settings || getModel().AutoFranchises || {});
     const registrations = () => list(settings().registry);
@@ -114,6 +114,8 @@
       $('recovery-auto-remap').disabled = busy || recoveryPreparing || modelDirty() || !canSearchRecovery() || recovery?.enabled === false;
       for (const element of $('recovery-results').querySelectorAll('[data-recovery-read], [data-recovery-search], [data-recovery-choice], [data-recovery-query]'))
         element.disabled = busy || recoveryPreparing || !canSearchRecovery() || element.dataset.recoveryPageDisabled === 'true';
+      for (const element of $('recovery-results').querySelectorAll('[data-recovery-file-path], [data-recovery-file-check], [data-recovery-file-scan]'))
+        element.disabled = busy || recoveryPreparing || (element.hasAttribute('data-recovery-file-scan') && modelDirty());
       $('auto-run').disabled = busy || !!status?.running;
     }
     async function act(action, { write = false, reload = write, recoveryAction = false } = {}) {
@@ -311,6 +313,39 @@
         { open: false, itemType: '', query: '', items: [], totalRecordCount: 0, startIndex: 0, limit: 30, loaded: false, loading: false });
       return recoveryLibrary.get(referenceId);
     }
+    function fileState(referenceId) {
+      if (!recoveryFiles.has(referenceId)) recoveryFiles.set(referenceId,
+        { path: '', open: false, result: null, error: '', request: 0 });
+      return recoveryFiles.get(referenceId);
+    }
+    function renderFileCheck(entry) {
+      const state = recoveryFiles.get(entry.referenceId), result = state?.result, id = esc(entry.referenceId);
+      const records = (items) => list(items).map((item) => '<li class="recovery-candidate-detail"><strong>' + esc(item.title || 'Unnamed item') +
+        '</strong><span>' + esc(item.itemType + ' · ' + item.itemId + (item.isVirtual ? ' · Virtual item' : '') +
+          (item.supported === false ? ' · Not supported by recovery' : '')) + '</span>' + jellyfinLink(item) + '</li>').join('');
+      const scanMessage = result?.scanState === 'Queued' ? 'Jellyfin library scan queued.' :
+        result?.scanState === 'Running' ? 'Jellyfin library scan is running.' :
+        result?.scanState === 'AlreadyQueued' ? 'Jellyfin library scan is already queued.' : '';
+      return '<details class="recovery-file-check" data-recovery-file-details="' + id + '"' + (state?.open ? ' open' : '') +
+        '><summary>Check video file</summary><div class="recovery-file-controls"><label class="field"><span>Video file path on the Jellyfin server</span>' +
+        '<input type="text" maxlength="4096" data-recovery-file-path="' + id + '" value="' + esc(state?.path || '') +
+        '" placeholder="Full path to the video file" autocomplete="off" spellcheck="false"></label><div class="recovery-file-actions">' +
+        '<button data-recovery-file-check="' + id + '" data-automation-action>Check file</button>' +
+        '<button data-recovery-file-scan="' + id + '" data-automation-action>Scan Jellyfin libraries</button></div></div>' +
+        (state?.error ? '<p role="alert" data-recovery-file-error>' + esc(state.error) + '</p>' : '') +
+        (result ? '<div class="recovery-file-result" data-recovery-file-result="' + id + '"><p role="status">' +
+          esc([scanMessage, result.message].filter(Boolean).join(' ')) + '</p>' +
+          (result.error ? '<p role="alert">' + esc(result.error) + '</p>' : '') +
+          '<dl class="automation-details"><dt>File found</dt><dd>' + (result.fileExists ? 'Yes' : 'No') +
+          '</dd><dt>Readable by Jellyfin</dt><dd>' + (result.readable ? 'Yes' : 'No') + '</dd>' +
+          '<dt>Attributes</dt><dd>' + esc(result.attributes || 'Unavailable') + '</dd><dt>Library</dt><dd>' +
+          (list(result.libraries).map((library) => esc(library.name + (library.contentType ? ' · ' + library.contentType : ''))).join('<br>') ||
+            (result.inLibrary ? 'Configured library' : 'Outside configured libraries')) + '</dd></dl>' +
+          (list(result.items).length ? '<h4>Video records in Jellyfin</h4><ul class="recovery-file-items">' + records(result.items) + '</ul>' :
+            '<p>No indexed video record was found for this path.</p>') +
+          (list(result.parentItems).length ? '<h4>Parent folder records</h4><ul class="recovery-file-items">' + records(result.parentItems) + '</ul>' : '') +
+          '</div>' : '') + '</details>';
+    }
     function collapseRecoverySearch(referenceId) {
       recoverySearchOpen.set(referenceId, false);
       renderRecovery();
@@ -399,7 +434,7 @@
         '" data-automation-action>Find candidate</button></div>' +
         '<button data-recovery-browse="' + esc(entry.referenceId) + '" data-recovery-read data-automation-action aria-expanded="' + !!recoveryLibrary.get(entry.referenceId)?.open + '">Browse library</button>' +
         (recoveryCandidates(entry).length ? '<ul class="automation-candidate">' + recoveryCandidates(entry).map((candidate) => '<li class="recovery-candidate-detail">' + candidateDetail(candidate) +
-          '</li>').join('') + '</ul>' : '<p>No replacement is selected. Search or browse for the matching library item; the saved reference is kept.</p>') + renderLibrary(entry) + '</details>') + '</article>';
+          '</li>').join('') + '</ul>' : '<p>No replacement is selected. Search or browse for the matching library item; the saved reference is kept.</p>') + renderLibrary(entry) + renderFileCheck(entry) + '</details>') + '</article>';
       }).join('') ||
         (recoveryError ? '<p>The recovery report is unavailable. Refresh the report to try again.</p>' :
           !recovery ? '<p>The recovery report is loading.</p>' :
@@ -529,6 +564,13 @@
       if (target) recoveryQueries.set(target.dataset.recoveryQuery, target.value);
       const libraryQuery = event.target.closest('[data-recovery-library-query]');
       if (libraryQuery) libraryState(libraryQuery.dataset.recoveryLibraryQuery).query = libraryQuery.value;
+      const filePath = event.target.closest('[data-recovery-file-path]');
+      if (filePath) {
+        const state = fileState(filePath.dataset.recoveryFilePath);
+        state.path = filePath.value; state.result = null; state.error = ''; state.request++;
+        filePath.closest('[data-recovery-file-details]')?.querySelector('[data-recovery-file-result]')?.remove();
+        filePath.closest('[data-recovery-file-details]')?.querySelector('[data-recovery-file-error]')?.remove();
+      }
     });
     $('recovery-results').addEventListener('change', (event) => {
       const target = event.target.closest('[data-recovery-choice]');
@@ -549,6 +591,8 @@
       const details = event.target;
       if (details.matches?.('[data-recovery-search-details]'))
         recoverySearchOpen.set(details.dataset.recoverySearchDetails, details.open);
+      if (details.matches?.('[data-recovery-file-details]'))
+        fileState(details.dataset.recoveryFileDetails).open = details.open;
     }, true);
     function checkedRecoverySnapshot() {
       if (!canSearchRecovery()) throw Error('Refresh the recovery report when the library is ready, then try again.');
@@ -577,7 +621,35 @@
         } finally { state.loading = false; }
       }, { recoveryAction: true });
     }
+    async function checkVideoFile(referenceId, scan = false) {
+      if (busy || recoveryPreparing) return null;
+      const state = fileState(referenceId), path = state.path.trim();
+      state.open = true;
+      if (!path) { state.error = 'Enter the full video file path on your Jellyfin server.'; renderRecovery(); return null; }
+      if (scan && modelDirty()) {
+        recoveryProblem('Save or reload your unsaved configuration changes before scanning the library.'); render(); return null;
+      }
+      return act(async () => {
+        const current = generation, sequence = ++state.request;
+        state.error = '';
+        try {
+          const result = camel(await post('Recovery/File/' + (scan ? 'Scan' : 'Check'), { path }));
+          if (current !== generation || sequence !== state.request || path !== state.path.trim() ||
+            !list(recovery?.entries).some((entry) => entry.referenceId === referenceId)) return null;
+          state.result = result;
+          return result;
+        } catch (error) {
+          if (current === generation && sequence === state.request && path === state.path.trim())
+            state.error = error.message || 'The video file could not be checked. Try again.';
+          return null;
+        }
+      }, { write: scan, reload: false, recoveryAction: true });
+    }
     $('recovery-results').addEventListener('click', (event) => {
+      const fileCheck = event.target.closest('[data-recovery-file-check]'), fileScan = event.target.closest('[data-recovery-file-scan]');
+      if (fileCheck || fileScan) {
+        void checkVideoFile(fileCheck?.dataset.recoveryFileCheck || fileScan.dataset.recoveryFileScan, !!fileScan); return;
+      }
       const browse = event.target.closest('[data-recovery-browse]'), close = event.target.closest('[data-recovery-library-close]'),
         librarySearch = event.target.closest('[data-recovery-library-search]'), previous = event.target.closest('[data-recovery-library-previous]'),
         next = event.target.closest('[data-recovery-library-next]'), choose = event.target.closest('[data-recovery-library-choose]');
@@ -622,6 +694,8 @@
     });
     $('recovery-results').addEventListener('keydown', (event) => {
       if (event.key !== 'Enter') return;
+      const filePath = event.target.closest('[data-recovery-file-path]');
+      if (filePath) { event.preventDefault(); void checkVideoFile(filePath.dataset.recoveryFilePath); return; }
       const libraryQuery = event.target.closest('[data-recovery-library-query]'), query = event.target.closest('[data-recovery-query]');
       if (!libraryQuery && !query) return;
       event.preventDefault();
