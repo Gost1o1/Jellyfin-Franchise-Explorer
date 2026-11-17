@@ -41,10 +41,10 @@ def fixture(browser, identifiers, *, index=0, position=0, legacy_device=False, r
         queueKeys:ids.map((id,i)=>'reference-'+i+':'+id),queueEpisodes:ids.map(id=>id===movie?0:1),completedKeys:[]};
       if(tracked)localStorage.setItem('fe-local-timeline-v1:'+uid,JSON.stringify({version:1,created:Date.now(),rowId:row,expectedId:ids[index],
         replayOnly:replay,homeOnly:true,subtitleEnabled:false,state:window.state}));
-      window.startNativeItem=item=>{window.currentId=item.Id;window.started=true;window.seconds=0;};
+      window.startNativeItem=item=>{window.currentId=item.Id;window.started=true;window.seconds=0;window.nativeFinished=false;};
       const video=document.querySelector('video');
       Object.defineProperties(video,{paused:{get:()=>!window.started},readyState:{get:()=>4},currentTime:{get:()=>window.seconds},
-        ended:{get:()=>false},duration:{get:()=>600}});
+        ended:{get:()=>!!window.nativeFinished},duration:{get:()=>600}});
       setInterval(()=>{if(window.started)window.seconds+=0.25},100);
       const ok=value=>new Response(JSON.stringify(value),{status:200,headers:{'Content-Type':'application/json'}});
       window.fetch=async(path,options={})=>{
@@ -109,6 +109,16 @@ def run():
                 assert page.evaluate('location.hash') == '#/home'
                 print('PASS explicit chronological native queue',len(ids),'start',index,'resume',position,'legacy-device',legacy)
                 if len(ids)>1 and index==0:
+                    # Near-end completion is persisted before the native video
+                    # actually ends. A Home fallback must not interrupt it.
+                    page.evaluate('''()=>{
+                      window.state={...window.state,index:1,itemId:window.nativeCalls[0].items[1].Id,
+                        completedKeys:[window.state.queueKeys[0]],pendingAutoAdvanceUtc:new Date().toISOString(),
+                        pendingAutoAdvanceFromKey:window.state.queueKeys[0],pendingAutoAdvanceToKey:window.state.queueKeys[1]};
+                    }''')
+                    page.wait_for_timeout(2300)
+                    assert page.evaluate('sessionStorage.getItem("fe-quickplay-v1")') is None, 'A near-end marker must not interrupt a still-visible native video'
+                    assert page.evaluate('window.nativeCalls.length') == 1
                     # Native auto-next owns the actual next item. The Home
                     # fallback must adopt it without launching another copy.
                     page.evaluate('''()=>{
@@ -120,6 +130,21 @@ def run():
                     assert page.evaluate('window.nativeCalls.length') == 1
                     assert page.evaluate('sessionStorage.getItem("fe-quickplay-v1")') is None
                     print('PASS native chronological successor adopted without duplicate handoff')
+                if len(ids)>100:
+                    # At the bounded native window's real EOF, recovery still
+                    # has the complete chronology and opens its next window.
+                    page.evaluate('''({uid,next})=>{
+                      const owner=JSON.parse(localStorage.getItem('fe-local-follow-v1:'+uid));
+                      owner.lastItemId=window.state.queueKeys[next-1].split(':').pop();
+                      localStorage.setItem('fe-local-follow-v1:'+uid,JSON.stringify(owner));
+                      window.state={...window.state,index:next,itemId:window.state.queueKeys[next].split(':').pop(),
+                        pendingAutoAdvanceUtc:new Date().toISOString(),pendingAutoAdvanceFromKey:window.state.queueKeys[next-1],
+                        pendingAutoAdvanceToKey:window.state.queueKeys[next]};
+                      window.started=false;window.currentId='';window.nativeFinished=true;
+                    }''', dict(uid=UID,next=index+100))
+                    page.wait_for_function('window.nativeCalls.length===2',timeout=10000)
+                    assert page.evaluate('window.nativeCalls[1].items[window.nativeCalls[1].startIndex].Id') == ids[index+100]
+                    print('PASS bounded native window EOF continues at the next chronological entry')
                 if len(ids)==1:
                     page.evaluate('window.state.playbackMode="complete";window.finishNativeItem()')
                     assert page.evaluate('window.nativeFinished') is True
