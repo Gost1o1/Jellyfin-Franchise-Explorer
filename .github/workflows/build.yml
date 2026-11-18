@@ -102,8 +102,10 @@ jobs:
           python3 scripts/test_card_navigation_v081.py
           python3 scripts/test_local_web_handoff.py
           python3 scripts/test_autonext_browser.py
+          python3 scripts/test_chronological_native_queue_browser.py
           python3 scripts/test_home_recovery_browser.py
           python3 scripts/test_my_media_tile_browser.py
+          python3 scripts/test_kefin_home_browser.py
           python3 scripts/test_my_media_tile_resize.py
           python3 scripts/test_v085_native_card.py
           python3 scripts/test_v085_card_progress.py
