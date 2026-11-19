@@ -27,11 +27,12 @@ internal static class RecoveryLibraryPickerTests
     public static async Task Run()
     {
         await BrowseLibrary();
+        await SearchImdbIdentity();
         await CorrectWrongSavedType();
         await RejectUnsafeTypeCorrections();
         ExactTitleSeparators();
         await EnforceAdministrator();
-        Console.WriteLine("PASS recovery library picker: complete paged browsing, explicit type repair, preserved progress and metadata, evidence/range guards, revisions and administrator checks");
+        Console.WriteLine("PASS recovery library picker: complete paged browsing, exact manual IMDb lookup, explicit type repair, preserved progress and metadata, evidence/range guards, revisions and administrator checks");
     }
 
     private static async Task BrowseLibrary()
@@ -93,6 +94,63 @@ internal static class RecoveryLibraryPickerTests
         fixture.Scanning = true;
         Check(await Rejects(() => fixture.Service.LibraryAsync(link.Id, status.Revision, status.LibraryRevision)),
             "Library browsing must reject an active library scan");
+    }
+
+    private static async Task SearchImdbIdentity()
+    {
+        using var fixture = new Fixture();
+        var link = fixture.Link("Movie", "Star Wars Episode IV A New Hope");
+        var movie = fixture.Add("Movie", "Star Wars", imdb: "TT0076759", year: 1977);
+        fixture.Add("Movie", "Star Wars alternative", imdb: "tt00767590", year: 1977);
+        var series = fixture.Add("Series", "Star Wars series", imdb: "tt0076759", year: 1977);
+        fixture.Add("Movie", "Star Wars offline", imdb: "tt0076759", year: 1977, available: false);
+        var status = await fixture.Service.StatusAsync();
+        var before = MediaRecoveryPlanner.Revision(fixture.Plugin.Configuration);
+        foreach (var query in new[]
+        {
+            "  tt0076759  ", "TT0076759", "https://www.imdb.com/title/tt0076759/?ref_=fn_al_tt_1",
+            "https://imdb.com/title/TT0076759"
+        })
+        {
+            var candidates = await fixture.Service.CandidatesAsync(link.Id, query, status.Revision, status.LibraryRevision);
+            Check(candidates.Count == 1 && candidates[0].ItemId == movie.Id.ToString("D") && !candidates[0].Verified,
+                "Manual IMDb lookup must find an available canonical title by exact case-insensitive provider ID without bypassing the saved type or granting automatic verification");
+            var movies = await fixture.Service.LibraryAsync(link.Id, status.Revision, status.LibraryRevision, itemType: "Movie", query: query);
+            Check(movies.TotalRecordCount == 1 && movies.Items.Single().ItemId == movie.Id.ToString("D"),
+                "Library IMDb lookup must apply exact provider matching and the existing availability/type filters before counting");
+            var all = await fixture.Service.LibraryAsync(link.Id, status.Revision, status.LibraryRevision, query: query);
+            Check(all.TotalRecordCount == 2 && all.Items.Any(i => i.ItemId == movie.Id.ToString("D")) && all.Items.Any(i => i.ItemId == series.Id.ToString("D")),
+                "All-media IMDb browsing must retain every available exact provider match for an explicit administrator choice");
+        }
+        foreach (var query in new[]
+        {
+            "tt007675", "https://www.imdb.com/title/tt007675/", "0076759", "tt0076759 extra",
+            "https://example.com/title/tt0076759/", "https://www.imdb.com/title/tt0076759/extra"
+        })
+        {
+            Check((await fixture.Service.CandidatesAsync(link.Id, query, status.Revision, status.LibraryRevision)).Count == 0,
+                "Candidate IMDb lookup must not accept partial provider IDs or extract an ID from arbitrary text, another host or another path");
+            Check((await fixture.Service.LibraryAsync(link.Id, status.Revision, status.LibraryRevision, query: query)).TotalRecordCount == 0,
+                "Library IMDb lookup must not accept partial provider IDs or extract an ID from arbitrary text, another host or another path");
+        }
+        var titles = await fixture.Service.CandidatesAsync(link.Id, "  sTaR wArS  ", status.Revision, status.LibraryRevision);
+        var libraryTitles = await fixture.Service.LibraryAsync(link.Id, status.Revision, status.LibraryRevision, query: "  sTaR wArS  ");
+        Check(titles.Count == 2 && titles.All(i => i.ItemType == "Movie") && libraryTitles.TotalRecordCount == 3,
+            "Ordinary manual title search must retain its trimmed case-insensitive substring matching and media-type defaults");
+        Check((await fixture.Service.CandidatesAsync(link.Id, "A New Hope", status.Revision, status.LibraryRevision)).Count == 0,
+            "IMDb lookup must not introduce fuzzy title matching for a different canonical library name");
+        Check(MediaRecoveryPlanner.Revision(fixture.Plugin.Configuration) == before && fixture.SaveCount == 0 && link.Identity is null,
+            "IMDb and ordinary title lookups must not capture identities or save configuration");
+
+        link.Identity = new() { ItemType = "Movie", Year = 1977, ProviderIds = new() { new() { Name = "Imdb", Value = "tt0000001" } } };
+        status = await fixture.Service.StatusAsync();
+        before = MediaRecoveryPlanner.Revision(fixture.Plugin.Configuration);
+        var conflicting = await fixture.Service.CandidatesAsync(link.Id, "tt0076759", status.Revision, status.LibraryRevision);
+        Check(conflicting.Single().ItemId == movie.Id.ToString("D") && !conflicting.Single().Verified
+                && await Rejects(() => fixture.Service.ApplyAsync(Request(status, link.Id, movie.Id))),
+            "Finding an exact IMDb query must not override a conflicting saved provider identity during explicit reconnection");
+        Check(MediaRecoveryPlanner.Revision(fixture.Plugin.Configuration) == before && fixture.SaveCount == 0,
+            "A rejected conflicting IMDb choice must retain the complete saved configuration");
     }
 
     private static async Task CorrectWrongSavedType()

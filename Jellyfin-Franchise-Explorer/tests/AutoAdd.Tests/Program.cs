@@ -40,6 +40,8 @@ await MediaRecoveryTests.Run();
 await RecoveryFailureRegressionTests.Run();
 await AutoRecoveryTests.Run();
 await RecoveryLibraryPickerTests.Run();
+await RecoveryFileTests.Run();
+await TimelineQueueTests.Run();
 await ConfigurationCommitTests.Run();
 
 if (args.Contains("--live"))

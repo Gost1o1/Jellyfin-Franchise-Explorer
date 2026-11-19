@@ -32,9 +32,11 @@ public sealed class HomeTileRegistrationService : IHostedService, IDisposable
     // Script IDs are stable within a UI generation, not forever. Injector and
     // Jellyfin Web can cache the previous script despite a DLL replacement.
     // A new ID lets this release load the updated home and menu integration.
-    private const string CurrentScriptId = "jellyfin-franchise-explorer-my-media-v08931";
+    private const string CurrentScriptId = "jellyfin-franchise-explorer-my-media-v08933";
     private static readonly string[] LegacyScriptIds =
     {
+        "jellyfin-franchise-explorer-my-media-v08932",
+        "jellyfin-franchise-explorer-my-media-v08931",
         "jellyfin-franchise-explorer-my-media-v08930",
         "jellyfin-franchise-explorer-my-media-v08929",
         "jellyfin-franchise-explorer-my-media-v08928",
@@ -189,7 +191,7 @@ public sealed class HomeTileRegistrationService : IHostedService, IDisposable
             ["requiresAuthentication"] = false,
             ["pluginId"] = global::Jellyfin.Plugin.FranchiseExplorer.Plugin.PluginId.ToString(),
             ["pluginName"] = "Franchise Explorer",
-            ["pluginVersion"] = "0.8.9.31"
+            ["pluginVersion"] = "0.8.9.33"
         });
 
         object? payload = parse.Invoke(null, new object[] { json });
@@ -233,6 +235,7 @@ public sealed class PluginServiceRegistrator : IPluginServiceRegistrator
         services.AddSingleton<AutoFranchiseService>();
         services.AddSingleton<IScheduledTask, AutoFranchisesTask>();
         services.AddSingleton<MediaRecoveryService>();
+        services.AddSingleton<RecoveryFileService>();
         services.AddHostedService(provider => provider.GetRequiredService<MediaRecoveryService>());
         services.AddSingleton<PlaybackSubtitlePolicyStore>();
         services.AddSingleton<FranchiseViewerPreferenceStore>();
